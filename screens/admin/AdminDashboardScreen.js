@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
@@ -7,6 +7,10 @@ export default function AdminDashboardScreen() {
     const navigation = useNavigation();
     return (
         <View style={styles.container}>
+            <StatusBar
+                barStyle="light-content"
+                backgroundColor="#667eea"
+            />
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Admin Dashboard</Text>
