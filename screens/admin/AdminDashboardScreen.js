@@ -1,16 +1,14 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 export default function AdminDashboardScreen() {
     const navigation = useNavigation();
     return (
         <View style={styles.container}>
-            <StatusBar
-                barStyle="light-content"
-                backgroundColor="#667eea"
-            />
+            <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Admin Dashboard</Text>
@@ -20,44 +18,42 @@ export default function AdminDashboardScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { backgroundColor: "#eef2ff" }]}>
+                        <FontAwesome5 name="coins" size={20} color="#667eea" />
                         <Text style={styles.statNumber}>LKR 13.56M</Text>
                         <Text style={styles.statLabel}>Total Escrow</Text>
                     </View>
-                    <View style={styles.statCard}>
+
+                    <View style={[styles.statCard, { backgroundColor: "#f0fdf4" }]}>
+                        <FontAwesome5 name="hand-holding-usd" size={20} color="#16a34a" />
                         <Text style={styles.statNumber}>23</Text>
                         <Text style={styles.statLabel}>Active Loans</Text>
                     </View>
-                    <View style={[styles.statCard, { borderWidth: 2, borderColor: "#dc2626" }]}>
+
+                    <View style={[styles.statCard, { backgroundColor: "#fef3f2", borderWidth: 0 }]}>
+                        <FontAwesome5 name="exclamation-triangle" size={20} color="#dc2626" />
                         <Text style={[styles.statNumber, { color: "#dc2626" }]}>5</Text>
                         <Text style={styles.statLabel}>Overdue</Text>
                     </View>
-                    <View style={styles.statCard}>
+
+                    <View style={[styles.statCard, { backgroundColor: "#fefce8" }]}>
+                        <FontAwesome5 name="chart-line" size={20} color="#ca8a04" />
                         <Text style={styles.statNumber}>89%</Text>
                         <Text style={styles.statLabel}>Success Rate</Text>
                     </View>
                 </View>
 
-                {/* Action Buttons */}
+
+                {/* Action Buttons (only for Monitor & Users) */}
                 <View style={styles.buttonGrid}>
-                    <TouchableOpacity style={styles.actionBtn}
-                        onPress={() => navigation.navigate("EscrowApproval")}
-                    >
-                        <FontAwesome5 name="shield-alt" size={22} color="#667eea" />
-                        <Text style={styles.actionLabel}>Escrow</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}
+                    <TouchableOpacity
+                        style={styles.actionBtn}
                         onPress={() => navigation.navigate("Repayments")}
                     >
                         <FontAwesome5 name="chart-line" size={22} color="#667eea" />
-                        <Text style={styles.actionLabel}>Monitor</Text>
+                        <Text style={styles.actionLabel}>Repayment</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}
-                        onPress={() => navigation.navigate("AnalyticsScreen")}
-                    >
-                        <FontAwesome5 name="chart-pie" size={22} color="#667eea" />
-                        <Text style={styles.actionLabel}>Analytics</Text>
-                    </TouchableOpacity>
+
                     <TouchableOpacity
                         style={styles.actionBtn}
                         onPress={() => navigation.navigate("UsersManagement")}
@@ -65,7 +61,6 @@ export default function AdminDashboardScreen() {
                         <FontAwesome5 name="users" size={22} color="#667eea" />
                         <Text style={styles.actionLabel}>Users</Text>
                     </TouchableOpacity>
-
                 </View>
 
                 {/* Recent Activity */}
@@ -149,85 +144,38 @@ export default function AdminDashboardScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    header: {
-        paddingTop: 40, paddingBottom: 20,
-        backgroundColor: "#667eea",
-        alignItems: "center",
-    },
+    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#667eea", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
     headerSubtitle: { color: "#f0f0f0", marginTop: 5 },
-
     content: { padding: 16 },
-
-    // Stats
     statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
     statCard: {
         flex: 1,
         minWidth: "45%",
-        backgroundColor: "#fff",
         padding: 16,
         borderRadius: 12,
         marginBottom: 12,
         elevation: 2,
-    },
-    statNumber: { fontSize: 20, fontWeight: "700", color: "#667eea" },
-    statLabel: { fontSize: 12, color: "#6b7280", marginTop: 4 },
-
-    // Action buttons
-    buttonGrid: { flexDirection: "row", flexWrap: "wrap", marginVertical: 16, gap: 12 },
-    actionBtn: {
-        flex: 1,
-        minWidth: "45%",
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 12,
-        alignItems: "center",
-        padding: 16,
-    },
-    actionLabel: { marginTop: 6, fontWeight: "600", color: "#374151" },
-
-    // Cards
-    card: {
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 2,
-    },
-    cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12, color: "#374151" },
-
-    // Transactions
-    transactionItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderColor: "#f1f5f9",
-    },
-    transactionLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-    iconCircle: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
         alignItems: "center",
         justifyContent: "center",
     },
+    statNumber: { fontSize: 20, fontWeight: "700", marginTop: 8 },
+    statLabel: { fontSize: 12, color: "#374151", marginTop: 4 },
+
+    buttonGrid: { flexDirection: "row", flexWrap: "wrap", marginVertical: 16, gap: 12 },
+    actionBtn: { flex: 1, minWidth: "45%", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 12, alignItems: "center", padding: 16 },
+    actionLabel: { marginTop: 6, fontWeight: "600", color: "#374151" },
+    card: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2 },
+    cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12, color: "#374151" },
+    transactionItem: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderColor: "#f1f5f9" },
+    transactionLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+    iconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
     transactionTitle: { fontWeight: "600", color: "#374151" },
     transactionDate: { fontSize: 12, color: "#6b7280" },
     status: { fontSize: 12, fontWeight: "600" },
-
-    // System Health
     healthGrid: { flexDirection: "row", justifyContent: "space-around", marginTop: 12 },
     healthItem: { alignItems: "center" },
-    healthCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 6,
-    },
+    healthCircle: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 6 },
     healthLabel: { fontSize: 12, color: "#6b7280" },
     healthStatus: { fontSize: 10, fontWeight: "600" },
 });

@@ -10,6 +10,7 @@ import DashboardStack from "./DashboardStack";
 import EscrowApprovalScreen from "../../screens/admin/EscrowApprovalScreen";
 import AnalyticsScreen from "../../screens/admin/AnalyticsScreen";
 import AdminProfileScreen from "../../screens/admin/AdminProfileScreen"
+import LoanManagementScreen from "../../screens/admin/LoanManagementScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -21,7 +22,8 @@ export default function AdminBottomNav() {
                 tabBarIcon: ({ color, size }) => {
                     if (route.name === "Dashboard") return <Ionicons name="grid-outline" size={size} color={color} />;
                     if (route.name === "Escrow") return <FontAwesome5 name="shield-alt" size={size} color={color} />;
-                    if (route.name === "Repayments") return <Ionicons name="cash-outline" size={size} color={color} />;
+                    if (route.name === "Loans")
+                        return <MaterialCommunityIcons name="bank-outline" size={size} color={color} />;
                     if (route.name === "Analytics") return <Ionicons name="bar-chart-outline" size={size} color={color} />;
                     if (route.name === "Profile")
                         return <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />;
@@ -32,7 +34,7 @@ export default function AdminBottomNav() {
         >
             <Tab.Screen name="Dashboard" component={DashboardStack} />
             <Tab.Screen name="Escrow" component={EscrowApprovalScreen} />
-            <Tab.Screen name="Repayments" component={RepaymentMonitoring} />
+            <Tab.Screen name="Loans" component={LoanManagementScreen} />
             <Tab.Screen name="Analytics" component={AnalyticsScreen} />
             <Tab.Screen name="Profile" component={AdminProfileScreen} />
         </Tab.Navigator>

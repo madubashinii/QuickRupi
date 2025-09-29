@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import PieChart from "../../components/AdminPieChart";
+import PieChart from "../../components/admin/AdminPieChart";
 
 export default function AnalyticsScreen({ navigation }) {
     // Pie chart data
