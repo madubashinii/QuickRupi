@@ -110,11 +110,9 @@ const handleExportData = () => console.log('Export data');
 // Reusable Components
 const ProfileImage = () => (
   <View style={styles.profileImageContainer}>
-    <View style={styles.profileImageGlow} />
     <View style={styles.profileImage}>
       <Ionicons name="person" size={24} color={colors.white} />
     </View>
-    <View style={styles.profileImageRing} />
   </View>
 );
 
@@ -357,23 +355,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileImageContainer: {
-    position: 'relative',
     marginRight: spacing.md,
-  },
-  profileImageGlow: {
-    position: 'absolute',
-    top: -8,
-    left: -8,
-    right: -8,
-    bottom: -8,
-    borderRadius: 33,
-    backgroundColor: colors.blueGreen,
-    opacity: 0.3,
-    shadowColor: colors.blueGreen,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 12,
   },
   profileImage: {
     width: PROFILE_IMAGE_SIZE,
@@ -382,22 +364,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.midnightBlue,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  profileImageRing: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 29,
-    borderWidth: 3,
-    borderColor: colors.blueGreen,
-    opacity: 0.9,
+    borderWidth: 1,
+    borderColor: colors.tealGreen,
   },
   userName: {
     fontSize: fontSize.xl,
