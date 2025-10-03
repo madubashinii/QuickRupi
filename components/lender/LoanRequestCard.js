@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { LoanRequestDetailsModal } from './LoanRequestDetailsModal';
 
 // Constants
 const DETAIL_ICONS = {
@@ -38,6 +39,24 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 
 // Loan Request Card Component
 const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  const handleDetailsPress = () => {
+    setShowDetailsModal(true);
+    if (onDetailsPress) {
+      onDetailsPress(request);
+    }
+  };
+
+  const handleFundPress = () => {
+    if (onFundPress) {
+      onFundPress(request);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowDetailsModal(false);
+  };
 
   return (
     <View style={styles.loanRequestCard}>
@@ -78,15 +97,23 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.detailsButton} onPress={() => onDetailsPress(request)}>
+        <TouchableOpacity style={styles.detailsButton} onPress={handleDetailsPress}>
           <Ionicons name="eye" size={14} color={colors.midnightBlue} style={styles.buttonIcon} />
           <Text style={styles.detailsButtonText}>Details</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.fundButton} onPress={() => onFundPress(request)}>
+        <TouchableOpacity style={styles.fundButton} onPress={handleFundPress}>
           <Ionicons name="add-circle" size={14} color={colors.white} style={styles.buttonIcon} />
           <Text style={styles.fundButtonText}>Fund</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Loan Request Details Modal */}
+      <LoanRequestDetailsModal
+        visible={showDetailsModal}
+        onClose={handleCloseModal}
+        request={request}
+        onFundPress={handleFundPress}
+      />
     </View>
   );
 };

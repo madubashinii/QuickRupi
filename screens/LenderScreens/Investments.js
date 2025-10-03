@@ -42,7 +42,8 @@ import {
   FilterMenu,
   SortMenu,
   SortModal,
-  FundingSheet
+  FundingSheet,
+  FinishedLoanDetailsModal
 } from '../../components/lender/InvestmentModals';
 import {
   EmptyState,
@@ -428,6 +429,8 @@ const FinishedSummaryRow = ({ summary }) => {
 const FinishedContent = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedInvestment, setSelectedInvestment] = useState(null);
   
   const summary = useFinishedInvestmentsSummary(mockFinishedInvestments);
 
@@ -442,8 +445,8 @@ const FinishedContent = () => {
   }, []);
 
   const handleDetailsPress = useCallback((investment) => {
-    console.log('Details pressed for:', investment.borrowerName);
-    // Handle details navigation here
+    setSelectedInvestment(investment);
+    setShowDetailsModal(true);
   }, []);
 
   const handleStatsPress = useCallback(() => {
@@ -481,6 +484,15 @@ const FinishedContent = () => {
         visible={showStatsModal}
         onClose={() => setShowStatsModal(false)}
         summary={summary}
+      />
+      
+      <FinishedLoanDetailsModal
+        visible={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedInvestment(null);
+        }}
+        investment={selectedInvestment}
       />
     </View>
   );
@@ -544,10 +556,10 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     position: 'absolute',
-    top: 70,
+    top: 60,
     left: 0,
     right: 0,
-    width: '100%',
+    width: '102%',
     height: '100%',
     opacity: 0.9,
   },

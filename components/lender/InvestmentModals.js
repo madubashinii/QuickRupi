@@ -9,6 +9,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { SORT_CONFIG, FILTER_OPTIONS } from './investmentUtils';
+export { OngoingLoanDetailsModal } from './OngoingLoanDetailsModal';
+export { LoanRequestDetailsModal } from './LoanRequestDetailsModal';
+export { FinishedLoanDetailsModal } from './FinishedLoanDetailsModal';
 
 // Reusable Modal Component
 export const BaseModal = ({ visible, onClose, title, titleIcon, children, modalStyle }) => {

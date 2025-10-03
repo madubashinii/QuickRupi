@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { OngoingLoanDetailsModal } from './InvestmentModals';
 
 // Constants
 const STATUS_CONFIG = {
@@ -64,57 +65,73 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 
 // Investment Card Component
 const InvestmentCard = ({ investment, onDetailsPress }) => {
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const progress = calculateProgress(investment.amountRepaid, investment.repaymentAmount);
 
+  const handleDetailsPress = () => {
+    setShowDetailsModal(true);
+    if (onDetailsPress) {
+      onDetailsPress(investment);
+    }
+  };
+
   return (
-    <View style={styles.investmentCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.borrowerInfo}>
-          <Text style={styles.borrowerName}>{investment.borrowerName}</Text>
-        </View>
-        <StatusChip status={investment.status} />
-      </View>
-
-      <View style={styles.investmentDetails}>
-        <DetailRow 
-          icon={DETAIL_ICONS.amount} 
-          label="Amount Funded" 
-          value={formatCurrency(investment.amountFunded)} 
-        />
-        <DetailRow 
-          icon={DETAIL_ICONS.apr} 
-          label="APR" 
-          value={`${investment.apr}%`} 
-          isApr 
-        />
-        <DetailRow 
-          icon={DETAIL_ICONS.term} 
-          label="Term" 
-          value={`${investment.termMonths} months`} 
-        />
-      </View>
-
-      <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
-          <View style={styles.progressLabelContainer}>
-            <Ionicons name={DETAIL_ICONS.progress} size={12} color={colors.gray} style={styles.detailIcon} />
-            <Text style={styles.detailLabel}>Progress</Text>
+    <>
+      <View style={styles.investmentCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.borrowerInfo}>
+            <Text style={styles.borrowerName}>{investment.borrowerName}</Text>
           </View>
-          <Text style={styles.progressPercentage}>{progress.toFixed(1)}%</Text>
+          <StatusChip status={investment.status} />
         </View>
-        <ProgressBar progress={progress} />
-        <Text style={styles.progressText}>
-          {formatCurrency(investment.amountRepaid)} of {formatCurrency(investment.repaymentAmount)}
-        </Text>
+
+        <View style={styles.investmentDetails}>
+          <DetailRow 
+            icon={DETAIL_ICONS.amount} 
+            label="Amount Funded" 
+            value={formatCurrency(investment.amountFunded)} 
+          />
+          <DetailRow 
+            icon={DETAIL_ICONS.apr} 
+            label="APR" 
+            value={`${investment.apr}%`} 
+            isApr 
+          />
+          <DetailRow 
+            icon={DETAIL_ICONS.term} 
+            label="Term" 
+            value={`${investment.termMonths} months`} 
+          />
+        </View>
+
+        <View style={styles.progressSection}>
+          <View style={styles.progressHeader}>
+            <View style={styles.progressLabelContainer}>
+              <Ionicons name={DETAIL_ICONS.progress} size={12} color={colors.gray} style={styles.detailIcon} />
+              <Text style={styles.detailLabel}>Progress</Text>
+            </View>
+            <Text style={styles.progressPercentage}>{progress.toFixed(1)}%</Text>
+          </View>
+          <ProgressBar progress={progress} />
+          <Text style={styles.progressText}>
+            {formatCurrency(investment.amountRepaid)} of {formatCurrency(investment.repaymentAmount)}
+          </Text>
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleDetailsPress}>
+            <Ionicons name="eye" size={14} color={colors.midnightBlue} style={styles.actionIcon} />
+            <Text style={styles.actionButtonText}>Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => onDetailsPress(investment)}>
-          <Ionicons name="eye" size={14} color={colors.midnightBlue} style={styles.actionIcon} />
-          <Text style={styles.actionButtonText}>Details</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <OngoingLoanDetailsModal
+        visible={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        investment={investment}
+      />
+    </>
   );
 };
 
