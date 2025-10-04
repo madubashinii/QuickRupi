@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import ROIGrowthChart from '../../components/lender/ROIGrowthChart';
 import MonthlyReturnsChart from '../../components/lender/MonthlyReturnsChart';
+import AddFundsModal from '../../components/lender/AddFundsModal';
 
 // Constants
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -99,7 +100,6 @@ const mockData = {
 // Handlers
 const handleNotificationPress = () => console.log('Notifications pressed');
 const handleMessagePress = () => console.log('Messages pressed');
-const handleAddFunds = () => console.log('Add Funds pressed');
 const handleInvest = () => console.log('Invest pressed');
 const handleSeeAllRepayments = () => console.log('See all repayments');
 const handleSeeAllTransactions = () => console.log('See all transactions');
@@ -190,6 +190,18 @@ const ReportButton = ({ title, icon, onPress, description }) => (
 
 const Dashboard = () => {
   const { user, portfolio, upcomingRepayments, recentTransactions, roiGrowthData, monthlyReturnsData, reportOptions } = mockData;
+  
+  // State for modals
+  const [showAddFundsModal, setShowAddFundsModal] = useState(false);
+
+  // Handlers
+  const handleAddFunds = () => setShowAddFundsModal(true);
+  const handleCloseAddFundsModal = () => setShowAddFundsModal(false);
+  const handleConfirmAddFunds = (data) => {
+    console.log('Add Funds confirmed:', data);
+    setShowAddFundsModal(false);
+    // Here you would typically call an API to add funds
+  };
 
   return (
     <AnimatedScreen style={styles.container}>
@@ -303,6 +315,14 @@ const Dashboard = () => {
         </View>
 
       </ScrollView>
+      
+      {/* Add Funds Modal */}
+      <AddFundsModal
+        visible={showAddFundsModal}
+        onClose={handleCloseAddFundsModal}
+        onConfirm={handleConfirmAddFunds}
+        walletBalance={portfolio.totalValue}
+      />
     </AnimatedScreen>
   );
 };

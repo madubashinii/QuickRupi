@@ -5,7 +5,6 @@ import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
 const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
   const [amount, setAmount] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('saved');
 
   // Mock saved account data
   const savedAccount = {
@@ -36,13 +35,11 @@ const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
     });
     
     setAmount('');
-    setSelectedAccount('saved');
     onClose();
   };
 
   const handleCancel = () => {
     setAmount('');
-    setSelectedAccount('saved');
     onClose();
   };
 
@@ -75,14 +72,11 @@ const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
             <View style={styles.accountSection}>
               <Text style={styles.sectionTitle}>Withdrawal Method</Text>
               
-              <TouchableOpacity
-                style={[styles.accountOption, selectedAccount === 'saved' && styles.selectedOption]}
-                onPress={() => setSelectedAccount('saved')}
-              >
+              <View style={styles.accountOption}>
                 <View style={styles.accountInfo}>
-                  <Ionicons name="wallet" size={18} color={selectedAccount === 'saved' ? colors.blueGreen : colors.gray} />
+                  <Ionicons name="business" size={18} color={colors.blueGreen} />
                   <View style={styles.accountDetails}>
-                    <Text style={[styles.accountText, selectedAccount === 'saved' && styles.selectedText]}>
+                    <Text style={styles.accountText}>
                       {savedAccount.bank}
                     </Text>
                     <Text style={styles.accountSubtext}>
@@ -90,19 +84,7 @@ const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
                     </Text>
                   </View>
                 </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.accountOption, selectedAccount === 'new' && styles.selectedOption]}
-                onPress={() => setSelectedAccount('new')}
-              >
-                <View style={styles.accountInfo}>
-                  <Ionicons name="add-circle" size={18} color={selectedAccount === 'new' ? colors.blueGreen : colors.gray} />
-                  <Text style={[styles.accountText, selectedAccount === 'new' && styles.selectedText]}>
-                    Add New Account
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              </View>
 
             </View>
           </View>
@@ -201,11 +183,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.lightGray,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.white,
-  },
-  selectedOption: {
     borderColor: colors.blueGreen,
     backgroundColor: colors.babyBlue,
   },
@@ -219,10 +196,6 @@ const styles = StyleSheet.create({
   },
   accountText: {
     fontSize: fontSize.base,
-    color: colors.gray,
-    fontWeight: '500',
-  },
-  selectedText: {
     color: colors.midnightBlue,
     fontWeight: '600',
   },
