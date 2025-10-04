@@ -106,7 +106,7 @@ export default function AdminLoanModal({ loan, onClose, onUpdate }) {
                                         {
                                             color:
                                                 loan.riskLevel === "Low"
-                                                    ? "#16a34a"
+                                                    ? "#5cd85a" // Lime Green
                                                     : loan.riskLevel === "Medium"
                                                         ? "#f59e0b"
                                                         : "#dc2626",
@@ -142,34 +142,39 @@ export default function AdminLoanModal({ loan, onClose, onUpdate }) {
                         {/* Purpose */}
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Purpose</Text>
-                            <Text style={styles.desc}>{loan.purpose}</Text>
-                            <Text style={styles.desc}>{loan.description}</Text>
+                            <View style={styles.purposeBox}>
+                                <Text style={styles.desc}>{loan.purpose}</Text>
+                                <Text style={styles.desc}>{loan.description}</Text>
+                            </View>
                         </View>
 
                         {/* Repayment progress */}
                         {loan.status === "ongoing" && loan.repaymentSchedule && (
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Repayment Progress</Text>
-                                {loan.repaymentSchedule.map((p, idx) => (
-                                    <View key={idx} style={styles.infoRow}>
-                                        <Text>{p.month}</Text>
-                                        <Text>
-                                            LKR {p.amount.toLocaleString()} •{" "}
-                                            <Text
-                                                style={{
-                                                    color:
-                                                        p.status === "paid"
-                                                            ? "#16a34a"
-                                                            : p.status === "pending"
-                                                                ? "#d97706"
-                                                                : "#dc2626",
-                                                }}
-                                            >
-                                                {p.status.toUpperCase()}
+                                <View style={styles.progressBox}>
+                                    {loan.repaymentSchedule.map((p, idx) => (
+                                        <View key={idx} style={styles.infoRow}>
+                                            <Text style={styles.label}>{p.month}</Text>
+                                            <Text style={styles.value}>
+                                                LKR {p.amount.toLocaleString()} •{" "}
+                                                <Text
+                                                    style={{
+                                                        color:
+                                                            p.status === "paid"
+                                                                ? "#5cd85a" // Lime Green
+                                                                : p.status === "pending"
+                                                                    ? "#d97706"
+                                                                    : "#dc2626",
+                                                        fontWeight: "700"
+                                                    }}
+                                                >
+                                                    {p.status.toUpperCase()}
+                                                </Text>
                                             </Text>
-                                        </Text>
-                                    </View>
-                                ))}
+                                        </View>
+                                    ))}
+                                </View>
                             </View>
                         )}
 
@@ -211,23 +216,123 @@ export default function AdminLoanModal({ loan, onClose, onUpdate }) {
 }
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center" },
-    modal: { margin: 20, backgroundColor: "#fff", borderRadius: 12, overflow: "hidden", flex: 1 },
-    header: { padding: 20, backgroundColor: "#667eea", alignItems: "center" },
-    headerTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
-    headerSubtitle: { fontSize: 14, color: "#f0f0f0" },
-    closeBtn: { position: "absolute", top: 15, right: 15 },
-    body: { padding: 16 },
-    section: { marginBottom: 16 },
-    sectionTitle: { fontWeight: "700", fontSize: 14, marginBottom: 8, color: "#374151" },
-    infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-    label: { fontSize: 12, color: "#6b7280" },
-    value: { fontSize: 13, fontWeight: "600", color: "#374151" },
-    desc: { fontSize: 13, color: "#374151", marginBottom: 6 },
-    actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    btn: { flex: 1, padding: 12, borderRadius: 8, alignItems: "center" },
-    btnText: { color: "#fff", fontWeight: "600" },
-    approve: { backgroundColor: "#16a34a" },
-    reject: { backgroundColor: "#dc2626" },
-    review: { backgroundColor: "#667eea" },
+    overlay: {
+        flex: 1,
+        backgroundColor: "rgba(8, 49, 58, 0.8)",
+        justifyContent: "center"
+    },
+    modal: {
+        margin: 20,
+        backgroundColor: "#dbf5f0",
+        borderRadius: 12,
+        overflow: "hidden",
+        flex: 1,
+        borderWidth: 2,
+        borderColor: "#a4e5e0"
+    },
+    header: {
+        padding: 20,
+        backgroundColor: "#0c6170",
+        alignItems: "center"
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#fff"
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: "#a4e5e0",
+        marginTop: 4
+    },
+    closeBtn: {
+        position: "absolute",
+        top: 15,
+        right: 15
+    },
+    body: {
+        padding: 16,
+        backgroundColor: "#fff"
+    },
+    section: {
+        marginBottom: 16,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
+    },
+    sectionTitle: {
+        fontWeight: "700",
+        fontSize: 14,
+        marginBottom: 8,
+        color: "#0c6170"
+    },
+    infoRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 6,
+        paddingVertical: 4
+    },
+    label: {
+        fontSize: 12,
+        color: "#107869",
+        fontWeight: "600"
+    },
+    value: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#08313a"
+    },
+    purposeBox: {
+        backgroundColor: "#dbf5f0",
+        padding: 12,
+        borderRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: "#37beb0"
+    },
+    progressBox: {
+        backgroundColor: "#dbf5f0",
+        padding: 12,
+        borderRadius: 8
+    },
+    desc: {
+        fontSize: 13,
+        color: "#08313a",
+        marginBottom: 6,
+        lineHeight: 18
+    },
+    actions: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginTop: 8,
+        marginBottom: 20
+    },
+    btn: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        minWidth: "30%",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    btnText: {
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: 14
+    },
+    approve: {
+        backgroundColor: "#107869"
+    },
+    reject: {
+        backgroundColor: "#dc2626"
+    },
+    review: {
+        backgroundColor: "#37beb0"
+    },
 });

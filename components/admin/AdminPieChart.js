@@ -35,7 +35,11 @@ export default function AdminPieChart({ size = 120, strokeWidth = 20, data }) {
                 </G>
             </Svg>
 
-            <View style={[styles.center, { width: radius * 2, height: radius * 2, borderRadius: radius }]}>
+            <View style={[styles.center, {
+                width: radius * 2,
+                height: radius * 2,
+                borderRadius: radius
+            }]}>
                 <Text style={styles.text}>
                     {data[0].percent + data[1].percent + data[2].percent}%
                 </Text>
@@ -45,12 +49,27 @@ export default function AdminPieChart({ size = 120, strokeWidth = 20, data }) {
 }
 
 const styles = StyleSheet.create({
-    container: { alignItems: "center", justifyContent: "center" },
+    container: {
+        alignItems: "center",
+        justifyContent: "center",
+        marginVertical: 20
+    },
     center: {
         position: "absolute",
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: "#dbf5f0",
+        borderWidth: 3,
+        borderColor: "#a4e5e0",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    text: { fontSize: 18, fontWeight: "700" },
+    text: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#0c6170",
+    },
 });

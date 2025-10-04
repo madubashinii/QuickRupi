@@ -24,15 +24,37 @@ export default function AdminFilterTabs({ filter, setFilter }) {
 }
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 16 },
-    row: { flexDirection: "row", gap: 8 },
+    container: {
+        marginBottom: 16
+    },
+    row: {
+        flexDirection: "row",
+        gap: 8
+    },
     tab: {
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#dbf5f0",
+        borderWidth: 1,
+        borderColor: "#a4e5e0",
     },
-    activeTab: { backgroundColor: "#667eea" },
-    tabText: { fontSize: 12, color: "#6b7280" },
-    activeText: { color: "#fff", fontWeight: "600" },
+    activeTab: {
+        backgroundColor: "#0c6170",
+        borderColor: "#37beb0",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    tabText: {
+        fontSize: 12,
+        color: "#107869",
+        fontWeight: "600"
+    },
+    activeText: {
+        color: "#fff",
+        fontWeight: "700"
+    },
 });
