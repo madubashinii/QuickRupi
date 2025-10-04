@@ -28,8 +28,8 @@ export default function AdminBottomNav() {
                     if (route.name === "Profile")
                         return <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />;
                 },
-                tabBarActiveTintColor: "#667eea",
-                tabBarInactiveTintColor: "gray",
+                tabBarActiveTintColor: "#0C6170",
+                tabBarInactiveTintColor: "#5a6163ff",
             })}
         >
             <Tab.Screen name="Dashboard" component={DashboardStack} />
