@@ -4,9 +4,9 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import PieChart from "../../components/admin/AdminPieChart";
 
 export default function AnalyticsScreen({ navigation }) {
-    // Pie chart data
+    // Pie chart data with your colors
     const repaymentData = [
-        { color: "#16a34a", percent: 80 }, // On Time
+        { color: "#5cd85a", percent: 80 }, // On Time - Lime Green
         { color: "#f59e0b", percent: 10 }, // Late
         { color: "#dc2626", percent: 10 }, // Default
     ];
@@ -15,12 +15,6 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backBtn}
-                    onPress={() => navigation.goBack()}
-                >
-                    <FontAwesome5 name="arrow-left" size={18} color="#fff" />
-                </TouchableOpacity>
                 <Text style={styles.title}>Analytics & Reports</Text>
                 <Text style={styles.subtitle}>Platform performance insights</Text>
             </View>
@@ -51,7 +45,7 @@ export default function AnalyticsScreen({ navigation }) {
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>$125K</Text>
+                        <Text style={styles.statNumber}>LKR 37.5M</Text>
                         <Text style={styles.statLabel}>Total Volume</Text>
                     </View>
                     <View style={styles.statCard}>
@@ -63,7 +57,7 @@ export default function AnalyticsScreen({ navigation }) {
                         <Text style={styles.statLabel}>Success Rate</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>$2.1K</Text>
+                        <Text style={styles.statNumber}>LKR 630K</Text>
                         <Text style={styles.statLabel}>Avg. Loan Size</Text>
                     </View>
                 </View>
@@ -76,18 +70,18 @@ export default function AnalyticsScreen({ navigation }) {
                     {/* Pie Labels */}
                     <View style={styles.pieLabels}>
                         <View style={styles.pieLabelItem}>
-                            <View style={[styles.pieDot, { backgroundColor: "#16a34a" }]} />
-                            <Text>On Time</Text>
+                            <View style={[styles.pieDot, { backgroundColor: "#5cd85a" }]} />
+                            <Text style={styles.pieText}>On Time</Text>
                             <Text style={styles.piePercent}>80%</Text>
                         </View>
                         <View style={styles.pieLabelItem}>
                             <View style={[styles.pieDot, { backgroundColor: "#f59e0b" }]} />
-                            <Text>Late</Text>
+                            <Text style={styles.pieText}>Late</Text>
                             <Text style={styles.piePercent}>10%</Text>
                         </View>
                         <View style={styles.pieLabelItem}>
                             <View style={[styles.pieDot, { backgroundColor: "#dc2626" }]} />
-                            <Text>Default</Text>
+                            <Text style={styles.pieText}>Default</Text>
                             <Text style={styles.piePercent}>10%</Text>
                         </View>
                     </View>
@@ -97,9 +91,9 @@ export default function AnalyticsScreen({ navigation }) {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>User Growth</Text>
                     {[
-                        { title: "New Borrowers", value: "+23", percent: "↑ 15%", color: "#16a34a" },
-                        { title: "New Lenders", value: "+18", percent: "↑ 12%", color: "#16a34a" },
-                        { title: "Total Users", value: "156", percent: "↑ 8%", color: "#16a34a" },
+                        { title: "New Borrowers", value: "+23", percent: "↑ 15%", color: "#5cd85a" },
+                        { title: "New Lenders", value: "+18", percent: "↑ 12%", color: "#5cd85a" },
+                        { title: "Total Users", value: "156", percent: "↑ 8%", color: "#5cd85a" },
                     ].map((item, idx) => (
                         <View key={idx} style={styles.transactionItem}>
                             <View>
@@ -121,7 +115,7 @@ export default function AnalyticsScreen({ navigation }) {
                     <FontAwesome5
                         name="download"
                         size={16}
-                        color="#667eea"
+                        color="#0c6170"
                         style={{ marginRight: 8 }}
                     />
                     <Text style={styles.secondaryBtnText}>Generate Detailed Report</Text>
@@ -132,38 +126,50 @@ export default function AnalyticsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: {
+        flex: 1,
+        backgroundColor: "#dbf5f0"
+    },
     header: {
         paddingTop: 40,
         paddingBottom: 20,
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         alignItems: "center",
         position: "relative",
     },
-    backBtn: {
-        position: "absolute",
-        left: 20,
-        top: 45,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "rgba(255,255,255,0.2)",
-        justifyContent: "center",
-        alignItems: "center",
+    title: {
+        fontSize: 22,
+        fontWeight: "700",
+        color: "#fff"
     },
-    title: { fontSize: 22, fontWeight: "700", color: "#fff" },
-    subtitle: { color: "#fff", opacity: 0.9, marginTop: 4 },
-    content: { padding: 20, paddingBottom: 16 },
+    subtitle: {
+        color: "#a4e5e0",
+        opacity: 0.9,
+        marginTop: 4
+    },
+    content: {
+        padding: 20,
+        paddingBottom: 16
+    },
     card: {
         backgroundColor: "#fff",
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#f1f5f9",
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
         elevation: 2,
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12, color: "#374151" },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        marginBottom: 12,
+        color: "#0c6170"
+    },
 
     barChart: {
         flexDirection: "row",
@@ -171,12 +177,24 @@ const styles = StyleSheet.create({
         justifyContent: "space-around",
         height: 120,
         paddingVertical: 10,
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#dbf5f0",
         borderRadius: 8,
     },
-    bar: { width: 20, backgroundColor: "#667eea", borderRadius: 2 },
-    barLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
-    barLabel: { fontSize: 10, color: "#6b7280" },
+    bar: {
+        width: 20,
+        backgroundColor: "#37beb0",
+        borderRadius: 2
+    },
+    barLabels: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 10
+    },
+    barLabel: {
+        fontSize: 10,
+        color: "#107869",
+        fontWeight: "600"
+    },
 
     statsGrid: {
         flexDirection: "row",
@@ -193,25 +211,68 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         elevation: 2,
         alignItems: "center",
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    statNumber: { fontSize: 20, fontWeight: "700", color: "#667eea" },
-    statLabel: { fontSize: 12, color: "#6b7280", marginTop: 4 },
+    statNumber: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#0c6170"
+    },
+    statLabel: {
+        fontSize: 12,
+        color: "#107869",
+        marginTop: 4,
+        fontWeight: "600"
+    },
 
-    pieLabels: { flexDirection: "row", justifyContent: "space-around", marginTop: 10 },
-    pieLabelItem: { alignItems: "center" },
-    pieDot: { width: 12, height: 12, borderRadius: 6, marginBottom: 5 },
-    piePercent: { fontWeight: "600" },
+    pieLabels: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        marginTop: 10
+    },
+    pieLabelItem: {
+        alignItems: "center"
+    },
+    pieDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginBottom: 5
+    },
+    pieText: {
+        fontSize: 12,
+        color: "#08313a",
+        fontWeight: "600"
+    },
+    piePercent: {
+        fontWeight: "700",
+        color: "#0c6170",
+        fontSize: 13
+    },
 
     transactionItem: {
         flexDirection: "row",
         justifyContent: "space-between",
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderColor: "#f1f5f9",
+        borderColor: "#dbf5f0",
     },
-    transactionTitle: { fontWeight: "600", color: "#374151" },
-    transactionDate: { fontSize: 12, color: "#6b7280" },
-    transactionAmount: { fontWeight: "600" },
+    transactionTitle: {
+        fontWeight: "600",
+        color: "#08313a"
+    },
+    transactionDate: {
+        fontSize: 12,
+        color: "#107869"
+    },
+    transactionAmount: {
+        fontWeight: "600"
+    },
 
     secondaryBtn: {
         flexDirection: "row",
@@ -219,10 +280,19 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         backgroundColor: "#fff",
         borderWidth: 2,
-        borderColor: "#667eea",
+        borderColor: "#0c6170",
         borderRadius: 12,
         padding: 14,
         marginVertical: 20,
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
     },
-    secondaryBtnText: { color: "#667eea", fontWeight: "600", fontSize: 16 },
+    secondaryBtnText: {
+        color: "#0c6170",
+        fontWeight: "600",
+        fontSize: 16
+    },
 });

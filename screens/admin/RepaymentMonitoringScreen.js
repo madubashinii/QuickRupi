@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -137,7 +137,7 @@ export default function RepaymentMonitorScreen({ navigation }) {
                         ]}
                         onPress={() => setActiveTab('overdue')}
                     >
-                        <Text style={activeTab === 'overdue' ? styles.tabTextActive : null}>
+                        <Text style={activeTab === 'overdue' ? styles.tabTextActive : styles.tabText}>
                             Overdue
                         </Text>
                     </TouchableOpacity>
@@ -148,7 +148,7 @@ export default function RepaymentMonitorScreen({ navigation }) {
                         ]}
                         onPress={() => setActiveTab('dueSoon')}
                     >
-                        <Text style={activeTab === 'dueSoon' ? styles.tabTextActive : null}>
+                        <Text style={activeTab === 'dueSoon' ? styles.tabTextActive : styles.tabText}>
                             Due Soon
                         </Text>
                     </TouchableOpacity>
@@ -159,7 +159,7 @@ export default function RepaymentMonitorScreen({ navigation }) {
                         ]}
                         onPress={() => setActiveTab('all')}
                     >
-                        <Text style={activeTab === 'all' ? styles.tabTextActive : null}>
+                        <Text style={activeTab === 'all' ? styles.tabTextActive : styles.tabText}>
                             All Loans
                         </Text>
                     </TouchableOpacity>
@@ -183,7 +183,7 @@ export default function RepaymentMonitorScreen({ navigation }) {
                     <Text style={styles.primaryBtnText}> Send Reminders</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={exportReport}>
-                    <FontAwesome5 name="download" size={16} color="#667eea" />
+                    <FontAwesome5 name="download" size={16} color="#0c6170" />
                     <Text style={styles.secondaryBtnText}> Export Report</Text>
                 </TouchableOpacity>
             </ScrollView>
@@ -192,13 +192,46 @@ export default function RepaymentMonitorScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f1eeeeff' },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#667eea', alignItems: 'center', position: 'relative' },
-    backBtn: { position: 'absolute', left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 22, color: '#fff', fontWeight: '700' },
-    headerSubtitle: { fontSize: 14, color: '#fff', marginTop: 4 },
-    content: { padding: 20 },
-    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    container: {
+        flex: 1,
+        backgroundColor: '#dbf5f0'
+    },
+    header: {
+        paddingTop: 40,
+        paddingBottom: 20,
+        backgroundColor: '#0c6170',
+        alignItems: 'center',
+        position: 'relative'
+    },
+    backBtn: {
+        position: 'absolute',
+        left: 20,
+        top: 45,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    headerTitle: {
+        fontSize: 22,
+        color: '#fff',
+        fontWeight: '700'
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: '#a4e5e0',
+        marginTop: 4
+    },
+    content: {
+        padding: 20
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between'
+    },
     statCard: {
         width: '48%',
         backgroundColor: '#fff',
@@ -207,31 +240,77 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#f1f5f9',
+        borderColor: '#a4e5e0',
+        elevation: 2,
+        shadowColor: '#0c6170',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    statNumber: { fontSize: 20, fontWeight: '700', color: '#667eea' },
-    statLabel: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-    statOverdue: { borderWidth: 2, borderColor: '#dc2626' },
-    numberOverdue: { color: '#dc2626' },
-    filterTabs: { flexDirection: 'row', marginBottom: 16 },
+    statNumber: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#0c6170'
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#107869',
+        marginTop: 4,
+        fontWeight: '600'
+    },
+    statOverdue: {
+        borderWidth: 2,
+        borderColor: '#dc2626'
+    },
+    numberOverdue: {
+        color: '#dc2626'
+    },
+    filterTabs: {
+        flexDirection: 'row',
+        marginBottom: 16,
+        marginTop: 8
+    },
     filterTab: {
-        paddingVertical: 6,
+        paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#fff',
         marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#a4e5e0',
     },
-    tabActive: { backgroundColor: '#667eea' },
-    tabTextActive: { color: '#fff', fontWeight: '700' },
+    tabActive: {
+        backgroundColor: '#0c6170',
+        borderColor: '#0c6170'
+    },
+    tabText: {
+        color: '#107869',
+        fontWeight: '600'
+    },
+    tabTextActive: {
+        color: '#fff',
+        fontWeight: '700'
+    },
     transactionItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 12,
         padding: 12,
         borderRadius: 8,
-        backgroundColor: '#f9fafb',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#a4e5e0',
+        elevation: 1,
+        shadowColor: '#0c6170',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
     },
-    transactionInfoContainer: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    transactionInfoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1
+    },
     transactionIcon: {
         width: 36,
         height: 36,
@@ -240,26 +319,67 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
     },
-    transactionInfo: { flex: 1 },
-    transactionTitle: { fontWeight: '600', fontSize: 14 },
-    transactionDate: { fontSize: 12, color: '#6b7280' },
-    transactionRight: { alignItems: 'flex-end', justifyContent: 'center' },
-    transactionAmount: { fontWeight: '700', marginBottom: 6 },
-    amountNegative: { color: '#dc2626' },
-    actionBtnSmall: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 },
-    btnContact: { backgroundColor: '#dc2626' },
-    btnRemind: { backgroundColor: '#f59e0b' },
-    btnText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+    transactionInfo: {
+        flex: 1
+    },
+    transactionTitle: {
+        fontWeight: '600',
+        fontSize: 14,
+        color: '#08313a'
+    },
+    transactionDate: {
+        fontSize: 12,
+        color: '#107869',
+        marginTop: 2
+    },
+    transactionRight: {
+        alignItems: 'flex-end',
+        justifyContent: 'center'
+    },
+    transactionAmount: {
+        fontWeight: '700',
+        marginBottom: 6,
+        color: '#08313a'
+    },
+    amountNegative: {
+        color: '#dc2626'
+    },
+    actionBtnSmall: {
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 6
+    },
+    btnContact: {
+        backgroundColor: '#dc2626'
+    },
+    btnRemind: {
+        backgroundColor: '#f59e0b'
+    },
+    btnText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700'
+    },
     primaryBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#667eea',
+        backgroundColor: '#0c6170',
         borderRadius: 12,
         padding: 16,
         marginTop: 10,
+        shadowColor: '#0c6170',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4
     },
-    primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, marginLeft: 8 },
+    primaryBtnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 16,
+        marginLeft: 8
+    },
     secondaryBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -267,11 +387,22 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: '#667eea',
+        borderColor: '#0c6170',
         padding: 16,
         marginTop: 10,
     },
-    secondaryBtnText: { color: '#667eea', fontWeight: '700', fontSize: 16, marginLeft: 8 },
-    overdue: { borderLeftWidth: 4, borderLeftColor: '#dc2626' },
-    dueSoon: { borderLeftWidth: 4, borderLeftColor: '#f59e0b' },
+    secondaryBtnText: {
+        color: '#0c6170',
+        fontWeight: '700',
+        fontSize: 16,
+        marginLeft: 8
+    },
+    overdue: {
+        borderLeftWidth: 4,
+        borderLeftColor: '#dc2626'
+    },
+    dueSoon: {
+        borderLeftWidth: 4,
+        borderLeftColor: '#f59e0b'
+    },
 });

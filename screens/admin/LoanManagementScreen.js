@@ -166,6 +166,7 @@ export default function LoanManagementScreen() {
                 <TextInput
                     style={styles.searchBar}
                     placeholder="Search by loan ID, borrower name, or amount..."
+                    placeholderTextColor="#107869"
                     value={search}
                     onChangeText={setSearch}
                 />
@@ -191,6 +192,7 @@ export default function LoanManagementScreen() {
                         </Text>
                     </View>
                 )}
+                <View style={{ height: 60 }} />
             </ScrollView>
 
             {/* Modal */}
@@ -203,34 +205,80 @@ export default function LoanManagementScreen() {
                         setSelectedLoan(null);
                     }}
                 />
-
             )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: {
+        flex: 1,
+        backgroundColor: "#dbf5f0"
+    },
     header: {
         paddingTop: 40,
         paddingBottom: 20,
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         alignItems: "center",
         position: "relative",
     },
-    title: { fontSize: 22, fontWeight: "700", color: "#fff" },
-    subtitle: { color: "#fff", opacity: 0.9, marginTop: 4 },
-    content: { padding: 20, paddingBottom: 16 },
-    statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    title: {
+        fontSize: 22,
+        fontWeight: "700",
+        color: "#fff"
+    },
+    subtitle: {
+        color: "#a4e5e0",
+        opacity: 0.9,
+        marginTop: 4
+    },
+    content: {
+        padding: 20,
+        paddingBottom: 32
+    },
+    statsGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12
+    },
     searchBar: {
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
+        backgroundColor: "#fff",
         borderRadius: 8,
         padding: 12,
         marginBottom: 16,
+        fontSize: 14,
+        color: "#08313a",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
     },
-    emptyState: { alignItems: "center", marginTop: 40 },
-    emptyIcon: { fontSize: 40, color: "#9ca3af", marginBottom: 10 },
-    emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151" },
-    emptySubtitle: { color: "#6b7280", textAlign: "center" },
+    emptyState: {
+        alignItems: "center",
+        marginTop: 40,
+        padding: 20,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
+    },
+    emptyIcon: {
+        fontSize: 40,
+        color: "#107869",
+        marginBottom: 10
+    },
+    emptyTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#0c6170",
+        marginBottom: 8
+    },
+    emptySubtitle: {
+        color: "#107869",
+        textAlign: "center",
+        fontSize: 14
+    },
 });

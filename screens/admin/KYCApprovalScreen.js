@@ -87,7 +87,6 @@ export default function KYCApprovalScreen({ navigation }) {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-
                 {/* Summary Stats */}
                 <View style={styles.statsSummary}>
                     <View style={styles.statCard}>
@@ -108,7 +107,7 @@ export default function KYCApprovalScreen({ navigation }) {
 
                 {kycRequests.length === 0 && (
                     <View style={styles.emptyState}>
-                        <FontAwesome5 name="check-circle" size={48} color="#16a34a" />
+                        <FontAwesome5 name="check-circle" size={48} color="#5cd85a" />
                         <Text style={styles.emptyTitle}>All Caught Up!</Text>
                         <Text style={styles.emptySubtitle}>No pending KYC approvals at this time.</Text>
                     </View>
@@ -139,7 +138,7 @@ export default function KYCApprovalScreen({ navigation }) {
                                     user.priority === "urgent" ? styles.priorityUrgent : styles.priorityNormal,
                                 ]}
                             >
-                                <Text style={styles.badgeText}>
+                                <Text style={[styles.badgeText, user.priority === "normal" && { color: "#d97706" }]}>
                                     {user.priority === "urgent" ? "URGENT" : "NORMAL"}
                                 </Text>
                             </View>
@@ -168,7 +167,7 @@ export default function KYCApprovalScreen({ navigation }) {
                                 <Text
                                     style={[
                                         styles.infoValue,
-                                        { color: user.riskScore === "High" ? "#dc2626" : user.riskScore === "Medium" ? "#f59e0b" : "#16a34a" },
+                                        { color: user.riskScore === "High" ? "#dc2626" : user.riskScore === "Medium" ? "#f59e0b" : "#5cd85a" },
                                     ]}
                                 >
                                     {user.riskScore}
@@ -199,7 +198,7 @@ export default function KYCApprovalScreen({ navigation }) {
                                                                 : "camera"
                                         }
                                         size={24}
-                                        color="#667eea"
+                                        color="#0c6170"
                                     />
                                     <Text style={styles.docLabel}>{doc}</Text>
                                 </TouchableOpacity>
@@ -240,15 +239,15 @@ export default function KYCApprovalScreen({ navigation }) {
                         <FontAwesome5
                             name="file-image"
                             size={48}
-                            color="#667eea"
+                            color="#0c6170"
                             style={{ marginVertical: 20, alignSelf: "center" }}
                         />
-                        <Text style={{ textAlign: "center", marginBottom: 20 }}>
+                        <Text style={{ textAlign: "center", marginBottom: 20, color: "#08313a" }}>
                             Document for {selectedDocument?.user}
                         </Text>
                         <View style={{ flexDirection: "row", gap: 10 }}>
                             <TouchableOpacity style={styles.modalBtnClose} onPress={closeDocument}>
-                                <Text style={{ color: "#667eea", textAlign: "center" }}>Close</Text>
+                                <Text style={{ color: "#0c6170", textAlign: "center", fontWeight: "600" }}>Close</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.modalBtnDownload}
@@ -257,7 +256,7 @@ export default function KYCApprovalScreen({ navigation }) {
                                     closeDocument();
                                 }}
                             >
-                                <Text style={{ color: "#fff", textAlign: "center" }}>Download</Text>
+                                <Text style={{ color: "#fff", textAlign: "center", fontWeight: "600" }}>Download</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -268,62 +267,66 @@ export default function KYCApprovalScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f3f4f6" },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#667eea', alignItems: 'center', position: 'relative' },
-    backBtn: { position: 'absolute', left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    container: { flex: 1, backgroundColor: "#dbf5f0" },
+    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#0c6170', alignItems: 'center', position: 'relative' },
+    backBtn: { position: 'absolute', left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(55, 190, 176, 0.3)', justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
-    headerSubtitle: { fontSize: 12, color: "#f0f0f0", marginTop: 4 },
+    headerSubtitle: { fontSize: 12, color: "#a4e5e0", marginTop: 4 },
     content: { padding: 16 },
-    emptyState: { alignItems: "center", marginTop: 50 },
-    emptyTitle: { fontSize: 18, fontWeight: "700", marginVertical: 5 },
-    emptySubtitle: { color: "#6b7280", fontSize: 14 },
-    kycCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2 },
-    urgent: { borderColor: "#dc2626", borderWidth: 2 },
-    normal: { borderColor: "#f59e0b", borderWidth: 2 },
+    emptyState: { alignItems: "center", marginTop: 50, backgroundColor: "#fff", padding: 30, borderRadius: 12, borderWidth: 2, borderColor: "#a4e5e0" },
+    emptyTitle: { fontSize: 18, fontWeight: "700", marginVertical: 5, color: "#0c6170" },
+    emptySubtitle: { color: "#107869", fontSize: 14 },
+    kycCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+    urgent: { borderColor: "#dc2626", borderWidth: 2, backgroundColor: "#fef2f2" },
+    normal: { borderColor: "#f59e0b", borderWidth: 2, backgroundColor: "#fffbeb" },
     kycHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
     userAvatar: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         alignItems: "center",
         justifyContent: "center",
         marginRight: 10,
+        borderWidth: 2,
+        borderColor: "#a4e5e0"
     },
     avatarText: { color: "#fff", fontWeight: "700" },
     userInfo: { flex: 1 },
-    userName: { fontWeight: "700", fontSize: 16, color: "#374151" },
-    userDetails: { fontSize: 12, color: "#6b7280" },
-    priorityBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+    userName: { fontWeight: "700", fontSize: 16, color: "#08313a" },
+    userDetails: { fontSize: 12, color: "#107869" },
+    priorityBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
     priorityUrgent: { backgroundColor: "#fee2e2" },
     priorityNormal: { backgroundColor: "#fef3c7" },
     badgeText: { fontSize: 10, fontWeight: "600", color: "#dc2626" },
-    verificationInfo: { marginBottom: 12 },
+    verificationInfo: { marginBottom: 12, backgroundColor: "#dbf5f0", padding: 12, borderRadius: 8 },
     infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-    infoLabel: { fontSize: 12, color: "#6b7280" },
-    infoValue: { fontSize: 12, fontWeight: "600", color: "#374151" },
+    infoLabel: { fontSize: 12, color: "#107869", fontWeight: "600" },
+    infoValue: { fontSize: 12, fontWeight: "600", color: "#08313a" },
     documentGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 },
     documentItem: {
         width: "22%",
         padding: 8,
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#dbf5f0",
         borderRadius: 8,
         alignItems: "center",
         justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
     },
-    docLabel: { fontSize: 10, marginTop: 4, textAlign: "center", color: "#6b7280" },
+    docLabel: { fontSize: 10, marginTop: 4, textAlign: "center", color: "#107869", fontWeight: "600" },
     actionButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 8, gap: 5 },
-    btnApprove: { flex: 1, backgroundColor: "#16a34a", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 8, borderRadius: 8 },
-    btnReject: { flex: 1, backgroundColor: "#dc2626", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 8, borderRadius: 8 },
-    btnReview: { flex: 1, backgroundColor: "#667eea", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 8, borderRadius: 8 },
-    btnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-    modalBackground: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
-    modalContent: { backgroundColor: "#fff", borderRadius: 12, padding: 20, width: "80%" },
-    modalTitle: { fontWeight: "700", fontSize: 18, textAlign: "center" },
-    modalBtnClose: { flex: 1, padding: 10, borderWidth: 1, borderColor: "#667eea", borderRadius: 6 },
-    modalBtnDownload: { flex: 1, padding: 10, backgroundColor: "#667eea", borderRadius: 6 },
+    btnApprove: { flex: 1, backgroundColor: "#107869", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 10, borderRadius: 8, shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+    btnReject: { flex: 1, backgroundColor: "#dc2626", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 10, borderRadius: 8, shadowColor: "#dc2626", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+    btnReview: { flex: 1, backgroundColor: "#37beb0", flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 10, borderRadius: 8, shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+    btnText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+    modalBackground: { flex: 1, backgroundColor: "rgba(8, 49, 58, 0.8)", justifyContent: "center", alignItems: "center" },
+    modalContent: { backgroundColor: "#fff", borderRadius: 12, padding: 20, width: "80%", borderWidth: 2, borderColor: "#a4e5e0" },
+    modalTitle: { fontWeight: "700", fontSize: 18, textAlign: "center", color: "#0c6170", marginBottom: 10 },
+    modalBtnClose: { flex: 1, padding: 10, borderWidth: 2, borderColor: "#0c6170", borderRadius: 6 },
+    modalBtnDownload: { flex: 1, padding: 10, backgroundColor: "#0c6170", borderRadius: 6, shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
     statsSummary: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
-    statCard: { backgroundColor: "#fff", padding: 12, borderRadius: 8, alignItems: "center", flex: 1, marginHorizontal: 4 },
-    statNumber: { fontSize: 18, fontWeight: "700", color: "#667eea" },
-    statLabel: { fontSize: 10, color: "#6b7280", marginTop: 4 },
+    statCard: { backgroundColor: "#fff", padding: 12, borderRadius: 8, alignItems: "center", flex: 1, marginHorizontal: 4, borderWidth: 2, borderColor: "#a4e5e0", shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+    statNumber: { fontSize: 18, fontWeight: "700", color: "#0c6170" },
+    statLabel: { fontSize: 10, color: "#107869", marginTop: 4, fontWeight: "600" },
 });

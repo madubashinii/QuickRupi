@@ -1,4 +1,3 @@
-// UsersManagementScreen.js
 import React, { useState } from "react";
 import {
     View,
@@ -18,7 +17,7 @@ const usersData = [
         type: "Borrower",
         status: "verified",
         initials: "SJ",
-        color: "#667eea",
+        color: "#0c6170", // Midnight Blue
     },
     {
         id: "USR002",
@@ -27,7 +26,7 @@ const usersData = [
         type: "Lender",
         status: "verified",
         initials: "MB",
-        color: "#16a34a",
+        color: "#107869", // Teal Green
     },
     {
         id: "USR003",
@@ -45,7 +44,7 @@ const usersData = [
         type: "Lender",
         status: "new",
         initials: "EW",
-        color: "#2563eb",
+        color: "#37beb0", // Blue Green
     },
     {
         id: "USR005",
@@ -63,7 +62,7 @@ const usersData = [
         type: "Both",
         status: "pending",
         initials: "DM",
-        color: "#8b5cf6",
+        color: "#1a5653", // Forest Green
     },
 ];
 
@@ -125,10 +124,10 @@ export default function UsersManagementScreen({ navigation }) {
                         color="#f59e0b"
                     />
                     <View>
-                        <Text style={{ fontWeight: "600", fontSize: 12 }}>
+                        <Text style={{ fontWeight: "600", fontSize: 12, color: "#08313a" }}>
                             3 KYC approvals pending
                         </Text>
-                        <Text style={{ fontSize: 10, color: "#6b7280" }}>
+                        <Text style={{ fontSize: 10, color: "#107869" }}>
                             Click the icon above to review
                         </Text>
                     </View>
@@ -158,6 +157,7 @@ export default function UsersManagementScreen({ navigation }) {
                 <TextInput
                     style={styles.searchBar}
                     placeholder="Search users by name, email, or ID..."
+                    placeholderTextColor="#107869"
                     value={search}
                     onChangeText={setSearch}
                 />
@@ -175,8 +175,9 @@ export default function UsersManagementScreen({ navigation }) {
                         >
                             <Text
                                 style={{
-                                    color: filter === f ? "#fff" : "#6b7280",
+                                    color: filter === f ? "#fff" : "#107869",
                                     fontSize: 12,
+                                    fontWeight: "600"
                                 }}
                             >
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -187,7 +188,7 @@ export default function UsersManagementScreen({ navigation }) {
 
                 {/* Users List */}
                 <View style={styles.card}>
-                    <Text style={{ marginBottom: 15, fontWeight: "600" }}>
+                    <Text style={{ marginBottom: 15, fontWeight: "600", color: "#0c6170" }}>
                         Platform Users
                     </Text>
 
@@ -210,7 +211,7 @@ export default function UsersManagementScreen({ navigation }) {
                                 </Text>
                                 <View style={styles.actionButtons}>
                                     <TouchableOpacity style={[styles.btnSmall, styles.btnView]}>
-                                        <Text style={{ color: "#fff", fontSize: 10 }}>View</Text>
+                                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600" }}>View</Text>
                                     </TouchableOpacity>
 
                                     {u.status === "pending" ? (
@@ -218,7 +219,7 @@ export default function UsersManagementScreen({ navigation }) {
                                             style={[styles.btnSmall, styles.btnVerify]}
                                             onPress={() => handleApproveKYC(u.id)}
                                         >
-                                            <Text style={{ color: "#fff", fontSize: 10 }}>
+                                            <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600" }}>
                                                 Approve
                                             </Text>
                                         </TouchableOpacity>
@@ -226,7 +227,7 @@ export default function UsersManagementScreen({ navigation }) {
                                         <TouchableOpacity
                                             style={[styles.btnSmall, styles.btnSuspend]}
                                         >
-                                            <Text style={{ color: "#fff", fontSize: 10 }}>
+                                            <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600" }}>
                                                 Suspended
                                             </Text>
                                         </TouchableOpacity>
@@ -234,7 +235,7 @@ export default function UsersManagementScreen({ navigation }) {
                                         <TouchableOpacity
                                             style={[styles.btnSmall, styles.btnVerify]}
                                         >
-                                            <Text style={{ color: "#fff", fontSize: 10 }}>
+                                            <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600" }}>
                                                 Active
                                             </Text>
                                         </TouchableOpacity>
@@ -270,26 +271,58 @@ export default function UsersManagementScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: {
+        flex: 1,
+        backgroundColor: "#dbf5f0"
+    },
 
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#667eea', alignItems: 'center', position: 'relative' },
-    backBtn: { position: 'absolute', left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 22, color: '#fff', fontWeight: '700' },
-    headerSubtitle: { color: '#fff', opacity: 0.9, marginTop: 4 },
+    header: {
+        paddingTop: 40,
+        paddingBottom: 20,
+        backgroundColor: '#0c6170',
+        alignItems: 'center',
+        position: 'relative'
+    },
+    backBtn: {
+        position: 'absolute',
+        left: 20,
+        top: 45,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(55, 190, 176, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    headerTitle: {
+        fontSize: 22,
+        color: '#fff',
+        fontWeight: '700'
+    },
+    headerSubtitle: {
+        color: '#a4e5e0',
+        opacity: 0.9,
+        marginTop: 4
+    },
     actionBar: {
         alignItems: "flex-end",
         paddingHorizontal: 20,
         paddingVertical: 10,
-        backgroundColor: "#f9fafb",
+        backgroundColor: "#dbf5f0",
     },
     actionIcon: {
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         borderRadius: 20,
         padding: 10,
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3
     },
     kycNotification: {
         backgroundColor: "#fef3c7",
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: "#f59e0b",
         borderRadius: 8,
         padding: 12,
@@ -298,7 +331,11 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 10,
     },
-    statsGrid: { flexDirection: "row", justifyContent: "space-between" },
+    statsGrid: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 15
+    },
     statCard: {
         flex: 1,
         backgroundColor: "#fff",
@@ -306,45 +343,74 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 12,
         alignItems: "center",
-        borderWidth: 1,
-        borderColor: "#f1f5f9",
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
+        shadowColor: "#0c6170",
+        shadowOpacity: 0.1,
         shadowRadius: 5,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2
     },
-    statNumber: { fontSize: 18, fontWeight: "700", color: "#667eea" },
-    statLabel: { fontSize: 11, color: "#6b7280" },
+    statNumber: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#0c6170"
+    },
+    statLabel: {
+        fontSize: 11,
+        color: "#107869",
+        fontWeight: "600",
+        marginTop: 4
+    },
     searchBar: {
         borderWidth: 2,
-        borderColor: "#e2e8f0",
+        borderColor: "#a4e5e0",
+        backgroundColor: "#fff",
         borderRadius: 8,
         padding: 10,
         marginVertical: 10,
+        color: "#08313a",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
     },
-    filterTabs: { flexDirection: "row", marginBottom: 15, gap: 8 },
+    filterTabs: {
+        flexDirection: "row",
+        marginBottom: 15,
+        gap: 8
+    },
     filterTab: {
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#dbf5f0",
         borderRadius: 20,
         paddingHorizontal: 12,
         paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
     },
-    filterTabActive: { backgroundColor: "#667eea" },
+    filterTabActive: {
+        backgroundColor: "#0c6170",
+        borderColor: "#37beb0"
+    },
     card: {
         backgroundColor: "#fff",
         borderRadius: 12,
         padding: 15,
-        borderWidth: 1,
-        borderColor: "#f1f5f9",
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
+        borderWidth: 2,
+        borderColor: "#a4e5e0",
+        shadowColor: "#0c6170",
+        shadowOpacity: 0.1,
         shadowRadius: 5,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2
     },
     userItem: {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: "#f1f5f9",
+        borderBottomColor: "#dbf5f0",
     },
     userAvatar: {
         width: 50,
@@ -353,19 +419,40 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         marginRight: 15,
+        borderWidth: 2,
+        borderColor: "#a4e5e0"
     },
-    userName: { fontWeight: "600", color: "#374151" },
-    userDetails: { fontSize: 12, color: "#6b7280" },
-    actionButtons: { flexDirection: "row", gap: 8, marginTop: 5 },
+    userName: {
+        fontWeight: "600",
+        color: "#08313a"
+    },
+    userDetails: {
+        fontSize: 12,
+        color: "#107869",
+        marginTop: 2
+    },
+    actionButtons: {
+        flexDirection: "row",
+        gap: 8,
+        marginTop: 5
+    },
     btnSmall: {
         paddingVertical: 4,
         paddingHorizontal: 8,
         borderRadius: 4,
     },
-    btnView: { backgroundColor: "#667eea" },
-    btnVerify: { backgroundColor: "#16a34a" },
-    btnSuspend: { backgroundColor: "#dc2626" },
-    userStatus: { alignItems: "flex-end" },
+    btnView: {
+        backgroundColor: "#37beb0"
+    },
+    btnVerify: {
+        backgroundColor: "#107869"
+    },
+    btnSuspend: {
+        backgroundColor: "#dc2626"
+    },
+    userStatus: {
+        alignItems: "flex-end"
+    },
     statusBadge: {
         paddingHorizontal: 8,
         paddingVertical: 4,
@@ -375,9 +462,25 @@ const styles = StyleSheet.create({
         marginBottom: 4,
         overflow: "hidden",
     },
-    statusVerified: { backgroundColor: "#dcfce7", color: "#16a34a" },
-    statusPending: { backgroundColor: "#fef3c7", color: "#d97706" },
-    statusRejected: { backgroundColor: "#fee2e2", color: "#dc2626" },
-    statusNew: { backgroundColor: "#dbeafe", color: "#2563eb" },
-    userType: { fontSize: 10, color: "#6b7280" },
+    statusVerified: {
+        backgroundColor: "#a4e5e0",
+        color: "#107869"
+    },
+    statusPending: {
+        backgroundColor: "#fef3c7",
+        color: "#d97706"
+    },
+    statusRejected: {
+        backgroundColor: "#fee2e2",
+        color: "#dc2626"
+    },
+    statusNew: {
+        backgroundColor: "#dbf5f0",
+        color: "#0c6170"
+    },
+    userType: {
+        fontSize: 10,
+        color: "#107869",
+        fontWeight: "600"
+    },
 });

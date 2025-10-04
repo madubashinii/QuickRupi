@@ -51,11 +51,6 @@ export default function EscrowApprovalScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backBtn}
-                    onPress={() => navigation.goBack()}
-                >
-                    <FontAwesome5 name="arrow-left" size={18} color="#fff" />
-                </TouchableOpacity>
                 <Text style={styles.title}>Escrow Approvals</Text>
                 <Text style={styles.subtitle}>Pending fund releases</Text>
             </View>
@@ -88,7 +83,7 @@ export default function EscrowApprovalScreen({ navigation }) {
                                     </View>
                                     <View>
                                         <Text style={styles.infoItem}>Amount</Text>
-                                        <Text style={[styles.infoValue, { color: '#667eea' }]}>
+                                        <Text style={[styles.infoValue, { color: '#0c6170' }]}>
                                             LKR {loan.amount.toLocaleString()}
                                         </Text>
                                     </View>
@@ -118,7 +113,7 @@ export default function EscrowApprovalScreen({ navigation }) {
 
                         {loan.status === 'Approved' && (
                             <View style={styles.approvedBox}>
-                                <FontAwesome5 name="check-circle" size={18} color="#16a34a" style={{ marginRight: 6 }} />
+                                <FontAwesome5 name="check-circle" size={18} color="#107869" style={{ marginRight: 6 }} />
                                 <Text style={styles.approvedText}>Funds released successfully</Text>
                             </View>
                         )}
@@ -127,45 +122,191 @@ export default function EscrowApprovalScreen({ navigation }) {
 
                 {loans.filter(l => l.status === 'Pending').length === 0 && (
                     <View style={styles.emptyState}>
-                        <FontAwesome5 name="check-circle" size={48} color="#16a34a" />
+                        <FontAwesome5 name="check-circle" size={48} color="#5cd85a" />
                         <Text style={styles.emptyTitle}>All Caught Up!</Text>
                         <Text style={styles.emptyText}>No more pending escrow approvals at this time.</Text>
                     </View>
                 )}
             </ScrollView>
-
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f1eeeeff' },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#667eea', alignItems: 'center', position: 'relative' },
-    backBtn: { position: 'absolute', left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    title: { fontSize: 22, color: '#fff', fontWeight: '700' },
-    subtitle: { color: '#fff', opacity: 0.9, marginTop: 4 },
-    content: { padding: 20, paddingBottom: 10 },
-    card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, borderColor: '#f1f5f9' },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    loanTitle: { fontSize: 18, fontWeight: '700' },
-    statusBadge: { fontSize: 12, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, fontWeight: '600' },
-    pendingBadge: { backgroundColor: '#fef3c7', color: '#d97706' },
-    approvedBadge: { backgroundColor: '#dcfce7', color: '#16a34a' },
-    rejectedBadge: { backgroundColor: '#fee2e2', color: '#dc2626' },
-    infoGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 12 },
-    infoItem: { fontSize: 12, color: '#6b7280' },
-    infoValue: { fontWeight: '600', color: '#374151', marginTop: 2 },
-    purposeBox: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 12 },
-    purposeLabel: { fontSize: 12, color: '#6b7280', marginBottom: 4 },
-    purposeText: { fontSize: 14, color: '#374151' },
-    actionButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-    btnApprove: { flex: 1, backgroundColor: '#16a34a', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginRight: 6 },
-    btnReject: { flex: 1, backgroundColor: '#dc2626', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
-    btnText: { color: '#fff', fontWeight: '600' },
-    approvedBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#dcfce7', padding: 12, borderRadius: 8 },
-    approvedText: { color: '#16a34a', fontSize: 14 },
-    emptyState: { padding: 40, backgroundColor: '#f8fafc', borderRadius: 12, alignItems: 'center', marginTop: 20 },
-    emptyTitle: { fontSize: 18, fontWeight: '700', marginVertical: 10 },
-    emptyText: { color: '#6b7280', textAlign: 'center' },
-
+    container: {
+        flex: 1,
+        backgroundColor: '#dbf5f0'
+    },
+    header: {
+        paddingTop: 40,
+        paddingBottom: 20,
+        backgroundColor: '#0c6170',
+        alignItems: 'center',
+        position: 'relative'
+    },
+    title: {
+        fontSize: 22,
+        color: '#fff',
+        fontWeight: '700'
+    },
+    subtitle: {
+        color: '#a4e5e0',
+        opacity: 0.9,
+        marginTop: 4
+    },
+    content: {
+        padding: 20,
+        paddingBottom: 10
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 15,
+        borderWidth: 2,
+        borderColor: '#a4e5e0',
+        shadowColor: '#0c6170',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12
+    },
+    loanTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#0c6170'
+    },
+    statusBadge: {
+        fontSize: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        fontWeight: '600'
+    },
+    pendingBadge: {
+        backgroundColor: '#fef3c7',
+        color: '#d97706'
+    },
+    approvedBadge: {
+        backgroundColor: '#a4e5e0',
+        color: '#107869'
+    },
+    rejectedBadge: {
+        backgroundColor: '#fee2e2',
+        color: '#dc2626'
+    },
+    infoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginBottom: 12
+    },
+    infoItem: {
+        fontSize: 12,
+        color: '#107869',
+        fontWeight: '600',
+        marginBottom: 4
+    },
+    infoValue: {
+        fontWeight: '600',
+        color: '#08313a',
+        marginTop: 2
+    },
+    purposeBox: {
+        backgroundColor: '#dbf5f0',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#37beb0'
+    },
+    purposeLabel: {
+        fontSize: 12,
+        color: '#107869',
+        marginBottom: 4,
+        fontWeight: '600'
+    },
+    purposeText: {
+        fontSize: 14,
+        color: '#08313a',
+        lineHeight: 20
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10
+    },
+    btnApprove: {
+        flex: 1,
+        backgroundColor: '#107869',
+        padding: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 6,
+        shadowColor: '#0c6170',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    btnReject: {
+        flex: 1,
+        backgroundColor: '#dc2626',
+        padding: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 6,
+        shadowColor: '#dc2626',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    btnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 14
+    },
+    approvedBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#a4e5e0',
+        padding: 12,
+        borderRadius: 8
+    },
+    approvedText: {
+        color: '#107869',
+        fontSize: 14,
+        fontWeight: '600'
+    },
+    emptyState: {
+        padding: 40,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 20,
+        borderWidth: 2,
+        borderColor: '#a4e5e0'
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        marginVertical: 10,
+        color: '#0c6170'
+    },
+    emptyText: {
+        color: '#107869',
+        textAlign: 'center',
+        fontSize: 14
+    },
 });

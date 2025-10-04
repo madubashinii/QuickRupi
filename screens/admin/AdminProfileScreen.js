@@ -39,6 +39,7 @@ export default function AdminProfileScreen() {
                     value={name}
                     onChangeText={setName}
                     placeholder="Enter your name"
+                    placeholderTextColor="#107869"
                 />
 
                 <Text style={styles.label}>Email</Text>
@@ -48,6 +49,7 @@ export default function AdminProfileScreen() {
                     onChangeText={setEmail}
                     placeholder="Enter your email"
                     keyboardType="email-address"
+                    placeholderTextColor="#107869"
                 />
 
                 <Text style={styles.label}>Phone</Text>
@@ -57,6 +59,7 @@ export default function AdminProfileScreen() {
                     onChangeText={setPhone}
                     placeholder="Enter your phone"
                     keyboardType="phone-pad"
+                    placeholderTextColor="#107869"
                 />
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
@@ -68,7 +71,7 @@ export default function AdminProfileScreen() {
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Other Actions</Text>
                 <TouchableOpacity style={styles.actionBtn}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#667eea" />
+                    <Ionicons name="lock-closed-outline" size={20} color="#0c6170" />
                     <Text style={styles.actionText}>Change Password</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn}>
@@ -81,21 +84,47 @@ export default function AdminProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f9fafb" },
+    container: {
+        flex: 1,
+        backgroundColor: "#dbf5f0"
+    },
 
     header: {
         paddingTop: 40,
         paddingBottom: 20,
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         alignItems: "center",
         position: "relative",
     },
-    headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
-    headerSubtitle: { fontSize: 14, color: "#e0e7ff", marginTop: 4 },
+    headerTitle: {
+        fontSize: 22,
+        fontWeight: "700",
+        color: "#fff"
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: "#a4e5e0",
+        marginTop: 4
+    },
 
-    avatarContainer: { alignItems: "center", marginVertical: 20 },
-    avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
-    role: { fontSize: 14, color: "#6b7280", marginTop: 2 },
+    avatarContainer: {
+        alignItems: "center",
+        marginVertical: 20
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        marginBottom: 12,
+        borderWidth: 3,
+        borderColor: "#37beb0"
+    },
+    role: {
+        fontSize: 14,
+        color: "#107869",
+        marginTop: 2,
+        fontWeight: "600"
+    },
 
     card: {
         backgroundColor: "#fff",
@@ -104,27 +133,54 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 16,
         elevation: 2,
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
     },
-    cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12, color: "#374151" },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        marginBottom: 12,
+        color: "#08313a"
+    },
 
-    label: { fontSize: 14, color: "#6b7280", marginTop: 10 },
+    label: {
+        fontSize: 14,
+        color: "#107869",
+        marginTop: 10,
+        fontWeight: "600"
+    },
     input: {
-        backgroundColor: "#f1f5f9",
+        backgroundColor: "#dbf5f0",
         padding: 10,
         borderRadius: 8,
         marginTop: 4,
         fontSize: 14,
-        color: "#111827",
+        color: "#08313a",
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
     },
 
     saveBtn: {
-        backgroundColor: "#667eea",
+        backgroundColor: "#0c6170",
         paddingVertical: 12,
         borderRadius: 8,
         marginTop: 16,
         alignItems: "center",
+        shadowColor: "#0c6170",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4
     },
-    saveText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+    saveText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "700"
+    },
 
     actionBtn: {
         flexDirection: "row",
@@ -133,7 +189,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         marginBottom: 12,
         borderRadius: 10,
-        backgroundColor: "#f1f5f9",
+        backgroundColor: "#dbf5f0",
+        borderWidth: 1,
+        borderColor: "#a4e5e0"
     },
-    actionText: { fontSize: 14, marginLeft: 12, fontWeight: "600", color: "#374151" },
+    actionText: {
+        fontSize: 14,
+        marginLeft: 12,
+        fontWeight: "600",
+        color: "#08313a"
+    },
 });
