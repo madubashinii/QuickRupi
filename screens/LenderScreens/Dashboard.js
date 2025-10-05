@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import ROIGrowthChart from '../../components/lender/ROIGrowthChart';
@@ -98,7 +99,7 @@ const mockData = {
 };
 
 // Handlers
-const handleNotificationPress = () => console.log('Notifications pressed');
+const handleNotificationPress = (navigation) => () => navigation.navigate('Notifications');
 const handleMessagePress = () => console.log('Messages pressed');
 const handleInvest = () => console.log('Invest pressed');
 const handleSeeAllRepayments = () => console.log('See all repayments');
@@ -190,6 +191,7 @@ const ReportButton = ({ title, icon, onPress, description }) => (
 
 const Dashboard = () => {
   const { user, portfolio, upcomingRepayments, recentTransactions, roiGrowthData, monthlyReturnsData, reportOptions } = mockData;
+  const navigation = useNavigation();
   
   // State for modals
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
@@ -222,7 +224,7 @@ const Dashboard = () => {
               </View>
             </View>
             <View style={styles.headerActions}>
-              <ActionButton icon="notifications-outline" onPress={handleNotificationPress} />
+              <ActionButton icon="notifications-outline" onPress={handleNotificationPress(navigation)} />
               <ActionButton icon="chatbubble-outline" onPress={handleMessagePress} />
             </View>
           </View>
