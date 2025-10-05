@@ -100,8 +100,8 @@ const mockData = {
 
 // Handlers
 const handleNotificationPress = (navigation) => () => navigation.navigate('Notifications');
-const handleMessagePress = () => console.log('Messages pressed');
-const handleInvest = () => console.log('Invest pressed');
+const handleMessagePress = (navigation) => () => navigation.navigate('Messages');
+const handleInvest = (navigation) => () => navigation.navigate('Investments', { initialTab: 'Browse' });
 const handleSeeAllRepayments = () => console.log('See all repayments');
 const handleSeeAllTransactions = () => console.log('See all transactions');
 const handlePortfolioReport = () => console.log('Portfolio report');
@@ -225,7 +225,7 @@ const Dashboard = () => {
             </View>
             <View style={styles.headerActions}>
               <ActionButton icon="notifications-outline" onPress={handleNotificationPress(navigation)} />
-              <ActionButton icon="chatbubble-outline" onPress={handleMessagePress} />
+              <ActionButton icon="chatbubble-outline" onPress={handleMessagePress(navigation)} />
             </View>
           </View>
         </View>
@@ -241,7 +241,7 @@ const Dashboard = () => {
               <Ionicons name="add" size={20} color={colors.white} />
               <Text style={styles.primaryButtonText}>Add Funds</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleInvest}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={handleInvest(navigation)}>
               <Ionicons name="arrow-up" size={20} color={colors.midnightBlue} />
               <Text style={styles.secondaryButtonText}>Invest</Text>
             </TouchableOpacity>

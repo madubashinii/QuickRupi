@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -498,9 +498,16 @@ const FinishedContent = () => {
   );
 };
 
-const Investments = () => {
+const Investments = ({ route }) => {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const metrics = useInvestmentMetrics(mockInvestments);
+
+  // Handle route parameters to set initial tab
+  useEffect(() => {
+    if (route?.params?.initialTab && TABS.includes(route.params.initialTab)) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
 
   const handleBrowsePress = useCallback(() => {
     setActiveTab('Browse');
