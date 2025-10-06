@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { LoanRequestDetailsModal } from './LoanRequestDetailsModal';
+import LoanFundModal from './LoanFundModal';
 
 // Constants
 const DETAIL_ICONS = {
@@ -40,6 +41,7 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 // Loan Request Card Component
 const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showFundModal, setShowFundModal] = useState(false);
 
   const handleDetailsPress = () => {
     setShowDetailsModal(true);
@@ -49,13 +51,26 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
   };
 
   const handleFundPress = () => {
-    if (onFundPress) {
-      onFundPress(request);
-    }
+    setShowFundModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleFundPressFromDetails = () => {
+    setShowDetailsModal(false); // Close details modal first
+    setShowFundModal(true);     // Then open fund modal
+  };
+
+  const handleCloseDetailsModal = () => {
     setShowDetailsModal(false);
+  };
+
+  const handleCloseFundModal = () => {
+    setShowFundModal(false);
+  };
+
+  const handleConfirmFunding = (fundingData) => {
+    console.log('Funding confirmed:', fundingData);
+    setShowFundModal(false);
+    // Here you would typically call an API to process the funding
   };
 
   return (
@@ -110,9 +125,17 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
       {/* Loan Request Details Modal */}
       <LoanRequestDetailsModal
         visible={showDetailsModal}
-        onClose={handleCloseModal}
+        onClose={handleCloseDetailsModal}
         request={request}
-        onFundPress={handleFundPress}
+        onFundPress={handleFundPressFromDetails}
+      />
+
+      {/* Loan Fund Modal */}
+      <LoanFundModal
+        visible={showFundModal}
+        onClose={handleCloseFundModal}
+        request={request}
+        onConfirm={handleConfirmFunding}
       />
     </View>
   );

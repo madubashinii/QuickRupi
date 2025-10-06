@@ -3,16 +3,15 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
-// ===== SOLID PRINCIPLES IMPLEMENTATION =====
 
-// Single Responsibility: Data formatting utilities
+//  Data formatting utilities
 const Formatter = {
   currency: (amount) => `LKR ${amount.toLocaleString()}`,
   percentage: (value) => `${value}%`,
   months: (value) => `${value} months`,
 };
 
-// Single Responsibility: Configuration management
+// Configuration management
 const Config = {
   RISK_LEVELS: {
     'Low': { color: colors.forestGreen, bgColor: '#E8F5E8', icon: 'shield-checkmark' },
@@ -32,7 +31,7 @@ const Config = {
   }
 };
 
-// Single Responsibility: Data access abstraction
+//  Data access abstraction
 const DataAccessor = {
   getValue: (obj, key, fallback = '') => obj?.[key] ?? fallback,
   getRequestId: (request) => DataAccessor.getValue(request, 'requestId', Config.DEFAULT_VALUES.requestId),
@@ -45,7 +44,7 @@ const DataAccessor = {
   getBusinessType: (request) => DataAccessor.getValue(request, 'businessType', Config.DEFAULT_VALUES.businessType),
 };
 
-// Open/Closed: Extensible component interfaces
+// Extensible component interfaces
 const ComponentFactory = {
   // Reusable atomic components
   RiskChip: ({ riskLevel }) => {
@@ -99,7 +98,7 @@ const ComponentFactory = {
   ),
 };
 
-// Single Responsibility: Section components with clear boundaries
+//  Section components with clear boundaries
 const SectionComponents = {
   Header: ({ request }) => (
     <View style={styles.section}>
@@ -180,7 +179,7 @@ const SectionComponents = {
   ),
 };
 
-// Dependency Inversion: Abstract modal behavior
+//  Abstract modal behavior
 const ModalBehavior = {
   shouldRender: (visible, request) => visible && request,
   handleClose: (onClose) => onClose,
@@ -190,7 +189,7 @@ const ModalBehavior = {
   },
 };
 
-// Main Modal Component - Single Responsibility for modal orchestration
+// Main Modal Component 
 export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress }) => {
   if (!ModalBehavior.shouldRender(visible, request)) return null;
 
@@ -243,7 +242,7 @@ export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress
   );
 };
 
-// Styles - Interface Segregation: Grouped by component responsibility
+// Styles
 const styles = StyleSheet.create({
   // Modal Layout
   overlay: {

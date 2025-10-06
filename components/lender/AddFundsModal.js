@@ -3,9 +3,18 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert } fro
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
+// Mock card data for preview
+const MOCK_CARD = {
+  brand: 'Visa',
+  last4: '4242',
+  nickname: 'Visa Personal',
+  cardholder: 'MARTINA ALEX',
+  expiry: '12/30',
+  isDefault: true,
+};
+
 const AddFundsModal = ({ visible, onClose, onConfirm }) => {
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const handleConfirm = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -13,17 +22,40 @@ const AddFundsModal = ({ visible, onClose, onConfirm }) => {
       return;
     }
     
-    onConfirm({ amount: parseFloat(amount), paymentMethod });
+    onConfirm({ amount: parseFloat(amount), paymentMethod: 'card' });
     setAmount('');
-    setPaymentMethod('card');
     onClose();
   };
 
   const handleCancel = () => {
     setAmount('');
-    setPaymentMethod('card');
     onClose();
   };
+
+  // Card Preview Component
+  const CardPreview = ({ card }) => (
+    <View style={styles.cardPreview}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardIcon}>
+          <Ionicons name="card" size={20} color={colors.white} />
+        </View>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardBrand}>{card.brand}</Text>
+          <Text style={styles.cardNumber}>•••• {card.last4}</Text>
+        </View>
+        {card.isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>DEFAULT</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.cardDetails}>
+        <Text style={styles.cardNickname}>{card.nickname}</Text>
+        <Text style={styles.cardholder}>{card.cardholder}</Text>
+        <Text style={styles.expiry}>Expires {card.expiry}</Text>
+      </View>
+    </View>
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
@@ -37,6 +69,7 @@ const AddFundsModal = ({ visible, onClose, onConfirm }) => {
           </View>
 
           <View style={styles.modalBody}>
+            <Text style={styles.sectionTitle}>Deposit Amount</Text>
             <View style={styles.amountInputContainer}>
               <Text style={styles.currencySymbol}>LKR</Text>
               <TextInput
@@ -50,27 +83,8 @@ const AddFundsModal = ({ visible, onClose, onConfirm }) => {
               />
             </View>
 
-            <View style={styles.paymentOptions}>
-              <TouchableOpacity
-                style={[styles.paymentOption, paymentMethod === 'card' && styles.selectedOption]}
-                onPress={() => setPaymentMethod('card')}
-              >
-                <Ionicons name="card" size={18} color={paymentMethod === 'card' ? colors.blueGreen : colors.gray} />
-                <Text style={[styles.optionText, paymentMethod === 'card' && styles.selectedText]}>
-                  Card
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.paymentOption, paymentMethod === 'bank' && styles.selectedOption]}
-                onPress={() => setPaymentMethod('bank')}
-              >
-                <Ionicons name="business" size={18} color={paymentMethod === 'bank' ? colors.blueGreen : colors.gray} />
-                <Text style={[styles.optionText, paymentMethod === 'bank' && styles.selectedText]}>
-                  Bank
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <CardPreview card={MOCK_CARD} />
           </View>
 
           <View style={styles.modalFooter}>
@@ -123,6 +137,12 @@ const styles = StyleSheet.create({
   modalBody: {
     padding: spacing.lg,
   },
+  sectionTitle: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.midnightBlue,
+    marginBottom: spacing.sm,
+  },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -146,35 +166,68 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.midnightBlue,
   },
-  paymentOptions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  cardPreview: {
+    backgroundColor: colors.midnightBlue,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  paymentOption: {
-    flex: 1,
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.lightGray,
-    backgroundColor: colors.white,
+    marginBottom: spacing.sm,
   },
-  selectedOption: {
-    borderColor: colors.blueGreen,
-    backgroundColor: colors.babyBlue,
+  cardIcon: {
+    marginRight: spacing.sm,
   },
-  optionText: {
+  cardInfo: {
+    flex: 1,
+  },
+  cardBrand: {
+    fontSize: fontSize.base,
+    fontWeight: '700',
+    color: colors.white,
+    marginBottom: 2,
+  },
+  cardNumber: {
     fontSize: fontSize.sm,
-    color: colors.gray,
-    marginLeft: spacing.xs,
+    color: colors.lightGray,
     fontWeight: '500',
+    letterSpacing: 0.5,
   },
-  selectedText: {
-    color: colors.midnightBlue,
+  defaultBadge: {
+    backgroundColor: colors.blueGreen,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  defaultText: {
+    fontSize: 10,
+    color: colors.white,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  cardDetails: {
+    borderTopWidth: 1,
+    borderTopColor: colors.lightGray,
+    paddingTop: spacing.sm,
+  },
+  cardNickname: {
+    fontSize: fontSize.sm,
+    color: colors.white,
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  cardholder: {
+    fontSize: fontSize.sm,
+    color: colors.lightGray,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  expiry: {
+    fontSize: fontSize.sm,
+    color: colors.lightGray,
+    fontWeight: '500',
   },
   modalFooter: {
     flexDirection: 'row',
