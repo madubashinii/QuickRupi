@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import ROIGrowthChart from '../../components/ROIGrowthChart';
-import MonthlyReturnsChart from '../../components/MonthlyReturnsChart';
+import AnimatedScreen from '../../components/lender/AnimatedScreen';
+import ROIGrowthChart from '../../components/lender/ROIGrowthChart';
+import MonthlyReturnsChart from '../../components/lender/MonthlyReturnsChart';
 
 // Constants
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: '100%',
     height: '100%',
-    opacity: 0.4,
+    opacity: 0.9,
   },
   header: {
     position: 'absolute',

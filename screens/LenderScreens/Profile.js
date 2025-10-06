@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { colors } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
+import AnimatedScreen from '../../components/lender/AnimatedScreen';
 
 const Profile = () => {
   return (

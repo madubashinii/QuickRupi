@@ -1,19 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { BarChart } from 'react-native-chart-kit';
+import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
-const ROIGrowthChart = ({ data }) => {
+const MonthlyReturnsChart = ({ data }) => {
   // Transform data for react-native-chart-kit
   const chartData = {
     labels: data.map(item => item.month),
     datasets: [
       {
-        data: data.map(item => item.roi),
-        color: (opacity = 1) => colors.blueGreen,
-        strokeWidth: 3,
+        data: data.map(item => item.returns),
       },
     ],
   };
@@ -22,43 +20,36 @@ const ROIGrowthChart = ({ data }) => {
     backgroundColor: colors.white,
     backgroundGradientFrom: colors.white,
     backgroundGradientTo: colors.white,
-    decimalPlaces: 1,
-    color: (opacity = 1) => colors.blueGreen,
+    decimalPlaces: 0,
+    color: (opacity = 1) => colors.midnightBlue,
     labelColor: (opacity = 1) => colors.gray,
     style: {
       borderRadius: borderRadius.lg,
-    },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: colors.blueGreen,
-      fill: colors.blueGreen,
     },
     propsForBackgroundLines: {
       strokeDasharray: '3,3',
       stroke: colors.lightGray,
       strokeWidth: 1,
     },
+    barPercentage: 0.7,
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>ROI Growth (6 Months)</Text>
-      <LineChart
+      <Text style={styles.title}>Monthly Returns Trend</Text>
+      <BarChart
         data={chartData}
         width={width - 80} // Account for margins
         height={200}
         chartConfig={chartConfig}
-        bezier
         style={styles.chart}
-        withDots={true}
-        withShadow={false}
-        withVerticalLines={false}
-        withHorizontalLines={true}
-        withVerticalLabels={true}
         withHorizontalLabels={true}
-        yAxisSuffix="%"
+        withVerticalLabels={true}
+        withHorizontalLines={true}
+        withVerticalLines={false}
+        yAxisSuffix=" LKR"
         yAxisInterval={1}
+        showValuesOnTopOfBars={false}
       />
     </View>
   );
@@ -88,4 +79,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ROIGrowthChart;
+export default MonthlyReturnsChart;
