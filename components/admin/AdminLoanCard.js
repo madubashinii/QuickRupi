@@ -4,10 +4,15 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 export default function AdminLoanCard({ loan, onPress }) {
     const statusColors = {
         pending: { border: "#f59e0b", badge: "#fef3c7", text: "#d97706" },
-        approved: { border: "#5cd85a", badge: "#a4e5e0", text: "#107869" }, // Lime Green & Tiffany Blue
-        ongoing: { border: "#37beb0", badge: "#dbf5f0", text: "#0c6170" }, // Blue Green & Baby Blue
+        approved: { border: "#5cd85a", badge: "#a4e5e0", text: "#107869" },
+        ongoing: { border: "#37beb0", badge: "#dbf5f0", text: "#0c6170" },
         rejected: { border: "#dc2626", badge: "#fee2e2", text: "#dc2626" },
-        completed: { border: "#107869", badge: "#a4e5e0", text: "#1a5653" }, // Teal Green & Tiffany Blue
+        completed: { border: "#107869", badge: "#a4e5e0", text: "#1a5653" },
+        funding: { border: "#0c9fd4", badge: "#d0f0fd", text: "#0c6170" },
+        funded: { border: "#37beb0", badge: "#dbf5f0", text: "#0c6170" },
+        disbursed: { border: "#5cd85a", badge: "#a4e5e0", text: "#107869" },
+        repaying: { border: "#37beb0", badge: "#dbf5f0", text: "#0c6170" },
+        defaulted: { border: "#dc2626", badge: "#fee2e2", text: "#dc2626" },
     };
 
     const colors = statusColors[loan.status] || statusColors.pending;
@@ -19,13 +24,13 @@ export default function AdminLoanCard({ loan, onPress }) {
         >
             <View style={styles.header}>
                 <Text style={styles.loanId}>Loan #{loan.id}</Text>
-                <Text style={styles.amount}>LKR {loan.amount.toLocaleString()}</Text>
+                <Text style={styles.amount}>LKR {loan.amountRequested?.toLocaleString()}</Text>
             </View>
 
             <View style={styles.details}>
                 <View>
                     <Text style={styles.label}>Borrower</Text>
-                    <Text style={styles.value}>{loan.borrower}</Text>
+                    <Text style={styles.value}>{loan.borrowerName}</Text>
                 </View>
                 <View>
                     <Text style={styles.label}>Purpose</Text>
@@ -41,6 +46,7 @@ export default function AdminLoanCard({ loan, onPress }) {
         </TouchableOpacity>
     );
 }
+
 
 const styles = StyleSheet.create({
     card: {

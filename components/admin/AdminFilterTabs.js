@@ -1,7 +1,7 @@
 import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from "react-native";
 
-const filters = ["all", "pending", "approved", "ongoing", "rejected", "completed"];
+const filters = ["all", "pending", "funding", "funded", "disbursed", "repaying", "completed", "defaulted"];
 
 export default function AdminFilterTabs({ filter, setFilter }) {
     return (
@@ -25,11 +25,11 @@ export default function AdminFilterTabs({ filter, setFilter }) {
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 16
+        marginBottom: 16,
     },
     row: {
         flexDirection: "row",
-        gap: 8
+        gap: 8,
     },
     tab: {
         paddingVertical: 8,
@@ -46,15 +46,15 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
-        elevation: 3
+        elevation: 3,
     },
     tabText: {
         fontSize: 12,
         color: "#107869",
-        fontWeight: "600"
+        fontWeight: "600",
     },
     activeText: {
         color: "#fff",
-        fontWeight: "700"
+        fontWeight: "700",
     },
 });
