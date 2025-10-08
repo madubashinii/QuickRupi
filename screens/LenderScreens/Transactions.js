@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import AddFundsModal from '../../components/lender/AddFundsModal';
 import WithdrawModal from '../../components/lender/WithdrawModal';
+import { initializeUserWallet, subscribeToWallet } from '../../services/wallet';
 
 // Constants
 const BACKGROUND_HEIGHT = 370;
@@ -37,12 +38,12 @@ const useTransactionHandlers = (setShowAddFundsModal, setShowWithdrawModal) => (
   handleWithdraw: () => setShowWithdrawModal(true),
   handleExport: () => console.log('Export pressed'),
   handleAddFundsConfirm: (data) => {
-    console.log('Add Funds confirmed:', data);
-    // TODO: Implement actual add funds logic
+    console.log('Add Funds confirmed - Amount:', data.amount);
+    // Balance updates automatically via real-time listener
   },
   handleWithdrawConfirm: (data) => {
-    console.log('Withdraw confirmed:', data);
-    // TODO: Implement actual withdraw logic
+    console.log('Withdraw confirmed - Amount:', data.amount);
+    // Balance updates automatically via real-time listener
   },
 });
 
@@ -141,12 +142,68 @@ const TransactionsList = ({ transactions }) => (
 
 // Main Component
 const Transactions = () => {
-  const { walletBalance, transactions } = MOCK_DATA;
+  const { transactions } = MOCK_DATA;
+  const [walletBalance, setWalletBalance] = useState('LKR 0.00');
   const [filterBy, setFilterBy] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState(null);
   const { handleAddFunds, handleWithdraw, handleExport, handleAddFundsConfirm, handleWithdrawConfirm } = useTransactionHandlers(setShowAddFundsModal, setShowWithdrawModal);
+
+  // Initialize wallet and subscribe to real-time updates
+  useEffect(() => {
+    const setupWallet = async () => {
+      try {
+        await initializeUserWallet('L001');
+        setWalletLoading(false);
+      } catch (error) {
+        console.error('Wallet initialization failed:', error);
+        setWalletError(error.message);
+        setWalletLoading(false);
+      }
+    };
+
+    setupWallet();
+
+    // Subscribe to real-time wallet updates
+      // DEV MODE: Currently hardcoded to "L001"
+      // TODO: Replace with role-based check once user collection is complete:
+      // if (currentUser.role === 'lender') { await initializeUserWallet(currentUser.id); }
+    const unsubscribe = subscribeToWallet('L001', (walletData) => {
+      if (walletData.balance !== null) {
+        setWalletBalance(`LKR ${walletData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Show loading while wallet initializes
+  if (walletLoading) {
+    return (
+      <AnimatedScreen style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.blueGreen} />
+          <Text style={styles.loadingText}>Initializing wallet...</Text>
+        </View>
+      </AnimatedScreen>
+    );
+  }
+
+  // Show error if wallet initialization failed
+  if (walletError) {
+    return (
+      <AnimatedScreen style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle" size={48} color={colors.red} />
+          <Text style={styles.errorTitle}>Wallet Error</Text>
+          <Text style={styles.errorText}>{walletError}</Text>
+        </View>
+      </AnimatedScreen>
+    );
+  }
 
   return (
     <AnimatedScreen style={styles.container}>
@@ -171,12 +228,14 @@ const Transactions = () => {
           visible={showAddFundsModal}
           onClose={() => setShowAddFundsModal(false)}
           onConfirm={handleAddFundsConfirm}
+          userId="L001"
         />
         <WithdrawModal
           visible={showWithdrawModal}
           onClose={() => setShowWithdrawModal(false)}
           onConfirm={handleWithdrawConfirm}
           walletBalance={walletBalance}
+          userId="L001"
         />
         <TransactionsList transactions={transactions} />
       </ScrollView>
@@ -213,6 +272,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.babyBlue,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  loadingText: {
+    color: colors.midnightBlue,
+    fontSize: fontSize.base,
+    marginTop: spacing.md,
+  },
+  errorTitle: {
+    color: colors.red,
+    fontSize: fontSize.lg,
+    fontWeight: 'bold',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  errorText: {
+    color: colors.gray,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
   },
   
   // Header

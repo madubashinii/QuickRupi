@@ -187,23 +187,17 @@ export const prepareCardDataForFirestore = (formData, userId) => {
  * Prepare bank data for Firestore
  */
 export const prepareBankDataForFirestore = (formData, userId) => {
-  console.log('Preparing bank data:', formData, 'userId:', userId);
-  
   // Validate required fields
   if (!formData.bankName?.trim()) {
-    console.log('Bank name validation failed:', formData.bankName);
     throw new Error('Bank name is required');
   }
   if (!formData.accountNumber?.trim()) {
-    console.log('Account number validation failed:', formData.accountNumber);
     throw new Error('Account number is required');
   }
   if (!formData.accountHolderName?.trim()) {
-    console.log('Account holder name validation failed:', formData.accountHolderName);
     throw new Error('Account holder name is required');
   }
   if (!formData.branch?.trim()) {
-    console.log('Branch validation failed:', formData.branch);
     throw new Error('Branch is required');
   }
 
@@ -219,6 +213,5 @@ export const prepareBankDataForFirestore = (formData, userId) => {
     isActive: true
   };
   
-  console.log('Prepared bank data:', preparedData);
   return preparedData;
 };

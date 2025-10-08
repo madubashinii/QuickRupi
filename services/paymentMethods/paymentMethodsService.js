@@ -99,11 +99,9 @@ export const createPaymentMethod = async (paymentData) => {
 
     // Encrypt sensitive data
     if (docData.type === TYPES.BANK && docData.accountNumber) {
-      console.log('Encrypting bank account number:', docData.accountNumber);
       const { encrypted, masked } = encryptionService.encryptAndMask(docData.accountNumber);
       docData.accountNumber = encrypted;
       docData.accountNumberMasked = masked;
-      console.log('Encryption successful');
     }
 
     // Handle default setting
@@ -198,7 +196,7 @@ export const updatePaymentMethod = async (paymentMethodId, updates) => {
         await unsetOtherDefaults(current.userId, current.type, paymentMethodId);
       } else if (updates.isDefault === false && current.isDefault) {
         // Unsetting default - ensure at least one remains default
-        console.log('Warning: Removing default status from payment method:', paymentMethodId);
+        console.warn('Removing default status from payment method');
       }
     }
 
@@ -210,8 +208,6 @@ export const updatePaymentMethod = async (paymentMethodId, updates) => {
 
     const docRef = doc(db, COLLECTION, paymentMethodId);
     await updateDoc(docRef, updatePayload);
-    
-    console.log('Payment method updated successfully:', paymentMethodId);
   } catch (error) {
     handleError('update', error);
     throw error;
