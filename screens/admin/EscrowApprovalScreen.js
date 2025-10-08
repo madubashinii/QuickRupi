@@ -1,52 +1,45 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { fetchEscrows, updateEscrowStatus } from "../../services/admin/escrowService";
 
-const escrowData = [
-    {
-        id: 'LN004',
-        borrower: 'John Smith',
-        lender: 'Michael Brown',
-        amount: 900000,
-        requestDate: 'Dec 20, 2024',
-        purpose: 'Business expansion - equipment purchase for manufacturing unit. Need funds to buy 2 new machines to increase production capacity.',
-        status: 'Pending',
-    },
-    {
-        id: 'LN006',
-        borrower: 'Lisa Davis',
-        lender: 'Sarah Johnson',
-        amount: 450000,
-        requestDate: 'Dec 21, 2024',
-        purpose: 'Medical expenses coverage for surgery and rehabilitation costs.',
-        status: 'Pending',
-    },
-    {
-        id: 'LN007',
-        borrower: 'Mark Wilson',
-        lender: 'Emma Thompson',
-        amount: 300000,
-        approvedDate: 'Dec 19, 2024',
-        status: 'Approved',
-    },
-];
 
 export default function EscrowApprovalScreen({ navigation }) {
-    const [loans, setLoans] = useState(escrowData);
+    const [escrows, setEscrows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [successMsg, setSuccessMsg] = useState("");
+    const [confirmVisible, setConfirmVisible] = useState(false);
+    const [selectedEscrow, setSelectedEscrow] = useState(null);
+    const [actionType, setActionType] = useState(""); // 'released' or 'refunded'
 
-    const approveEscrow = (loanId) => {
-        setLoans(loans.map(loan =>
-            loan.id === loanId ? { ...loan, status: 'Approved' } : loan
-        ));
-        Alert.alert('Success', 'Escrow approved successfully!');
+    useEffect(() => {
+        loadEscrows();
+    }, []);
+
+    const loadEscrows = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchEscrows();
+            setEscrows(data);
+        } catch {
+            console.error("Failed to load escrows");
+        } finally {
+            setLoading(false);
+        }
+    };
+    const handleEscrowUpdate = async (escrowId, newStatus, lenderId, amount) => {
+        const result = await updateEscrowStatus(escrowId, newStatus, lenderId, amount);
+        setSuccessMsg(result.message);
+        setTimeout(() => setSuccessMsg(""), 2000);
+
+        if (result.success) {
+            setEscrows(prev =>
+                prev.map(e => (e.id === escrowId ? { ...e, status: newStatus } : e))
+            );
+        }
     };
 
-    const rejectEscrow = (loanId) => {
-        setLoans(loans.map(loan =>
-            loan.id === loanId ? { ...loan, status: 'Rejected' } : loan
-        ));
-        Alert.alert('Rejected', 'Escrow request rejected');
-    };
+    if (loading) return <ActivityIndicator size="large" style={{ flex: 1, justifyContent: 'center' }} />;
 
     return (
         <View style={styles.container}>
@@ -56,54 +49,73 @@ export default function EscrowApprovalScreen({ navigation }) {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {loans.map(loan => (
-                    <View key={loan.id} style={styles.card}>
+                {escrows.map(escrow => (
+                    <View key={escrow.id} style={styles.card}>
                         <View style={styles.cardHeader}>
-                            <Text style={styles.loanTitle}>{`Loan #${loan.id}`}</Text>
-                            <Text style={[
-                                styles.statusBadge,
-                                loan.status === 'Pending' ? styles.pendingBadge :
-                                    loan.status === 'Approved' ? styles.approvedBadge :
-                                        styles.rejectedBadge
-                            ]}>
-                                {loan.status}
+                            <Text style={styles.loanTitle}>{`Loan #${escrow.id}`}</Text>
+                            <Text
+                                style={[
+                                    styles.statusBadge,
+                                    escrow.status === 'Pending'
+                                        ? styles.pendingBadge
+                                        : escrow.status === 'released'
+                                            ? styles.approvedBadge
+                                            : styles.rejectedBadge
+                                ]}
+                            >
+                                {escrow.status}
                             </Text>
                         </View>
 
-                        {loan.status !== 'Approved' && (
+                        {escrow.status !== 'released' && escrow.status !== 'refunded' && (
                             <>
                                 <View style={styles.infoGrid}>
                                     <View>
                                         <Text style={styles.infoItem}>Borrower</Text>
-                                        <Text style={styles.infoValue}>{loan.borrower}</Text>
+                                        <Text style={styles.infoValue}>{escrow.borrower}</Text>
                                     </View>
                                     <View>
                                         <Text style={styles.infoItem}>Lender</Text>
-                                        <Text style={styles.infoValue}>{loan.lender}</Text>
+                                        <Text style={styles.infoValue}>{escrow.lender}</Text>
                                     </View>
                                     <View>
                                         <Text style={styles.infoItem}>Amount</Text>
                                         <Text style={[styles.infoValue, { color: '#0c6170' }]}>
-                                            LKR {loan.amount.toLocaleString()}
+                                            LKR {escrow.amount.toLocaleString()}
                                         </Text>
                                     </View>
                                     <View>
                                         <Text style={styles.infoItem}>Request Date</Text>
-                                        <Text style={styles.infoValue}>{loan.requestDate}</Text>
+                                        <Text style={styles.infoValue}>{escrow.requestDate}</Text>
                                     </View>
                                 </View>
 
                                 <View style={styles.purposeBox}>
                                     <Text style={styles.purposeLabel}>Purpose</Text>
-                                    <Text style={styles.purposeText}>{loan.purpose}</Text>
+                                    <Text style={styles.purposeText}>{escrow.purpose}</Text>
                                 </View>
 
                                 <View style={styles.actionButtons}>
-                                    <TouchableOpacity style={styles.btnApprove} onPress={() => approveEscrow(loan.id)}>
+                                    <TouchableOpacity
+                                        style={styles.btnApprove}
+                                        onPress={() => {
+                                            setSelectedEscrow(escrow);
+                                            setActionType('released');
+                                            setConfirmVisible(true);
+                                        }}
+                                    >
                                         <FontAwesome5 name="check" size={16} color="#fff" style={{ marginRight: 6 }} />
                                         <Text style={styles.btnText}>Approve</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={styles.btnReject} onPress={() => rejectEscrow(loan.id)}>
+
+                                    <TouchableOpacity
+                                        style={styles.btnReject}
+                                        onPress={() => {
+                                            setSelectedEscrow(escrow);
+                                            setActionType('refunded');
+                                            setConfirmVisible(true);
+                                        }}
+                                    >
                                         <FontAwesome5 name="times" size={16} color="#fff" style={{ marginRight: 6 }} />
                                         <Text style={styles.btnText}>Reject</Text>
                                     </TouchableOpacity>
@@ -111,26 +123,92 @@ export default function EscrowApprovalScreen({ navigation }) {
                             </>
                         )}
 
-                        {loan.status === 'Approved' && (
+                        {(escrow.status === 'released' || escrow.status === 'refunded') && (
                             <View style={styles.approvedBox}>
                                 <FontAwesome5 name="check-circle" size={18} color="#107869" style={{ marginRight: 6 }} />
-                                <Text style={styles.approvedText}>Funds released successfully</Text>
+                                <Text style={styles.approvedText}>
+                                    {escrow.status === 'released' ? 'Funds released successfully' : 'Escrow refunded'}
+                                </Text>
                             </View>
                         )}
                     </View>
                 ))}
 
-                {loans.filter(l => l.status === 'Pending').length === 0 && (
+                {escrows.every(e => e.status === 'released' || e.status === 'refunded') && escrows.length > 0 && (
                     <View style={styles.emptyState}>
                         <FontAwesome5 name="check-circle" size={48} color="#5cd85a" />
                         <Text style={styles.emptyTitle}>All Caught Up!</Text>
                         <Text style={styles.emptyText}>No more pending escrow approvals at this time.</Text>
                     </View>
                 )}
+                {successMsg !== "" && (
+                    <View style={styles.successMsgBox}>
+                        <Text style={styles.successMsgText}>{successMsg}</Text>
+                    </View>
+                )}
+
             </ScrollView>
+
+            {/* Confirmation Modal */}
+            {confirmVisible && selectedEscrow && (
+                <Modal
+                    visible={confirmVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setConfirmVisible(false)}
+                >
+                    <View style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <View style={{
+                            width: '80%',
+                            backgroundColor: '#fff',
+                            borderRadius: 12,
+                            padding: 20
+                        }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 20 }}>
+                                {`Are you sure you want to ${actionType === 'released' ? 'approve' : 'reject'} escrow for Loan #${selectedEscrow.id}?`}
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <TouchableOpacity
+                                    style={{ flex: 1, marginRight: 6, padding: 12, backgroundColor: '#107869', borderRadius: 8, alignItems: 'center' }}
+                                    onPress={async () => {
+                                        await handleEscrowUpdate(
+                                            selectedEscrow.id,
+                                            actionType,
+                                            selectedEscrow.lenderId,
+                                            selectedEscrow.amount
+                                        );
+                                        setConfirmVisible(false);
+                                        setSelectedEscrow(null);
+                                        setActionType("");
+                                    }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: '700' }}>Yes</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={{ flex: 1, marginLeft: 6, padding: 12, backgroundColor: '#dc2626', borderRadius: 8, alignItems: 'center' }}
+                                    onPress={() => {
+                                        setConfirmVisible(false);
+                                        setSelectedEscrow(null);
+                                        setActionType("");
+                                    }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: '700' }}>No</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
@@ -216,7 +294,8 @@ const styles = StyleSheet.create({
     infoValue: {
         fontWeight: '600',
         color: '#08313a',
-        marginTop: 2
+        marginTop: 2,
+        fontSize: 11
     },
     purposeBox: {
         backgroundColor: '#dbf5f0',
@@ -309,4 +388,20 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 14
     },
+    successMsgBox: {
+        position: 'absolute',
+        top: 100,
+        alignSelf: 'center',
+        backgroundColor: '#107869',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        zIndex: 100,
+        elevation: 5
+    },
+    successMsgText: {
+        color: '#fff',
+        fontWeight: '600'
+    }
+
 });
