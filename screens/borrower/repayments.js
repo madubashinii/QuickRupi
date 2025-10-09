@@ -2,20 +2,20 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
-import InfoText from "../components/InfoText"; // adjust path if needed
+import InfoText from "../components/InfoBox"; 
 
-const LoanRecords = () => {
+const PaymentRecords = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fixedUserId = "B001"; // replace with a test user ID
+  const fixedUserId = "B001";// replace with a test user ID
 
   useEffect(() => {
     const fetchRecords = async () => {
       try {
         const q = query(
-          collection(db, "loans"),
-          where("userId", "==", fixedUserId) // replace later
+          collection(db, "repayments"),
+          where("userId", "==", fixedUserId) //replace this with correct id after testing
         );
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({

@@ -2,7 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-
 const firebaseConfig = {
     apiKey: process.env.EXPO_PUBLIC_API_KEY,
     authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
@@ -11,6 +10,13 @@ const firebaseConfig = {
     messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
     appId: process.env.EXPO_PUBLIC_APP_ID,
 };
+
+if (firebaseConfig){
+    console.log("🔥 Firebase Config:", firebaseConfig);
+}
+else{
+    console.log("🔥 nothing");
+}
 
 
 const app = initializeApp(firebaseConfig);
