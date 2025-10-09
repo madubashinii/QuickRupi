@@ -1,15 +1,78 @@
-import React from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { FontAwesome5 } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import PieChart from "../../components/admin/AdminPieChart";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { fetchAnalyticsData } from "../../services/admin/analyticsService";
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
-export default function AnalyticsScreen({ navigation }) {
-    // Pie chart data with your colors
-    const repaymentData = [
-        { color: "#5cd85a", percent: 80 }, // On Time - Lime Green
-        { color: "#f59e0b", percent: 10 }, // Late
-        { color: "#dc2626", percent: 10 }, // Default
-    ];
+
+export default function AnalyticsScreen() {
+    const [loading, setLoading] = useState(true);
+    const [analytics, setAnalytics] = useState(null);
+
+    useEffect(() => {
+        loadAnalytics();
+    }, []);
+
+    const loadAnalytics = async () => {
+        setLoading(true);
+        const data = await fetchAnalyticsData();
+        setAnalytics(data);
+        setLoading(false);
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+                <ActivityIndicator size="large" color="#0c6170" />
+                <Text style={{ marginTop: 10, color: "#0c6170" }}>Loading analytics...</Text>
+            </View>
+        );
+    }
+
+    const repaymentData = analytics?.repaymentData || [];
+
+
+    const generatePDF = async (analytics) => {
+        if (!analytics) return;
+
+        const htmlContent = `
+    <html>
+      <head> 
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #0c6170; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #0c6170; padding: 10px; text-align: left; }
+          th { background-color: #a4e5e0; }
+        </style>
+      </head>
+      <body>
+        <h1>Platform Analytics Report</h1>
+        <table>
+          <tr><th>Metric</th><th>Value</th></tr>
+          <tr><td>Total Volume</td><td>LKR ${analytics.totalVolume.toLocaleString()}</td></tr>
+          <tr><td>Active Users</td><td>${analytics.activeUsers}</td></tr>
+          <tr><td>Success Rate</td><td>${analytics.successRate}%</td></tr>
+          <tr><td>Average Loan Size</td><td>LKR ${analytics.avgLoanSize.toLocaleString()}</td></tr>
+          <tr><td>New Borrowers</td><td>${analytics.userGrowth.newBorrowers} (↑ ${analytics.userGrowthPercent.newBorrowers}%)</td></tr>
+          <tr><td>New Lenders</td><td>${analytics.userGrowth.newLenders} (↑ ${analytics.userGrowthPercent.newLenders}%)</td></tr>
+          <tr><td>Total Users</td><td>${analytics.userGrowth.totalUsers} (↑ ${analytics.userGrowthPercent.totalUsers}%)</td></tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+        // Generate PDF file
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+
+        // Share it
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Analytics PDF' });
+    };
+
+
+
 
     return (
         <View style={styles.container}>
@@ -20,44 +83,22 @@ export default function AnalyticsScreen({ navigation }) {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {/* Funding Volume Trend */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Funding Volume Trend</Text>
-                    <View style={styles.barChart}>
-                        {[0.6, 0.8, 0.45, 0.9, 0.7, 0.85, 0.95].map((height, idx) => (
-                            <View
-                                key={idx}
-                                style={[styles.bar, { height: `${height * 100}%` }]}
-                            />
-                        ))}
-                    </View>
-                    <View style={styles.barLabels}>
-                        {["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(
-                            (month, idx) => (
-                                <Text key={idx} style={styles.barLabel}>
-                                    {month}
-                                </Text>
-                            )
-                        )}
-                    </View>
-                </View>
-
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>LKR 37.5M</Text>
+                        <Text style={styles.statNumber}>LKR {analytics.totalVolume.toLocaleString()}</Text>
                         <Text style={styles.statLabel}>Total Volume</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>156</Text>
+                        <Text style={styles.statNumber}>{analytics.activeUsers}</Text>
                         <Text style={styles.statLabel}>Active Users</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>89%</Text>
+                        <Text style={styles.statNumber}>{analytics.successRate}%</Text>
                         <Text style={styles.statLabel}>Success Rate</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>LKR 630K</Text>
+                        <Text style={styles.statNumber}>LKR {analytics.avgLoanSize.toLocaleString()}</Text>
                         <Text style={styles.statLabel}>Avg. Loan Size</Text>
                     </View>
                 </View>
@@ -67,23 +108,15 @@ export default function AnalyticsScreen({ navigation }) {
                     <Text style={styles.cardTitle}>Repayment Performance</Text>
                     <PieChart size={120} strokeWidth={20} data={repaymentData} />
 
-                    {/* Pie Labels */}
+                    {/* Pie Chart Labels */}
                     <View style={styles.pieLabels}>
-                        <View style={styles.pieLabelItem}>
-                            <View style={[styles.pieDot, { backgroundColor: "#5cd85a" }]} />
-                            <Text style={styles.pieText}>On Time</Text>
-                            <Text style={styles.piePercent}>80%</Text>
-                        </View>
-                        <View style={styles.pieLabelItem}>
-                            <View style={[styles.pieDot, { backgroundColor: "#f59e0b" }]} />
-                            <Text style={styles.pieText}>Late</Text>
-                            <Text style={styles.piePercent}>10%</Text>
-                        </View>
-                        <View style={styles.pieLabelItem}>
-                            <View style={[styles.pieDot, { backgroundColor: "#dc2626" }]} />
-                            <Text style={styles.pieText}>Default</Text>
-                            <Text style={styles.piePercent}>10%</Text>
-                        </View>
+                        {repaymentData.map((item, idx) => (
+                            <View key={idx} style={styles.pieLabelItem}>
+                                <View style={[styles.pieDot, { backgroundColor: item.color }]} />
+                                <Text style={styles.pieText}>{item.label}</Text>
+                                <Text style={styles.piePercent}>{item.percent}%</Text>
+                            </View>
+                        ))}
                     </View>
                 </View>
 
@@ -91,9 +124,24 @@ export default function AnalyticsScreen({ navigation }) {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>User Growth</Text>
                     {[
-                        { title: "New Borrowers", value: "+23", percent: "↑ 15%", color: "#5cd85a" },
-                        { title: "New Lenders", value: "+18", percent: "↑ 12%", color: "#5cd85a" },
-                        { title: "Total Users", value: "156", percent: "↑ 8%", color: "#5cd85a" },
+                        {
+                            title: "New Borrowers",
+                            value: `+${analytics.userGrowth.newBorrowers}`,
+                            percent: `↑ ${analytics.userGrowthPercent.newBorrowers}%`,
+                            color: "#5cd85a",
+                        },
+                        {
+                            title: "New Lenders",
+                            value: `+${analytics.userGrowth.newLenders}`,
+                            percent: `↑ ${analytics.userGrowthPercent.newLenders}%`,
+                            color: "#5cd85a",
+                        },
+                        {
+                            title: "Total Users",
+                            value: analytics.userGrowth.totalUsers,
+                            percent: `↑ ${analytics.userGrowthPercent.totalUsers}%`,
+                            color: "#5cd85a",
+                        },
                     ].map((item, idx) => (
                         <View key={idx} style={styles.transactionItem}>
                             <View>
@@ -101,9 +149,7 @@ export default function AnalyticsScreen({ navigation }) {
                                 <Text style={styles.transactionDate}>This month</Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>
-                                <Text style={[styles.transactionAmount, { color: item.color }]}>
-                                    {item.value}
-                                </Text>
+                                <Text style={[styles.transactionAmount, { color: item.color }]}>{item.value}</Text>
                                 <Text style={{ fontSize: 12, color: item.color }}>{item.percent}</Text>
                             </View>
                         </View>
@@ -111,7 +157,10 @@ export default function AnalyticsScreen({ navigation }) {
                 </View>
 
                 {/* Button */}
-                <TouchableOpacity style={styles.secondaryBtn}>
+                <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => generatePDF(analytics)}
+                >
                     <FontAwesome5
                         name="download"
                         size={16}
@@ -120,6 +169,8 @@ export default function AnalyticsScreen({ navigation }) {
                     />
                     <Text style={styles.secondaryBtnText}>Generate Detailed Report</Text>
                 </TouchableOpacity>
+
+
             </ScrollView>
         </View>
     );
