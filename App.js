@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import BorrowerDashboard from './screens/borrower/BorrowerDashboard';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import BorrowerBottomNav from "./navigation/borrower/borrowerNav";
 
 const Stack = createNativeStackNavigator();
 
@@ -11,14 +12,11 @@ export default function App() {
   return (
 
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="BorrowerDashboard">
-        <Stack.Screen 
-          name="BorrowerDashboard" 
-          component={HomeScreen} 
-          options={{ title: 'Welcome' }}
-        />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="BorrowerApp" component={BorrowerBottomNav} />
       </Stack.Navigator>
     </NavigationContainer>
+    
   );
     //<View style={styles.container}>
      // {/*<Text>Open up App.js to start working on your app!</Text>*/}

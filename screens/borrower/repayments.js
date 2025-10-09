@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
-import InfoText from "../components/InfoBox"; 
+import InfoText from "../../components/borrower/infoBox"; 
 
 const PaymentRecords = () => {
   const [records, setRecords] = useState([]);

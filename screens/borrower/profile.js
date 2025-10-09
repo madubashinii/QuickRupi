@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import BottomNavBar from "../components/BottomNavBar"; // add your navbar if needed
 import Toast from "react-native-root-toast";
 
 
@@ -89,9 +88,6 @@ const ProfileScreen = ({ navigation }) => {
           </Text>
          </TouchableOpacity>
       </View>
-
-      {/* bottom nav bar */}
-      <BottomNavBar navigation={navigation} />
     </View>
   );
 };
@@ -141,3 +137,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+export default ProfileScreen;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
-import InfoText from "../components/InfoText"; // adjust path if needed
+import InfoText from "../../components/borrower/infoBox"; // adjust path if needed
 
 const LoanRecords = () => {
   const [records, setRecords] = useState([]);
@@ -76,4 +76,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PaymentRecords;
+export default LoanRecords;
