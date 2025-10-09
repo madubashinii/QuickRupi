@@ -1,63 +1,3 @@
-// import { collection, getDocs, query, where } from "firebase/firestore";
-// import { db } from "../../services/firebaseConfig";
-
-// // Fetch users, loans, repayments, and investments
-// export const fetchAnalyticsData = async () => {
-//     try {
-//         const [usersSnap, loansSnap, repaymentsSnap, investmentsSnap] = await Promise.all([
-//             getDocs(collection(db, "users")),
-//             getDocs(collection(db, "loans")),
-//             getDocs(collection(db, "repayments")),
-//             getDocs(collection(db, "investments")),
-//         ]);
-
-//         const totalVolume = investmentsSnap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-//         const activeUsers = usersSnap.docs.length;
-
-//         const totalRepayments = repaymentsSnap.docs.length;
-//         const onTimeRepayments = repaymentsSnap.docs.filter(r => r.data().status === "completed").length;
-//         const successRate = totalRepayments ? Math.round((onTimeRepayments / totalRepayments) * 100) : 0;
-
-//         const loanAmounts = loansSnap.docs.map(doc => doc.data().amountFunded || doc.data().amountRequested || 0);
-//         const avgLoanSize = loanAmounts.length > 0 ? Math.round(loanAmounts.reduce((a, b) => a + b, 0) / loanAmounts.length) : 0;
-
-//         const onTimePercent = totalRepayments ? Math.round((onTimeRepayments / totalRepayments) * 100) : 0;
-//         const latePercent = 10;
-//         const defaultPercent = totalRepayments ? 100 - onTimePercent - latePercent : 0;
-
-//         const repaymentData = [
-//             { color: "#5cd85a", percent: onTimePercent, label: "On Time" },
-//             { color: "#f59e0b", percent: latePercent, label: "Late" },
-//             { color: "#dc2626", percent: defaultPercent, label: "Default" },
-//         ];
-
-//         const thisMonth = new Date().getMonth();
-//         const lastMonth = (thisMonth - 1 + 12) % 12;
-
-//         const newBorrowers = usersSnap.docs.filter(u => u.data().role === "borrower" && u.data().createdAt.toDate().getMonth() === thisMonth).length;
-//         const newLenders = usersSnap.docs.filter(u => u.data().role === "lender" && u.data().createdAt.toDate().getMonth() === thisMonth).length;
-
-//         const prevBorrowers = usersSnap.docs.filter(u => u.data().role === "borrower" && u.data().createdAt.toDate().getMonth() === lastMonth).length;
-//         const prevLenders = usersSnap.docs.filter(u => u.data().role === "lender" && u.data().createdAt.toDate().getMonth() === lastMonth).length;
-
-//         const newBorrowersPercent = prevBorrowers ? Math.round((newBorrowers / prevBorrowers) * 100) : 0;
-//         const newLendersPercent = prevLenders ? Math.round((newLenders / prevLenders) * 100) : 0;
-//         const totalUsersPercent = 0; // optional
-
-//         return {
-//             totalVolume,
-//             activeUsers,
-//             successRate,
-//             avgLoanSize,
-//             repaymentData,
-//             userGrowth: { newBorrowers, newLenders, totalUsers: activeUsers },
-//             userGrowthPercent: { newBorrowers: newBorrowersPercent, newLenders: newLendersPercent, totalUsers: totalUsersPercent },
-//         };
-//     } catch (error) {
-//         console.error("Error fetching analytics data:", error);
-//         return null;
-//     }
-// };
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
 
@@ -91,7 +31,7 @@ export const fetchAnalyticsData = async () => {
         const totalRepayments = repaymentsSnap.docs.length;
         const onTimeRepayments = repaymentsSnap.docs.filter(r => {
             const data = r.data();
-            const repaidAt = parseDate(data.repaidAt || data.paidAt); // in case different field names
+            const repaidAt = parseDate(data.repaidAt || data.paidAt);
             const dueDate = parseDate(data.dueDate);
             return data.status === "completed" && repaidAt && dueDate && repaidAt <= dueDate;
         }).length;
