@@ -5,6 +5,7 @@ import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import AddFundsModal from '../../components/lender/AddFundsModal';
 import WithdrawModal from '../../components/lender/WithdrawModal';
+import ExportModal from '../../components/lender/ExportModal';
 import { initializeUserWallet, subscribeToWallet } from '../../services/wallet';
 import { subscribeToUserTransactions, getMoreTransactions, formatTransactionForDisplay, applyTransactionFilter } from '../../services/transactions';
 
@@ -59,12 +60,10 @@ const showErrorNotification = (title, message) => {
 };
 
 // Event Handlers
-const useTransactionHandlers = (setShowAddFundsModal, setShowWithdrawModal) => ({
+const useTransactionHandlers = (setShowAddFundsModal, setShowWithdrawModal, setShowExportModal) => ({
   handleAddFunds: () => setShowAddFundsModal(true),
   handleWithdraw: () => setShowWithdrawModal(true),
-  handleExport: () => {
-    showSuccessNotification('Export', 'Transaction export feature coming soon!');
-  },
+  handleExport: () => setShowExportModal(true),
   handleAddFundsConfirm: (data) => {
     // Balance and transactions update automatically via real-time listeners
     if (data.success !== false) {
@@ -248,7 +247,18 @@ const LoadMoreButton = ({ onPress, isLoading, disabled }) => (
   </TouchableOpacity>
 );
 
-const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingMore, onLoadMore }) => {
+const ShowLessButton = ({ onPress }) => (
+  <TouchableOpacity
+    style={styles.showLessButton}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <Ionicons name="chevron-up" size={18} color={colors.blueGreen} />
+    <Text style={styles.showLessText}>Show Less</Text>
+  </TouchableOpacity>
+);
+
+const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingMore, onLoadMore, hasLoadedMore, onShowLess }) => {
   if (loading) {
     return <LoadingSkeleton />;
   }
@@ -260,6 +270,13 @@ const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingM
           {transactions.map(transaction => (
             <TransactionItem key={transaction.transactionId} transaction={transaction} />
           ))}
+          
+          {/* Show Less Button (appears when more items are loaded) */}
+          {hasLoadedMore && (
+            <ShowLessButton onPress={onShowLess} />
+          )}
+          
+          {/* Load More or End of List */}
           {hasMore ? (
             <LoadMoreButton 
               onPress={onLoadMore}
@@ -267,11 +284,13 @@ const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingM
               disabled={isLoadingMore}
             />
           ) : (
-            <View style={styles.endOfListContainer}>
-              <View style={styles.endOfListDivider} />
-              <Text style={styles.endOfListText}>End of transactions</Text>
-              <View style={styles.endOfListDivider} />
-            </View>
+            !hasLoadedMore && (
+              <View style={styles.endOfListContainer}>
+                <View style={styles.endOfListDivider} />
+                <Text style={styles.endOfListText}>End of transactions</Text>
+                <View style={styles.endOfListDivider} />
+              </View>
+            )
           )}
         </>
       ) : (
@@ -297,14 +316,17 @@ const Transactions = () => {
   const [hasMoreTransactions, setHasMoreTransactions] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [lastVisibleTransaction, setLastVisibleTransaction] = useState(null);
+  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+  const [initialTransactions, setInitialTransactions] = useState([]);
   
   // UI State
   const [filterBy, setFilterBy] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   
-  const { handleAddFunds, handleWithdraw, handleExport, handleAddFundsConfirm, handleWithdrawConfirm } = useTransactionHandlers(setShowAddFundsModal, setShowWithdrawModal);
+  const { handleAddFunds, handleWithdraw, handleExport, handleAddFundsConfirm, handleWithdrawConfirm } = useTransactionHandlers(setShowAddFundsModal, setShowWithdrawModal, setShowExportModal);
 
   // Initialize wallet and subscribe to real-time updates
   useEffect(() => {
@@ -338,10 +360,12 @@ const Transactions = () => {
         // Format transactions for display
         const formattedTransactions = transactionsData.map(formatTransactionForDisplay);
         setTransactions(formattedTransactions);
+        setInitialTransactions(formattedTransactions); // Store initial load
         setHasMoreTransactions(hasMore);
         setLastVisibleTransaction(lastVisible);
         setTransactionsLoading(false);
         setTransactionsError(null);
+        setHasLoadedMore(false); // Reset on new subscription data
       } catch (error) {
         console.error('Transaction formatting error:', error);
         setTransactionsError(error.message);
@@ -372,12 +396,20 @@ const Transactions = () => {
       setTransactions(prev => [...prev, ...formattedNewTransactions]);
       setHasMoreTransactions(hasMore);
       setLastVisibleTransaction(lastVisible);
+      setHasLoadedMore(true); // Mark that more has been loaded
     } catch (error) {
       console.error('Load more error:', error);
       showErrorNotification('Load Failed', 'Failed to load more transactions');
     } finally {
       setIsLoadingMore(false);
     }
+  };
+
+  // Handle Show Less (collapse back to initial view)
+  const handleShowLess = () => {
+    setTransactions(initialTransactions);
+    setHasMoreTransactions(true); // Re-enable load more
+    setHasLoadedMore(false);
   };
 
   // Show combined loading state
@@ -456,6 +488,13 @@ const Transactions = () => {
           walletBalance={walletBalance}
           userId="L001"
         />
+        <ExportModal
+          visible={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          transactions={filteredTransactions}
+          filterType={filterBy}
+          userId="L001"
+        />
         <TransactionsList 
           transactions={filteredTransactions} 
           loading={transactionsLoading}
@@ -463,6 +502,8 @@ const Transactions = () => {
           hasMore={hasMoreTransactions}
           isLoadingMore={isLoadingMore}
           onLoadMore={handleLoadMore}
+          hasLoadedMore={hasLoadedMore}
+          onShowLess={handleShowLess}
         />
       </ScrollView>
     </AnimatedScreen>
@@ -816,6 +857,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: '600',
     color: colors.white,
+  },
+  
+  // Show Less Button
+  showLessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.babyBlue,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.blueGreen,
+    gap: spacing.xs,
+  },
+  showLessText: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.blueGreen,
   },
   
   // End of List

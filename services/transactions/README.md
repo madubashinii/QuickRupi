@@ -121,10 +121,51 @@ All create/update operations validate automatically. Manual validation available
 - `validateTransactionStatus(status)`
 - `validateTransactionData(data)` - Returns `{ valid, error? }`
 
+## Export Functionality
+
+### Quick Export (Recommended)
+```javascript
+import { exportAndShareCSV, getExportSummary } from '../services/transactions';
+
+// One-line export with file handling
+const handleExport = async () => {
+  try {
+    const summary = getExportSummary(transactions);
+    console.log(`Exporting ${summary.count} transactions...`);
+    
+    const result = await exportAndShareCSV(transactions, 'deposits');
+    console.log(`✅ ${result.message}`);
+  } catch (error) {
+    console.error('Export failed:', error.message);
+  }
+};
+```
+
+### Manual Export (Advanced)
+```javascript
+import { exportToCSV } from '../services/transactions';
+
+const csvData = exportToCSV(transactions);
+// csvData = { content, filename, mimeType, count, success }
+// Handle file saving and sharing manually
+```
+
+### Export Features
+- ✅ Saves to device cache directory
+- ✅ Triggers native share dialog (iOS/Android)
+- ✅ Automatic cleanup after sharing
+- ✅ UTF-8 BOM for Excel compatibility
+- ✅ Handles special characters
+- ✅ Dynamic filenames with timestamps
+
+### Export Workflow
+1. Generate CSV → 2. Save to cache → 3. Share → 4. Cleanup
+
 ## Important Notes
 
 - All transactions use Firestore `serverTimestamp()`
 - Default sort: newest first
 - Real-time updates via Firestore snapshots
 - Built-in validation on all CRUD operations
+- Export uses device cache directory (auto-cleared by OS)
 - Pagination support with `hasMore` and `lastVisible`

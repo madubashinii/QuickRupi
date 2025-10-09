@@ -10,7 +10,8 @@ export {
   subscribeToUserTransactions,
   getMoreTransactions,
   updateTransactionStatus,
-  getTransactionById
+  getTransactionById,
+  getAllTransactionsForExport
 } from './transactionService';
 
 // Export all transaction utility functions
@@ -21,3 +22,19 @@ export {
   filterTransactionsByDateRange
 } from './transactionUtils';
 
+// Export all transaction export functions
+export {
+  exportToCSV,
+  exportAndShareCSV,
+  formatTransactionForExport,
+  generateExportFilename,
+  getExportSummary
+} from './transactionExportService';
+
+// Export transaction type utilities
+export {
+  isTransactionCredit,
+  isTransactionDebit,
+  capitalize,
+  getTransactionSign
+} from './transactionTypeUtils';

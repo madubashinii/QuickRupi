@@ -247,3 +247,31 @@ export const getTransactionById = async (transactionId) => {
   const docSnap = await getDoc(docRef);
   return docSnap.exists() ? { transactionId: docSnap.id, ...docSnap.data() } : null;
 };
+
+/**
+ * Get ALL transactions for a user (for export purposes)
+ * @param {string} userId - User ID
+ * @param {object} filters - Optional filters { type, status }
+ * @returns {Promise<Array>} All transactions for the user
+ */
+export const getAllTransactionsForExport = async (userId, filters = {}) => {
+  const { type = null, status = null } = filters;
+  
+  let q = query(
+    collection(db, TRANSACTIONS_COLLECTION),
+    where('userId', '==', userId),
+    orderBy('timestamp', 'desc')
+  );
+
+  if (type) {
+    q = query(q, where('type', '==', type));
+  }
+
+  if (status) {
+    q = query(q, where('status', '==', status));
+  }
+
+  // No limit - fetch ALL transactions
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ transactionId: doc.id, ...doc.data() }));
+};
