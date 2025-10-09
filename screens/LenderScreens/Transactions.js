@@ -1,28 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import AddFundsModal from '../../components/lender/AddFundsModal';
 import WithdrawModal from '../../components/lender/WithdrawModal';
 import { initializeUserWallet, subscribeToWallet } from '../../services/wallet';
+import { subscribeToUserTransactions, getMoreTransactions, formatTransactionForDisplay, applyTransactionFilter } from '../../services/transactions';
 
 // Constants
 const BACKGROUND_HEIGHT = 370;
-
-// Data
-const MOCK_DATA = {
-  walletBalance: 'LKR 100,500.00',
-  transactions: [
-    { id: 1, type: 'Investment Return', amount: 3450, date: 'Today, 2:30 PM', isPositive: true, icon: 'trending-up' },
-    { id: 2, type: 'Loan Disbursed', amount: 15000, date: 'Today, 1:30 PM', isPositive: false, icon: 'card' },
-    { id: 3, type: 'Funds Added', amount: 60000, date: 'Yesterday, 8:40 PM', isPositive: true, icon: 'arrow-down-circle' },
-    { id: 4, type: 'Investment Return', amount: 8500, date: 'Yesterday, 4:15 PM', isPositive: true, icon: 'trending-up' },
-    { id: 5, type: 'Loan Disbursed', amount: 50000, date: 'Yesterday, 1:00 PM', isPositive: false, icon: 'card' },
-    { id: 6, type: 'Service Fee', amount: 250, date: 'Dec 10, 3:20 PM', isPositive: false, icon: 'receipt' },
-    { id: 7, type: 'Interest Payment', amount: 1200, date: 'Dec 9, 11:45 AM', isPositive: true, icon: 'cash' },
-  ],
-};
 
 const FILTER_OPTIONS = [
   { key: 'all', label: 'All' },
@@ -32,18 +19,69 @@ const FILTER_OPTIONS = [
   { key: 'fees', label: 'Fees' },
 ];
 
+// Helper Functions
+const formatTransactionDate = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  
+  // Handle Firestore timestamp
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `Today, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  if (diffDays === 1) return `Yesterday, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  if (diffDays < 7) return `${diffDays} days ago`;
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+// Helper Functions - Notifications
+const showSuccessNotification = (title, message) => {
+  Alert.alert(
+    `✅ ${title}`,
+    message,
+    [{ text: 'OK', style: 'default' }],
+    { cancelable: true }
+  );
+};
+
+const showErrorNotification = (title, message) => {
+  Alert.alert(
+    `⚠️ ${title}`,
+    message,
+    [{ text: 'OK', style: 'default' }],
+    { cancelable: true }
+  );
+};
+
 // Event Handlers
 const useTransactionHandlers = (setShowAddFundsModal, setShowWithdrawModal) => ({
   handleAddFunds: () => setShowAddFundsModal(true),
   handleWithdraw: () => setShowWithdrawModal(true),
-  handleExport: () => console.log('Export pressed'),
+  handleExport: () => {
+    showSuccessNotification('Export', 'Transaction export feature coming soon!');
+  },
   handleAddFundsConfirm: (data) => {
-    console.log('Add Funds confirmed - Amount:', data.amount);
-    // Balance updates automatically via real-time listener
+    // Balance and transactions update automatically via real-time listeners
+    if (data.success !== false) {
+      showSuccessNotification(
+        'Funds Added',
+        `LKR ${data.amount.toLocaleString()} added to your wallet successfully!`
+      );
+    }
   },
   handleWithdrawConfirm: (data) => {
-    console.log('Withdraw confirmed - Amount:', data.amount);
-    // Balance updates automatically via real-time listener
+    // Balance and transactions update automatically via real-time listeners
+    if (data.success !== false) {
+      showSuccessNotification(
+        'Withdrawal Successful',
+        `LKR ${data.amount.toLocaleString()} withdrawn successfully!`
+      );
+    }
   },
 });
 
@@ -51,20 +89,30 @@ const useTransactionHandlers = (setShowAddFundsModal, setShowWithdrawModal) => (
 const TransactionItem = ({ transaction }) => {
   const indicatorColor = transaction.isPositive ? colors.blueGreen : colors.red;
   const amountColor = transaction.isPositive ? colors.blueGreen : colors.red;
-  const sign = transaction.isPositive ? '+' : '-';
+  const iconBgColor = transaction.isPositive ? colors.blueGreen : colors.red;
+  const showStatusBadge = transaction.status === 'pending' || transaction.status === 'failed';
   
   return (
     <View style={styles.transactionItem}>
       <View style={[styles.transactionIndicator, { backgroundColor: indicatorColor }]} />
-      <View style={styles.transactionIconContainer}>
+      <View style={[styles.transactionIconContainer, { backgroundColor: iconBgColor }]}>
         <Ionicons name={transaction.icon} size={20} color={colors.white} />
       </View>
       <View style={styles.transactionDetails}>
-        <Text style={styles.transactionType}>{transaction.type}</Text>
-        <Text style={styles.transactionDate}>{transaction.date}</Text>
+        <View style={styles.transactionHeader}>
+          <Text style={styles.transactionType}>{transaction.displayDescription}</Text>
+          {showStatusBadge && (
+            <View style={[styles.statusBadge, { backgroundColor: transaction.statusColor }]}>
+              <Text style={styles.statusBadgeText}>
+                {transaction.status.toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.transactionDate}>{formatTransactionDate(transaction.timestamp)}</Text>
       </View>
       <Text style={[styles.transactionAmount, { color: amountColor }]}>
-        {sign} LKR {transaction.amount.toLocaleString()}
+        {transaction.formattedAmount}
       </Text>
     </View>
   );
@@ -132,24 +180,130 @@ const FilterModal = ({ visible, onClose, filterBy, onFilterChange }) => (
   </Modal>
 );
 
-const TransactionsList = ({ transactions }) => (
+const EmptyState = ({ filterBy }) => {
+  const emptyMessages = {
+    all: {
+      title: 'No transactions yet',
+      subtitle: 'Your transaction history will appear here'
+    },
+    deposits: {
+      title: 'No deposits found',
+      subtitle: 'Topup your wallet or receive loan repayments'
+    },
+    payouts: {
+      title: 'No payouts found',
+      subtitle: 'No withdrawals or investments yet'
+    },
+    repayments: {
+      title: 'No repayments found',
+      subtitle: 'Loan repayments will appear here'
+    },
+    fees: {
+      title: 'No fees found',
+      subtitle: 'Transaction fees will appear here'
+    }
+  };
+
+  const message = emptyMessages[filterBy] || emptyMessages.all;
+
+  return (
+    <View style={styles.emptyState}>
+      <Ionicons name="receipt-outline" size={64} color={colors.gray} />
+      <Text style={styles.emptyStateText}>{message.title}</Text>
+      <Text style={styles.emptyStateSubtext}>{message.subtitle}</Text>
+    </View>
+  );
+};
+
+const LoadingSkeleton = () => (
   <View style={styles.transactionsList}>
-    {transactions.map(transaction => (
-      <TransactionItem key={transaction.id} transaction={transaction} />
+    {[1, 2, 3, 4, 5].map((item) => (
+      <View key={item} style={styles.skeletonItem}>
+        <View style={styles.skeletonIcon} />
+        <View style={styles.skeletonDetails}>
+          <View style={styles.skeletonTitle} />
+          <View style={styles.skeletonSubtitle} />
+        </View>
+        <View style={styles.skeletonAmount} />
+      </View>
     ))}
   </View>
 );
 
+const LoadMoreButton = ({ onPress, isLoading, disabled }) => (
+  <TouchableOpacity
+    style={[styles.loadMoreButton, disabled && styles.loadMoreButtonDisabled]}
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.7}
+  >
+    {isLoading ? (
+      <ActivityIndicator size="small" color={colors.white} />
+    ) : (
+      <>
+        <Text style={styles.loadMoreText}>Load More</Text>
+        <Ionicons name="chevron-down" size={18} color={colors.white} />
+      </>
+    )}
+  </TouchableOpacity>
+);
+
+const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingMore, onLoadMore }) => {
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  return (
+    <View style={styles.transactionsList}>
+      {transactions.length > 0 ? (
+        <>
+          {transactions.map(transaction => (
+            <TransactionItem key={transaction.transactionId} transaction={transaction} />
+          ))}
+          {hasMore ? (
+            <LoadMoreButton 
+              onPress={onLoadMore}
+              isLoading={isLoadingMore}
+              disabled={isLoadingMore}
+            />
+          ) : (
+            <View style={styles.endOfListContainer}>
+              <View style={styles.endOfListDivider} />
+              <Text style={styles.endOfListText}>End of transactions</Text>
+              <View style={styles.endOfListDivider} />
+            </View>
+          )}
+        </>
+      ) : (
+        <EmptyState filterBy={filterBy} />
+      )}
+    </View>
+  );
+};
+
 // Main Component
 const Transactions = () => {
-  const { transactions } = MOCK_DATA;
+  // Wallet State
   const [walletBalance, setWalletBalance] = useState('LKR 0.00');
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState(null);
+  
+  // Transaction State
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [transactionsError, setTransactionsError] = useState(null);
+  
+  // Pagination State
+  const [hasMoreTransactions, setHasMoreTransactions] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [lastVisibleTransaction, setLastVisibleTransaction] = useState(null);
+  
+  // UI State
   const [filterBy, setFilterBy] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [walletLoading, setWalletLoading] = useState(true);
-  const [walletError, setWalletError] = useState(null);
+  
   const { handleAddFunds, handleWithdraw, handleExport, handleAddFundsConfirm, handleWithdrawConfirm } = useTransactionHandlers(setShowAddFundsModal, setShowWithdrawModal);
 
   // Initialize wallet and subscribe to real-time updates
@@ -168,42 +322,107 @@ const Transactions = () => {
     setupWallet();
 
     // Subscribe to real-time wallet updates
-      // DEV MODE: Currently hardcoded to "L001"
-      // TODO: Replace with role-based check once user collection is complete:
-      // if (currentUser.role === 'lender') { await initializeUserWallet(currentUser.id); }
-    const unsubscribe = subscribeToWallet('L001', (walletData) => {
+    // DEV MODE: Currently hardcoded to "L001"
+    // TODO: Replace with role-based check once user collection is complete:
+    // if (currentUser.role === 'lender') { await initializeUserWallet(currentUser.id); }
+    const unsubscribeWallet = subscribeToWallet('L001', (walletData) => {
       if (walletData.balance !== null) {
         setWalletBalance(`LKR ${walletData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       }
     });
 
-    return () => unsubscribe();
+    // Subscribe to real-time transaction updates with pagination (10 transactions)
+    const unsubscribeTransactions = subscribeToUserTransactions('L001', (data) => {
+      try {
+        const { transactions: transactionsData, hasMore, lastVisible } = data;
+        // Format transactions for display
+        const formattedTransactions = transactionsData.map(formatTransactionForDisplay);
+        setTransactions(formattedTransactions);
+        setHasMoreTransactions(hasMore);
+        setLastVisibleTransaction(lastVisible);
+        setTransactionsLoading(false);
+        setTransactionsError(null);
+      } catch (error) {
+        console.error('Transaction formatting error:', error);
+        setTransactionsError(error.message);
+        setTransactionsLoading(false);
+      }
+    }, 10);
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeWallet();
+      unsubscribeTransactions();
+    };
   }, []);
 
-  // Show loading while wallet initializes
-  if (walletLoading) {
+  // Handle Load More
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMoreTransactions || !lastVisibleTransaction) return;
+
+    setIsLoadingMore(true);
+    try {
+      const { transactions: newTransactions, hasMore, lastVisible } = await getMoreTransactions(
+        'L001',
+        lastVisibleTransaction,
+        10
+      );
+      
+      const formattedNewTransactions = newTransactions.map(formatTransactionForDisplay);
+      setTransactions(prev => [...prev, ...formattedNewTransactions]);
+      setHasMoreTransactions(hasMore);
+      setLastVisibleTransaction(lastVisible);
+    } catch (error) {
+      console.error('Load more error:', error);
+      showErrorNotification('Load Failed', 'Failed to load more transactions');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Show combined loading state
+  if (walletLoading || transactionsLoading) {
     return (
       <AnimatedScreen style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.blueGreen} />
-          <Text style={styles.loadingText}>Initializing wallet...</Text>
+          <Text style={styles.loadingText}>Initializing wallet and loading transactions...</Text>
         </View>
       </AnimatedScreen>
     );
   }
 
-  // Show error if wallet initialization failed
-  if (walletError) {
+  // Show combined error state
+  if (walletError || transactionsError) {
     return (
       <AnimatedScreen style={styles.container}>
         <View style={styles.loadingContainer}>
           <Ionicons name="alert-circle" size={48} color={colors.red} />
-          <Text style={styles.errorTitle}>Wallet Error</Text>
-          <Text style={styles.errorText}>{walletError}</Text>
+          <Text style={styles.errorTitle}>Error Loading Data</Text>
+          {walletError && (
+            <Text style={styles.errorText}>Wallet: {walletError}</Text>
+          )}
+          {transactionsError && (
+            <Text style={styles.errorText}>Transactions: {transactionsError}</Text>
+          )}
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={() => {
+              setWalletError(null);
+              setTransactionsError(null);
+              setWalletLoading(true);
+              setTransactionsLoading(true);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </AnimatedScreen>
     );
   }
+
+  // Apply filter to transactions
+  const filteredTransactions = applyTransactionFilter(transactions, filterBy);
 
   return (
     <AnimatedScreen style={styles.container}>
@@ -237,7 +456,14 @@ const Transactions = () => {
           walletBalance={walletBalance}
           userId="L001"
         />
-        <TransactionsList transactions={transactions} />
+        <TransactionsList 
+          transactions={filteredTransactions} 
+          loading={transactionsLoading}
+          filterBy={filterBy}
+          hasMore={hasMoreTransactions}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={handleLoadMore}
+        />
       </ScrollView>
     </AnimatedScreen>
   );
@@ -295,6 +521,19 @@ const styles = StyleSheet.create({
     color: colors.gray,
     fontSize: fontSize.sm,
     textAlign: 'center',
+    marginVertical: spacing.xs,
+  },
+  retryButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.blueGreen,
+    borderRadius: borderRadius.md,
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: fontSize.base,
+    fontWeight: '600',
   },
   
   // Header
@@ -498,7 +737,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -506,11 +744,17 @@ const styles = StyleSheet.create({
   transactionDetails: {
     flex: 1,
   },
+  transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    gap: spacing.xs,
+  },
   transactionType: {
     fontSize: fontSize.base,
     fontWeight: '600',
     color: colors.midnightBlue,
-    marginBottom: spacing.xs,
+    flex: 1,
   },
   transactionDate: {
     fontSize: fontSize.sm,
@@ -519,6 +763,120 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: fontSize.base,
     fontWeight: 'bold',
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 0.5,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl * 2,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyStateText: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.midnightBlue,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  emptyStateSubtext: {
+    fontSize: fontSize.sm,
+    color: colors.gray,
+    textAlign: 'center',
+  },
+  
+  // Load More Button
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.blueGreen,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.6,
+  },
+  loadMoreText: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  
+  // End of List
+  endOfListContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  endOfListDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.lightGray,
+  },
+  endOfListText: {
+    fontSize: fontSize.xs,
+    color: colors.gray,
+    marginHorizontal: spacing.md,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  
+  // Loading Skeleton
+  skeletonItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGray,
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.lightGray,
+    marginRight: spacing.md,
+  },
+  skeletonDetails: {
+    flex: 1,
+  },
+  skeletonTitle: {
+    height: 16,
+    backgroundColor: colors.lightGray,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+    width: '60%',
+  },
+  skeletonSubtitle: {
+    height: 12,
+    backgroundColor: colors.lightGray,
+    borderRadius: borderRadius.sm,
+    width: '40%',
+  },
+  skeletonAmount: {
+    height: 16,
+    width: 80,
+    backgroundColor: colors.lightGray,
+    borderRadius: borderRadius.sm,
   },
 });
 
