@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import LenderTabs from './navigation/LenderTabs';
 import NotificationsScreen from './screens/LenderScreens/Notifications';
 import MessagesScreen from './screens/LenderScreens/MessagesScreen';
+import Toast from 'react-native-toast-message';
 
 const Stack = createNativeStackNavigator();
 
@@ -16,7 +17,9 @@ export default function App() {
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Messages" component={MessagesScreen} />
       </Stack.Navigator>
+      <Toast />
       <StatusBar style="light" />
     </NavigationContainer>
   );
 }
+

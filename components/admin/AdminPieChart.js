@@ -12,7 +12,7 @@ export default function AdminPieChart({ size = 120, strokeWidth = 20, data }) {
     return (
         <View style={styles.container}>
             <Svg width={size} height={size}>
-                <G rotation="-90" originX={size / 2} originY={size / 2}>
+                <G transform={`rotate(-90 ${size / 2} ${size / 2})`} >
                     {data.map((item, index) => {
                         const dash = (item.percent / 100) * circumference;
                         const dashOffset = circumference - (cumulativePercent / 100) * circumference;
