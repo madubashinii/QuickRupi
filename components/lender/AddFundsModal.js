@@ -1,34 +1,89 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getDefaultPaymentMethod, TYPES } from '../../services/paymentMethods/paymentMethodsService';
+import { addFunds, getWalletBalance } from '../../services/wallet';
 
-// Mock card data for preview
-const MOCK_CARD = {
-  brand: 'Visa',
-  last4: '4242',
-  nickname: 'Visa Personal',
-  cardholder: 'MARTINA ALEX',
-  expiry: '12/30',
-  isDefault: true,
-};
-
-const AddFundsModal = ({ visible, onClose, onConfirm }) => {
+const AddFundsModal = ({ visible, onClose, onConfirm, userId }) => {
   const [amount, setAmount] = useState('');
+  const [defaultCard, setDefaultCard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleConfirm = () => {
+  // Fetch default card when modal opens
+  useEffect(() => {
+    const fetchDefaultCard = async () => {
+      if (!visible || !userId) return;
+      
+      setLoading(true);
+      try {
+        const card = await getDefaultPaymentMethod(userId, TYPES.CARD);
+        setDefaultCard(card);
+      } catch (error) {
+        console.error('Failed to fetch default card:', error);
+        setDefaultCard(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDefaultCard();
+  }, [visible, userId]);
+
+  const handleConfirm = async () => {
+    // Validate amount input
     if (!amount || parseFloat(amount) <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount');
       return;
     }
+
+    if (!defaultCard) {
+      Alert.alert('No Payment Method', 'Please add a payment method first');
+      return;
+    }
     
-    onConfirm({ amount: parseFloat(amount), paymentMethod: 'card' });
-    setAmount('');
-    onClose();
+    // Set processing state and show loading indicator
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const parsedAmount = parseFloat(amount);
+      
+      // Call wallet service to add funds
+      await addFunds(userId, parsedAmount);
+      
+      // Get updated balance
+      const updatedBalance = await getWalletBalance(userId);
+      
+      // Show success message
+      Alert.alert('Success', `LKR ${parsedAmount.toFixed(2)} added successfully!`);
+      
+      // Pass updated data back to parent
+      onConfirm({ 
+        amount: parsedAmount, 
+        paymentMethod: 'card',
+        newBalance: updatedBalance 
+      });
+      
+      // Reset and close modal
+      setAmount('');
+      onClose();
+    } catch (err) {
+      // Handle error: show message, no rollback needed (addFunds atomic)
+      console.error('Add funds failed:', err);
+      setError(err.message || 'Failed to add funds');
+      Alert.alert('Error', err.message || 'Failed to add funds. Please try again.');
+    } finally {
+      // Always reset processing state
+      setIsProcessing(false);
+    }
   };
 
   const handleCancel = () => {
     setAmount('');
+    setError(null);
     onClose();
   };
 
@@ -84,15 +139,48 @@ const AddFundsModal = ({ visible, onClose, onConfirm }) => {
             </View>
 
             <Text style={styles.sectionTitle}>Payment Method</Text>
-            <CardPreview card={MOCK_CARD} />
+            {loading ? (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={colors.blueGreen} />
+                <Text style={styles.loadingText}>Loading card...</Text>
+              </View>
+            ) : defaultCard ? (
+              <CardPreview card={defaultCard} />
+            ) : (
+              <View style={styles.noCardContainer}>
+                <Ionicons name="card-outline" size={40} color={colors.gray} />
+                <Text style={styles.noCardText}>No default card found</Text>
+                <Text style={styles.noCardSubtext}>Please add a payment method first</Text>
+              </View>
+            )}
+
+            {/* Error display area for API failures */}
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.red} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={handleCancel}
+              disabled={isProcessing}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>Add Funds</Text>
+            <TouchableOpacity 
+              style={[styles.confirmButton, isProcessing && styles.confirmButtonDisabled]} 
+              onPress={handleConfirm}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.confirmButtonText}>Add Funds</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -229,6 +317,54 @@ const styles = StyleSheet.create({
     color: colors.lightGray,
     fontWeight: '500',
   },
+  loadingCard: {
+    backgroundColor: colors.babyBlue,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  loadingText: {
+    fontSize: fontSize.sm,
+    color: colors.gray,
+    marginTop: spacing.sm,
+  },
+  noCardContainer: {
+    backgroundColor: colors.babyBlue,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  noCardText: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.midnightBlue,
+    marginTop: spacing.sm,
+  },
+  noCardSubtext: {
+    fontSize: fontSize.sm,
+    color: colors.gray,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.red,
+    fontWeight: '500',
+  },
   modalFooter: {
     flexDirection: 'row',
     padding: spacing.lg,
@@ -255,6 +391,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.blueGreen,
     alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    backgroundColor: colors.gray,
+    opacity: 0.6,
   },
   confirmButtonText: {
     fontSize: fontSize.base,
