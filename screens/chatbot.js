@@ -1,4 +1,4 @@
-/*import React, { useState } from "react";
+import React, { useState } from "react";
 import { View, TextInput, Button, Text, ScrollView, StyleSheet } from "react-native";
 import Constants from "expo-constants";
 import 'dotenv/config';
@@ -84,4 +84,4 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderColor: "#ccc", padding: 8, borderRadius: 8, marginRight: 8 },
 });
 
-export default Chatbot;*/
+export default Chatbot;

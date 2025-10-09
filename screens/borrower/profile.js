@@ -73,6 +73,21 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.texts}>{userName}</Text>
         <Text style={styles.texts}>{userName}</Text>
         <Text style={styles.texts}>{userName}</Text>
+
+        <TouchableOpacity
+           key={tab.name}
+           style={styles.tab}
+           onPress={() => navigation.navigate()}
+        >
+          <Ionicons 
+             name={tab.icon} 
+             size={24} 
+             color={ "#999"} 
+         />
+          <Text style={[styles.label, { color: "#007AFF"}]}>
+            {tab.label}
+          </Text>
+         </TouchableOpacity>
       </View>
 
       {/* bottom nav bar */}
