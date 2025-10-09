@@ -1,16 +1,70 @@
-import React, { useState } from "react";
-import { View, Text, Image, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, Image, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../../services/firebaseConfig";
+import { useNavigation } from "@react-navigation/native";
 
 export default function AdminProfileScreen() {
-    const [name, setName] = useState("Jane Doe");
-    const [email, setEmail] = useState("admin@quickrupi.com");
-    const [phone, setPhone] = useState("+94 77 123 4567");
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [loading, setLoading] = useState(true);
+    const navigation = useNavigation();
 
-    const handleSave = () => {
-        // You can connect this to your backend API
-        Alert.alert("Profile Updated", "Your profile has been updated successfully.");
+    const adminId = "Admin";
+
+    useEffect(() => {
+        const fetchAdminProfile = async () => {
+            try {
+                const docRef = doc(db, "users", adminId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setName(data.name || "");
+                    setEmail(data.email || "");
+                    setPhone(data.phone || "");
+                } else {
+                    console.log("No admin profile found!");
+                }
+            } catch (error) {
+                console.log("Error fetching profile:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAdminProfile();
+    }, []);
+
+    const handleSave = async () => {
+        try {
+            const docRef = doc(db, "users", adminId);
+            await updateDoc(docRef, { name, email, phone });
+            Alert.alert("Profile Updated", "Your profile has been updated successfully.");
+        } catch (error) {
+            console.log("Error updating profile:", error);
+            Alert.alert("Update Failed", "Could not update profile.");
+        }
     };
+
+    const handleLogout = () => {
+        // Navigate to LoginScreen
+        navigation.reset({
+            index: 0,
+            routes: [{ name: 'LoginScreen' }],
+        });
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+                <ActivityIndicator size="large" color="#0c6170" />
+                <Text style={{ marginTop: 10, color: "#0c6170" }}>Loading profile...</Text>
+            </View>
+        );
+    }
 
     return (
         <ScrollView style={styles.container}>
@@ -22,12 +76,19 @@ export default function AdminProfileScreen() {
 
             {/* Profile Avatar */}
             <View style={styles.avatarContainer}>
-                <Image
-                    source={{ uri: "https://i.pravatar.cc/150?img=12" }}
-                    style={styles.avatar}
-                />
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                        {name
+                            .split(" ")
+                            .map(n => n[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                    </Text>
+                </View>
                 <Text style={styles.role}>Administrator</Text>
             </View>
+
 
             {/* Editable Profile Info */}
             <View style={styles.card}>
@@ -74,129 +135,47 @@ export default function AdminProfileScreen() {
                     <Ionicons name="lock-closed-outline" size={20} color="#0c6170" />
                     <Text style={styles.actionText}>Change Password</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn}>
+                <TouchableOpacity style={styles.actionBtn} onPress={handleLogout}>
                     <FontAwesome5 name="sign-out-alt" size={20} color="#dc2626" />
                     <Text style={styles.actionText}>Logout</Text>
                 </TouchableOpacity>
+
             </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#dbf5f0"
-    },
-
-    header: {
-        paddingTop: 40,
-        paddingBottom: 20,
-        backgroundColor: "#0c6170",
-        alignItems: "center",
-        position: "relative",
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#fff"
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: "#a4e5e0",
-        marginTop: 4
-    },
-
-    avatarContainer: {
-        alignItems: "center",
-        marginVertical: 20
-    },
+    container: { flex: 1, backgroundColor: "#dbf5f0" },
+    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center" },
+    headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
+    headerSubtitle: { fontSize: 14, color: "#a4e5e0", marginTop: 4 },
+    avatarContainer: { alignItems: "center", marginVertical: 20 },
+    avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12, borderWidth: 3, borderColor: "#37beb0" },
+    role: { fontSize: 14, color: "#107869", marginTop: 2, fontWeight: "600" },
+    card: { backgroundColor: "#fff", marginHorizontal: 16, borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: "#0c6170", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, borderWidth: 1, borderColor: "#a4e5e0" },
+    cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12, color: "#08313a" },
+    label: { fontSize: 14, color: "#107869", marginTop: 10, fontWeight: "600" },
+    input: { backgroundColor: "#dbf5f0", padding: 10, borderRadius: 8, marginTop: 4, fontSize: 14, color: "#08313a", borderWidth: 1, borderColor: "#a4e5e0" },
+    saveBtn: { backgroundColor: "#0c6170", paddingVertical: 12, borderRadius: 8, marginTop: 16, alignItems: "center", shadowColor: "#0c6170", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+    saveText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+    actionBtn: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 10, marginBottom: 12, borderRadius: 10, backgroundColor: "#dbf5f0", borderWidth: 1, borderColor: "#a4e5e0" },
+    actionText: { fontSize: 14, marginLeft: 12, fontWeight: "600", color: "#08313a" },
     avatar: {
         width: 100,
         height: 100,
         borderRadius: 50,
         marginBottom: 12,
+        backgroundColor: "#37beb0",
+        justifyContent: "center",
+        alignItems: "center",
         borderWidth: 3,
-        borderColor: "#37beb0"
+        borderColor: "#fff",
     },
-    role: {
-        fontSize: 14,
-        color: "#107869",
-        marginTop: 2,
-        fontWeight: "600"
-    },
-
-    card: {
-        backgroundColor: "#fff",
-        marginHorizontal: 16,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 2,
-        shadowColor: "#0c6170",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        borderWidth: 1,
-        borderColor: "#a4e5e0"
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        marginBottom: 12,
-        color: "#08313a"
-    },
-
-    label: {
-        fontSize: 14,
-        color: "#107869",
-        marginTop: 10,
-        fontWeight: "600"
-    },
-    input: {
-        backgroundColor: "#dbf5f0",
-        padding: 10,
-        borderRadius: 8,
-        marginTop: 4,
-        fontSize: 14,
-        color: "#08313a",
-        borderWidth: 1,
-        borderColor: "#a4e5e0"
-    },
-
-    saveBtn: {
-        backgroundColor: "#0c6170",
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginTop: 16,
-        alignItems: "center",
-        shadowColor: "#0c6170",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4
-    },
-    saveText: {
+    avatarText: {
         color: "#fff",
-        fontSize: 16,
-        fontWeight: "700"
+        fontSize: 32,
+        fontWeight: "700",
     },
 
-    actionBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 12,
-        paddingHorizontal: 10,
-        marginBottom: 12,
-        borderRadius: 10,
-        backgroundColor: "#dbf5f0",
-        borderWidth: 1,
-        borderColor: "#a4e5e0"
-    },
-    actionText: {
-        fontSize: 14,
-        marginLeft: 12,
-        fontWeight: "600",
-        color: "#08313a"
-    },
 });
