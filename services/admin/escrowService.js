@@ -1,5 +1,5 @@
 import { db } from "../firebaseConfig";
-import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from "firebase/firestore";
 
 // Fetch all escrows with borrower, lender, and loan info
 export const fetchEscrows = async () => {
@@ -43,24 +43,92 @@ export const fetchEscrows = async () => {
         throw error;
     }
 };
-
-//  Update escrow status and send notification
+/**
+ * Update escrow status and handle wallet & repayment schedule, send notification
+ */
 export const updateEscrowStatus = async (escrowId, newStatus, lenderId, amount) => {
     try {
-        // Update escrow status
-        await updateDoc(doc(db, "escrow", escrowId), { status: newStatus });
+        // Get escrow
+        const escrowRef = doc(db, "escrow", escrowId);
+        const escrowSnap = await getDoc(escrowRef);
+        if (!escrowSnap.exists()) throw new Error("Escrow not found");
+        const escrow = escrowSnap.data();
 
-        // Update lender wallet if refunded
-        if (newStatus === "refunded") {
-            const lenderWalletRef = doc(db, "wallets", lenderId);
-            const lenderWalletSnap = await getDoc(lenderWalletRef);
-            if (lenderWalletSnap.exists()) {
-                const currentBalance = lenderWalletSnap.data().balance || 0;
-                await updateDoc(lenderWalletRef, { balance: currentBalance + amount });
+        // Update escrow status
+        await updateDoc(escrowRef, { status: newStatus, releasedAt: serverTimestamp() });
+
+        // Handle borrower wallet if escrow released
+        if (newStatus === "released") {
+            // Query borrower wallet by userId
+            const walletQuery = query(collection(db, "borrowerWallets"), where("userId", "==", escrow.borrowerId));
+            const walletSnap = await getDocs(walletQuery);
+
+            if (!walletSnap.empty) {
+                const walletDoc = walletSnap.docs[0];
+                const currentBalance = walletDoc.data().balance || 0;
+
+                await updateDoc(walletDoc.ref, {
+                    balance: currentBalance + amount,
+                    lastUpdated: serverTimestamp()
+                });
+            } else {
+                console.warn("Borrower wallet not found for userId:", escrow.borrowerId);
+            }
+
+            // Create repayment schedule
+            const loanRef = doc(db, "loans", escrow.loanId);
+            const loanSnap = await getDoc(loanRef);
+            if (loanSnap.exists()) {
+                const loan = loanSnap.data();
+                const principal = loan.amountFunded || amount;
+                const monthlyRate = (loan.interestRate || 0) / 12 / 100;
+                const months = loan.termMonths || 1;
+
+                const repayments = [];
+                for (let i = 1; i <= months; i++) {
+                    const interestAmount = principal * monthlyRate;
+                    const totalAmount = principal / months + interestAmount;
+                    const dueDate = new Date();
+                    dueDate.setMonth(dueDate.getMonth() + i);
+
+                    repayments.push({
+                        loanId: loan.loanId,
+                        borrowerId: loan.borrowerId,
+                        lenderId: escrow.lenderId,
+                        dueDate: dueDate.toISOString(),
+                        totalAmount,
+                        principleAmount: principal / months,
+                        interestAmount,
+                        status: "pending",
+                        createdAt: serverTimestamp()
+                    });
+                }
+
+                // Save repayments
+                const batchPromises = repayments.map(rep => addDoc(collection(db, "repayments"), rep));
+                await Promise.all(batchPromises);
             }
         }
 
-        // Add notification
+        // Handle lender wallet if escrow refunded
+        if (newStatus === "refunded") {
+            const walletQuery = query(collection(db, "wallets"), where("userId", "==", lenderId));
+            const walletSnap = await getDocs(walletQuery);
+
+            if (!walletSnap.empty) {
+                const walletDoc = walletSnap.docs[0];
+                const currentBalance = walletDoc.data().balance || 0;
+
+                await updateDoc(walletDoc.ref, {
+                    balance: currentBalance + amount,
+                    lastUpdated: serverTimestamp()
+                });
+            } else {
+                console.warn("Lender wallet not found for userId:", lenderId);
+            }
+        }
+
+        // Send notification to lender
         await addDoc(collection(db, "notifications"), {
             userId: lenderId,
             message: `Your escrow for Loan #${escrowId} has been ${newStatus}`,
