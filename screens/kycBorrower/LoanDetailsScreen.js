@@ -14,23 +14,20 @@ export default function LoanDetailsScreen({ navigation, route }) {
 
   const handleChange = (key, value) => setLoan({ ...loan, [key]: value });
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (!loan.amount || !loan.period || !loan.purpose || !loan.guarantors) {
       alert("Please complete all loan details.");
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) return alert("User not logged in");
-
-    try {
-      await updateUserDoc(user.uid, { loanDetails: loan }, 2);
-      navigation.navigate("AccountDetailsScreen", { ...route.params, loanData: loan });
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save loan details");
-    }
+    // Pass all collected data to next screen
+    navigation.navigate("AccountDetailsScreen", {
+      ...route.params,
+      loanData: loan
+    });
   };
+
+
 
   return (
     <View style={styles.container}>

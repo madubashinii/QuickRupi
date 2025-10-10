@@ -3,6 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 
 import { CheckBox } from "react-native-elements";
 import { colors } from '../../theme/colors';
 import { updateUserDoc } from '../../services/firestoreService';
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../../services/firebaseConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+
 
 export default function AccountDetailsScreen({ navigation, route }) {
   const [account, setAccount] = useState({
@@ -19,16 +23,26 @@ export default function AccountDetailsScreen({ navigation, route }) {
     if (account.password !== account.confirm) return alert("Passwords do not match");
     if (!account.accepted) return alert("You must agree to terms");
 
-    const user = auth.currentUser;
-    if (!user) return alert("User not logged in");
-
     try {
-      await updateUserDoc(user.uid, { accountDetails: account, kycCompleted: true }, 3);
-      alert("KYC completed successfully!");
-      // Navigate to dashboard
+      // Create the Firebase Auth user
+      const { personalData, loanData } = route.params; // passed from previous screens
+      const userCredential = await createUserWithEmailAndPassword(auth, personalData.email, account.password);
+      const uid = userCredential.user.uid;
+
+      //  Create Firestore document with all collected data
+      await setDoc(doc(db, "users", uid), {
+        personalDetails: personalData,
+        loanDetails: loanData,
+        accountDetails: account,
+        kycCompleted: true,
+        step: 3
+      });
+
+      alert("Registration completed successfully!");
+      navigation.replace("DashboardScreen"); // Navigate to dashboard after signup
     } catch (err) {
       console.error(err);
-      alert("Failed to save account details");
+      alert("Registration failed: " + err.message);
     }
   };
 

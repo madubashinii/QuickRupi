@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Status
 import { Picker } from "@react-native-picker/picker";
 import { colors } from '../../theme/colors';
 import { updateUserDoc } from '../../services/firestoreService';
+import { auth } from "../../services/firebaseConfig";
 
 export default function PersonalDetailsScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -21,23 +22,16 @@ export default function PersonalDetailsScreen({ navigation }) {
 
   const handleChange = (key, value) => setForm({ ...form, [key]: value });
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (!form.title || !form.firstName || !form.lastName || !form.nic || !form.dob || !form.gender) {
       alert("Please complete all required fields.");
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) return alert("User not logged in");
-
-    try {
-      await updateUserDoc(user.uid, { personalDetails: form }, 1);
-      navigation.navigate("LoanDetailsScreen", { personalData: form });
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save personal details");
-    }
+    // Pass data to next screen instead of saving to Firestore 
+    navigation.navigate("LoanDetailsScreen", { personalData: form });
   };
+
 
   return (
     <View style={styles.container}>
