@@ -51,15 +51,16 @@ const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance, userId }) =
       }
 
       setIsProcessing(true);
-      await withdrawFunds(userId, parseFloat(amount));
+      await withdrawFunds(userId, parseFloat(amount), defaultBank?.paymentMethodId);
       
-      Alert.alert('Success', 'Withdrawal successful');
+      // Pass updated data back to parent (parent will show success notification)
       onConfirm({ amount: parseFloat(amount), account: defaultBank });
       setAmount('');
       setError(null);
       onClose();
     } catch (error) {
       setError(error.message || 'Failed to process withdrawal');
+      Alert.alert('Error', error.message || 'Failed to process withdrawal. Please try again.');
     } finally {
       setIsProcessing(false);
     }

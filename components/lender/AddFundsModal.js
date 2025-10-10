@@ -51,16 +51,13 @@ const AddFundsModal = ({ visible, onClose, onConfirm, userId }) => {
     try {
       const parsedAmount = parseFloat(amount);
       
-      // Call wallet service to add funds
-      await addFunds(userId, parsedAmount);
+      // Call wallet service to add funds with payment method ID
+      await addFunds(userId, parsedAmount, defaultCard?.paymentMethodId);
       
       // Get updated balance
       const updatedBalance = await getWalletBalance(userId);
       
-      // Show success message
-      Alert.alert('Success', `LKR ${parsedAmount.toFixed(2)} added successfully!`);
-      
-      // Pass updated data back to parent
+      // Pass updated data back to parent (parent will show success notification)
       onConfirm({ 
         amount: parsedAmount, 
         paymentMethod: 'card',

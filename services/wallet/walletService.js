@@ -11,6 +11,7 @@ import {
   onSnapshot,
   serverTimestamp 
 } from 'firebase/firestore';
+import { createTransaction, TRANSACTION_TYPES, TRANSACTION_STATUS } from '../transactions';
 
 const WALLETS_COLLECTION = 'wallets';
 
@@ -107,8 +108,12 @@ export const getWalletById = async (walletId) => {
 
 /**
  * Add funds to wallet
+ * @param {string} userId - User ID
+ * @param {number} amount - Amount to add
+ * @param {string} paymentMethodId - Optional payment method ID
+ * @param {string} description - Optional custom description
  */
-export const addFunds = async (userId, amount) => {
+export const addFunds = async (userId, amount, paymentMethodId = null, description = null) => {
   if (!validateAmount(amount)) throw new Error('Invalid amount');
   
   const wallet = await getWalletByUserId(userId);
@@ -116,19 +121,55 @@ export const addFunds = async (userId, amount) => {
   
   const newBalance = wallet.balance + amount;
   await updateWalletBalance(wallet.walletId, newBalance);
+  
+  // Create transaction record (non-blocking - wallet is source of truth)
+  try {
+    await createTransaction({
+      userId,
+      amount,
+      type: TRANSACTION_TYPES.TOPUP,
+      status: TRANSACTION_STATUS.COMPLETED,
+      description: description || `Funds added: LKR ${amount.toLocaleString()}`,
+      paymentMethodId
+    });
+  } catch (error) {
+    console.error('Failed to create transaction record for addFunds:', error);
+    // Don't throw - wallet update succeeded, which is the source of truth
+  }
+  
   return newBalance;
 };
 
 /**
  * Withdraw funds from wallet
+ * @param {string} userId - User ID
+ * @param {number} amount - Amount to withdraw
+ * @param {string} paymentMethodId - Optional payment method ID
+ * @param {string} description - Optional custom description
  */
-export const withdrawFunds = async (userId, amount) => {
+export const withdrawFunds = async (userId, amount, paymentMethodId = null, description = null) => {
   if (!validateAmount(amount)) throw new Error('Invalid amount');
   if (!(await checkSufficientBalance(userId, amount))) throw new Error('Insufficient balance');
   
   const wallet = await getWalletByUserId(userId);
   const newBalance = wallet.balance - amount;
   await updateWalletBalance(wallet.walletId, newBalance);
+  
+  // Create transaction record (non-blocking - wallet is source of truth)
+  try {
+    await createTransaction({
+      userId,
+      amount,
+      type: TRANSACTION_TYPES.WITHDRAW,
+      status: TRANSACTION_STATUS.COMPLETED,
+      description: description || `Withdrawal: LKR ${amount.toLocaleString()}`,
+      paymentMethodId
+    });
+  } catch (error) {
+    console.error('Failed to create transaction record for withdrawFunds:', error);
+    // Don't throw - wallet update succeeded, which is the source of truth
+  }
+  
   return newBalance;
 };
 
