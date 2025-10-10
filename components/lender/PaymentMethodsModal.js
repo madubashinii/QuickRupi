@@ -1,88 +1,194 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AddPaymentMethod from './AddPaymentMethod';
-
-// Constants
-const BANKS = ['Commercial Bank', 'HNB', 'Sampath Bank', 'People\'s Bank', 'DFCC Bank'];
+import { 
+  getUserPaymentMethods, 
+  createPaymentMethod, 
+  deletePaymentMethod, 
+  setDefaultPaymentMethod,
+  TYPES
+} from '../../services/paymentMethods/paymentMethodsService';
 
 // Payment Method Limits
 const MAX_CARDS = 2;
 const MAX_BANK_ACCOUNTS = 1;
 
-const MOCK_CARDS = [
-  {
-    id: 1,
-    type: 'card',
-    brand: 'Visa',
-    last4: '4242',
-    nickname: 'Visa Personal',
-    cardholder: 'MARTINA ALEX',
-    expiry: '12/30',
-    isDefault: true,
-  },
-  {
-    id: 2,
-    type: 'card',
-    brand: 'Mastercard',
-    last4: '5555',
-    nickname: 'Mastercard Business',
-    cardholder: 'MARTINA ALEX',
-    expiry: '06/31',
-    isDefault: false,
-  }
-];
-
-const MOCK_BANK = {
-  id: 3,
-  type: 'bank',
-  bankName: 'Commercial Bank',
-  last4: '7890',
-  branch: 'Colombo 03',
-  accountHolder: 'Brian Gunasekara',
-  accountType: 'Savings',
-  isDefault: true,
-};
 
 // Payment Methods Modal
 const PaymentMethodsModal = ({ visible, onClose }) => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [securityExpanded, setSecurityExpanded] = useState(false);
+  const [limitsExpanded, setLimitsExpanded] = useState(false);
+  const [editMode, setEditMode] = useState('add'); // 'add' or 'edit'
+  const [editData, setEditData] = useState(null);
+
+  // Load payment methods from Firestore
+  const loadPaymentMethods = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Using hardcoded user ID for development
+      const userId = 'L001';
+      const methods = await getUserPaymentMethods(userId);
+      setPaymentMethods(methods);
+    } catch (err) {
+      setError('Failed to load payment methods');
+      console.error('Error loading payment methods:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadPaymentMethods();
+    }
+  }, [visible]);
 
   // Current payment method counts
-  const currentCards = MOCK_CARDS.length;
-  const currentBanks = 1; // MOCK_BANK exists
+  const currentCards = paymentMethods.filter(m => m.type === TYPES.CARD).length;
+  const currentBanks = paymentMethods.filter(m => m.type === TYPES.BANK).length;
 
   // Check if limits are reached
   const isCardLimitReached = currentCards >= MAX_CARDS;
   const isBankLimitReached = currentBanks >= MAX_BANK_ACCOUNTS;
   const canAddMore = !isCardLimitReached || !isBankLimitReached;
 
+  // CRUD Operations
+  const handleCreatePaymentMethod = async (formData) => {
+    try {
+      // AddPaymentMethod component now handles the data transformation and saving
+      // This function just refreshes the data after successful addition
+      await loadPaymentMethods();
+      setShowAddForm(false);
+    } catch (err) {
+      console.error('Error refreshing payment methods:', err);
+    }
+  };
+
+  const handleDeletePaymentMethod = async (paymentMethodId) => {
+    Alert.alert(
+      'Delete Payment Method',
+      'Are you sure you want to delete this payment method?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await deletePaymentMethod(paymentMethodId);
+              await loadPaymentMethods(); // Refresh data
+              Alert.alert('Success', 'Payment method deleted successfully');
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete payment method');
+              console.error('Error deleting payment method:', err);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSetDefault = async (paymentMethodId) => {
+    try {
+      setLoading(true);
+      
+      // Using hardcoded user ID for development
+      const userId = 'L001';
+      await setDefaultPaymentMethod(paymentMethodId, userId);
+      await loadPaymentMethods(); // Refresh data
+      Alert.alert('Success', 'Default payment method updated');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to set default payment method');
+      console.error('Error setting default:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handlers following Single Responsibility Principle
-  const handleSave = () => setShowAddForm(false);
-  const handleCancel = () => setShowAddForm(false);
-  
-  // Action handlers (these would typically call API services)
-  const handleDelete = (type, id) => console.log(`Delete ${type} with id:`, id);
-  const handleMakeDefault = (type, id) => console.log(`Make ${type} default with id:`, id);
+  const handleCancel = () => {
+    setShowAddForm(false);
+    setEditMode('add');
+    setEditData(null);
+  };
+
+  const handleEditPaymentMethod = (paymentMethod) => {
+    setEditMode('edit');
+    setEditData(paymentMethod);
+    setShowAddForm(true);
+  };
+
+  // Security Notice Component
+  const SecurityNotice = () => (
+    <ExpandableSection
+      title="Your Data is Safe With Us"
+      icon="shield-checkmark"
+      isExpanded={securityExpanded}
+      onToggle={() => setSecurityExpanded(!securityExpanded)}
+      variant="primary"
+    >
+      <Text style={styles.expandableDescription}>
+        We use <Text style={styles.expandableHighlight}>bank-grade 256-bit encryption</Text> to protect your payment information. 
+        Your sensitive data is encrypted before storage and never stored in plain text.
+      </Text>
+      <View style={styles.expandableFeatures}>
+        <View style={styles.expandableFeature}>
+          <Ionicons name="lock-closed" size={12} color={colors.green} />
+          <Text style={styles.expandableFeatureText}>End-to-end encrypted</Text>
+        </View>
+        <View style={styles.expandableFeature}>
+          <Ionicons name="eye-off" size={12} color={colors.green} />
+          <Text style={styles.expandableFeatureText}>Never shared</Text>
+        </View>
+        <View style={styles.expandableFeature}>
+          <Ionicons name="shield" size={12} color={colors.green} />
+          <Text style={styles.expandableFeatureText}>PCI compliant</Text>
+        </View>
+      </View>
+    </ExpandableSection>
+  );
 
   // Limits Info Component
-  const LimitsInfo = () => (
-    <View style={styles.limitsInfo}>
-      <View style={styles.limitsHeader}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.blueGreen} />
-        <Text style={styles.limitsTitle}>Payment Method Limits</Text>
-      </View>
-      <Text style={styles.limitsText}>
-        You can add up to <Text style={styles.limitsHighlight}>{MAX_CARDS} cards</Text> and <Text style={styles.limitsHighlight}>{MAX_BANK_ACCOUNTS} bank account</Text>.
-      </Text>
-      <View style={styles.limitsStatus}>
-        <Text style={styles.limitsStatusText}>
-          Cards: {currentCards}/{MAX_CARDS} • Banks: {currentBanks}/{MAX_BANK_ACCOUNTS}
+  const LimitsInfo = () => {
+    const headerBadge = (
+      <View style={styles.expandableBadge}>
+        <Text style={styles.expandableBadgeText}>
+          {currentCards}/{MAX_CARDS} • {currentBanks}/{MAX_BANK_ACCOUNTS}
         </Text>
       </View>
-    </View>
-  );
+    );
+
+    return (
+      <ExpandableSection
+        title="Payment Method Limits"
+        icon="information-circle-outline"
+        isExpanded={limitsExpanded}
+        onToggle={() => setLimitsExpanded(!limitsExpanded)}
+        variant="secondary"
+        headerBadge={headerBadge}
+      >
+        <Text style={styles.expandableDescription}>
+          You can add up to <Text style={styles.expandableHighlight}>{MAX_CARDS} cards</Text> and <Text style={styles.expandableHighlight}>{MAX_BANK_ACCOUNTS} bank account</Text>.
+        </Text>
+        <Text style={styles.expandableReason}>
+          <Text style={styles.expandableReasonLabel}>Why these limits? </Text>
+          To ensure your financial security and comply with regulatory requirements, we carefully monitor and limit the number of payment methods. This helps prevent unauthorized access and reduces fraud risk while keeping your account manageable.
+        </Text>
+      </ExpandableSection>
+    );
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -95,8 +201,29 @@ const PaymentMethodsModal = ({ visible, onClose }) => {
             </TouchableOpacity>
           </View>
 
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          )}
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={loadPaymentMethods} style={styles.retryButton}>
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {!showAddForm ? (
             <>
+              {/* Security Notice */}
+              <View style={styles.securityContainer}>
+                <SecurityNotice />
+              </View>
+
               {/* Payment Method Limits Info */}
               <View style={styles.limitsContainer}>
                 <LimitsInfo />
@@ -107,19 +234,24 @@ const PaymentMethodsModal = ({ visible, onClose }) => {
                 <View style={styles.savedMethodsContainer}>
                   <Text style={styles.sectionTitle}>Saved Payment Methods</Text>
                   
-                  {MOCK_CARDS.map(card => (
+                  {paymentMethods.filter(method => method.type === TYPES.CARD).map(card => (
                     <SavedCardCard 
                       key={card.id}
                       card={card} 
-                      onDelete={() => handleDelete('card', card.id)}
+                      onEdit={() => handleEditPaymentMethod(card)}
+                      onDelete={() => handleDeletePaymentMethod(card.id)}
                     />
                   ))}
                   
-                  <SavedBankCard 
-                    bank={MOCK_BANK} 
-                    onDelete={() => handleDelete('bank', MOCK_BANK.id)}
-                    onMakeDefault={() => handleMakeDefault('bank', MOCK_BANK.id)}
-                  />
+                   {paymentMethods.filter(method => method.type === TYPES.BANK).map(bank => (
+                    <SavedBankCard 
+                      key={bank.id}
+                      bank={bank} 
+                      onEdit={() => handleEditPaymentMethod(bank)}
+                      onDelete={() => handleDeletePaymentMethod(bank.id)}
+                      onMakeDefault={() => handleSetDefault(bank.id)}
+                    />
+                  ))}
                 </View>
               </ScrollView>
 
@@ -145,14 +277,58 @@ const PaymentMethodsModal = ({ visible, onClose }) => {
             <AddPaymentMethod
               visible={showAddForm}
               onClose={handleCancel}
-              onSaveBank={handleSave}
-              onSaveCard={handleSave}
-              banks={BANKS}
+              onSave={handleCreatePaymentMethod}
+              mode={editMode}
+              initialData={editData}
             />
           )}
         </View>
       </View>
     </Modal>
+  );
+};
+
+// Reusable Expandable Section Component
+const ExpandableSection = ({ 
+  title, 
+  icon, 
+  isExpanded, 
+  onToggle, 
+  children, 
+  headerBadge,
+  variant = 'primary' 
+}) => {
+  const containerStyle = variant === 'primary' 
+    ? styles.expandableSection 
+    : styles.expandableSectionSecondary;
+
+  return (
+    <View style={containerStyle}>
+      <TouchableOpacity 
+        style={styles.expandableHeader}
+        onPress={onToggle}
+        activeOpacity={0.7}
+      >
+        <View style={styles.expandableHeaderContent}>
+          <View style={styles.expandableIconContainer}>
+            <Ionicons name={icon} size={18} color={colors.blueGreen} />
+          </View>
+          <Text style={styles.expandableTitle}>{title}</Text>
+          {headerBadge}
+        </View>
+        <Ionicons 
+          name={isExpanded ? "chevron-up" : "chevron-down"} 
+          size={20} 
+          color={colors.blueGreen} 
+        />
+      </TouchableOpacity>
+      
+      {isExpanded && (
+        <View style={styles.expandableContent}>
+          {children}
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -171,85 +347,133 @@ const ActionButton = ({ icon, text, onPress, variant = 'danger' }) => {
 };
 
 // Saved Card Card Component
-const SavedCardCard = ({ card, onDelete }) => (
-  <View style={styles.professionalCard}>
-    <View style={styles.cardHeader}>
-      <View style={styles.cardMainInfo}>
-        <View style={styles.cardIcon}>
-          <Ionicons name="card" size={18} color={colors.blueGreen} />
+const SavedCardCard = ({ card, onDelete, onEdit }) => {
+  // Get brand display name
+  const getBrandDisplayName = (brand) => {
+    const brandMap = {
+      'visa': 'Visa',
+      'mastercard': 'Mastercard', 
+      'amex': 'American Express',
+      'discover': 'Discover'
+    };
+    return brandMap[brand] || brand?.toUpperCase() || 'Card';
+  };
+
+  // Format expiry date
+  const formatExpiry = (expiry) => {
+    if (!expiry) return 'N/A';
+    return expiry.length === 4 ? `${expiry.slice(0, 2)}/${expiry.slice(2)}` : expiry;
+  };
+
+  return (
+    <View style={styles.professionalCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardMainInfo}>
+          <View style={styles.cardIcon}>
+            <Ionicons name="card" size={18} color={colors.blueGreen} />
+          </View>
+          <View style={styles.cardPrimaryInfo}>
+            <Text style={styles.cardBrand}>{getBrandDisplayName(card.brand)}</Text>
+            <Text style={styles.cardNumber}>•••• {card.last4 || '****'}</Text>
+          </View>
         </View>
-        <View style={styles.cardPrimaryInfo}>
-          <Text style={styles.cardBrand}>{card.brand}</Text>
-          <Text style={styles.cardNumber}>•••• {card.last4}</Text>
+        {card.isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>DEFAULT</Text>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.cardDetailsGrid}>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Nickname</Text>
+          <Text style={styles.detailValue}>{card.nickname || 'No nickname'}</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Cardholder</Text>
+          <Text style={styles.detailValue}>{card.cardholder || 'N/A'}</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Expires</Text>
+          <Text style={styles.detailValue}>{formatExpiry(card.expiry)}</Text>
         </View>
       </View>
-      {card.isDefault && (
-        <View style={styles.defaultBadge}>
-          <Text style={styles.defaultText}>DEFAULT</Text>
-        </View>
-      )}
-    </View>
-    
-    <View style={styles.cardDetailsGrid}>
-      <View style={styles.detailItem}>
-        <Text style={styles.detailLabel}>Nickname</Text>
-        <Text style={styles.detailValue}>{card.nickname}</Text>
-      </View>
-      <View style={styles.detailItem}>
-        <Text style={styles.detailLabel}>Cardholder</Text>
-        <Text style={styles.detailValue}>{card.cardholder}</Text>
-      </View>
-      <View style={styles.detailItem}>
-        <Text style={styles.detailLabel}>Expires</Text>
-        <Text style={styles.detailValue}>{card.expiry}</Text>
+      
+      <View style={styles.cardActions}>
+        <ActionButton icon="create-outline" text="Edit" onPress={onEdit} variant="primary" />
+        <ActionButton icon="trash-outline" text="Delete" onPress={onDelete} variant="danger" />
       </View>
     </View>
-    
-    <View style={styles.cardActions}>
-      <ActionButton icon="trash-outline" text="Delete" onPress={onDelete} variant="danger" />
-    </View>
-  </View>
-);
+  );
+};
 
 // Saved Bank Card Component
-const SavedBankCard = ({ bank, onDelete, onMakeDefault }) => (
-  <View style={styles.professionalCard}>
-    <View style={styles.cardHeader}>
-      <View style={styles.cardMainInfo}>
-        <View style={styles.cardIcon}>
-          <Ionicons name="business" size={18} color={colors.blueGreen} />
-        </View>
-        <View style={styles.cardPrimaryInfo}>
-          <Text style={styles.cardBrand}>{bank.bankName}</Text>
-          <Text style={styles.cardNumber}>•••• {bank.last4} · {bank.branch}</Text>
-        </View>
-      </View>
-      {bank.isDefault && (
-        <View style={styles.defaultBadge}>
-          <Text style={styles.defaultText}>DEFAULT</Text>
-        </View>
-      )}
-    </View>
+const SavedBankCard = ({ bank, onDelete, onMakeDefault, onEdit }) => {
+  // Get masked account number for display
+  const getMaskedAccountNumber = () => {
+    // Use the masked version from Firestore if available
+    if (bank.accountNumberMasked) {
+      return bank.accountNumberMasked;
+    }
     
-    <View style={styles.cardDetailsGrid}>
-      <View style={styles.detailItem}>
-        <Text style={styles.detailLabel}>Account Holder</Text>
-        <Text style={styles.detailValue}>{bank.accountHolder}</Text>
+    // Fallback: if we have the encrypted account number, we can't display it
+    // This should not happen in normal flow, but provides safety
+    return '••••****';
+  };
+
+  // Format account type display
+  const formatAccountType = (accountType) => {
+    const typeMap = {
+      'savings': 'Savings Account',
+      'checking': 'Checking Account', 
+      'current': 'Current Account'
+    };
+    return typeMap[accountType] || accountType || 'Account';
+  };
+
+  return (
+    <View style={styles.professionalCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardMainInfo}>
+          <View style={styles.cardIcon}>
+            <Ionicons name="business" size={18} color={colors.blueGreen} />
+          </View>
+          <View style={styles.cardPrimaryInfo}>
+            <Text style={styles.cardBrand}>{bank.bankName || 'Bank Account'}</Text>
+            <Text style={styles.cardNumber}>
+              {getMaskedAccountNumber()}
+              {bank.branch && ` • ${bank.branch}`}
+            </Text>
+          </View>
+        </View>
+        {bank.isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>DEFAULT</Text>
+          </View>
+        )}
       </View>
-      <View style={styles.detailItem}>
-        <Text style={styles.detailLabel}>Account Type</Text>
-        <Text style={styles.detailValue}>{bank.accountType}</Text>
+      
+      <View style={styles.cardDetailsGrid}>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Account Holder</Text>
+          <Text style={styles.detailValue}>{bank.accountHolder || 'N/A'}</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Account Type</Text>
+          <Text style={styles.detailValue}>{formatAccountType(bank.accountType)}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.cardActions}>
+        {!bank.isDefault && (
+          <ActionButton icon="star-outline" text="Make Default" onPress={onMakeDefault} variant="primary" />
+        )}
+        <ActionButton icon="create-outline" text="Edit" onPress={onEdit} variant="primary" />
+        <ActionButton icon="trash-outline" text="Delete" onPress={onDelete} variant="danger" />
       </View>
     </View>
-    
-    <View style={styles.cardActions}>
-      {!bank.isDefault && (
-        <ActionButton icon="star-outline" text="Make Default" onPress={onMakeDefault} />
-      )}
-      <ActionButton icon="trash-outline" text="Delete" onPress={onDelete} variant="danger" />
-    </View>
-  </View>
-);
+  );
+};
 
 
 // Shared Styles
@@ -266,6 +490,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.sm,
+    fontSize: fontSize.md,
+    color: colors.gray,
+  },
+  errorContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: fontSize.md,
+    color: colors.error,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  retryButton: {
+    padding: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+  },
+  retryText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
+  },
   modalContent: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
@@ -273,7 +525,7 @@ const styles = StyleSheet.create({
     width: '90%',
     maxWidth: 400,
     maxHeight: '100%',
-    minHeight: 600,
+    minHeight: 700,
     elevation: 8,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
@@ -293,49 +545,130 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.midnightBlue,
   },
+        // Reusable Expandable Section Styles
+        securityContainer: {
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.sm,
+        },
         limitsContainer: {
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.sm,
           borderBottomWidth: 1,
           borderBottomColor: colors.lightGray,
         },
-        limitsInfo: {
+        expandableSection: {
+          backgroundColor: '#E8F5F1',
+          borderRadius: borderRadius.md,
+          borderLeftWidth: 4,
+          borderLeftColor: colors.blueGreen,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+          overflow: 'hidden',
+        },
+        expandableSectionSecondary: {
           backgroundColor: colors.babyBlue,
           borderRadius: borderRadius.md,
-          padding: spacing.sm,
           marginBottom: spacing.sm,
+          borderLeftWidth: 4,
+          borderLeftColor: colors.blueGreen,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+          overflow: 'hidden',
         },
-        limitsHeader: {
+        expandableHeader: {
           flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: spacing.xs,
+          justifyContent: 'space-between',
+          padding: spacing.md,
         },
-        limitsTitle: {
-          fontSize: fontSize.sm,
-          fontWeight: '600',
+        expandableHeaderContent: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flex: 1,
+        },
+        expandableIconContainer: {
+          backgroundColor: colors.white,
+          borderRadius: borderRadius.round,
+          padding: spacing.xs,
+          marginRight: spacing.sm,
+          shadowColor: colors.blueGreen,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.2,
+          shadowRadius: 2,
+          elevation: 2,
+        },
+        expandableTitle: {
+          fontSize: fontSize.base,
+          fontWeight: '700',
           color: colors.midnightBlue,
-          marginLeft: spacing.xs,
+          flex: 1,
         },
-        limitsText: {
+        expandableBadge: {
+          backgroundColor: colors.white,
+          borderRadius: borderRadius.sm,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: 4,
+          marginLeft: spacing.sm,
+        },
+        expandableBadgeText: {
+          fontSize: 11,
+          color: colors.gray,
+          fontWeight: '600',
+        },
+        expandableContent: {
+          paddingHorizontal: spacing.md,
+          paddingBottom: spacing.md,
+        },
+        expandableDescription: {
           fontSize: fontSize.sm,
           color: colors.gray,
           lineHeight: 18,
-          marginBottom: spacing.xs,
+          marginBottom: spacing.sm,
         },
-        limitsHighlight: {
-          fontWeight: '600',
-          color: colors.midnightBlue,
+        expandableHighlight: {
+          fontWeight: '700',
+          color: colors.blueGreen,
         },
-        limitsStatus: {
-          backgroundColor: colors.white,
-          borderRadius: borderRadius.sm,
-          padding: spacing.xs,
-        },
-        limitsStatusText: {
+        expandableReason: {
           fontSize: fontSize.xs,
           color: colors.gray,
-          fontWeight: '500',
-          textAlign: 'center',
+          lineHeight: 16,
+          fontStyle: 'italic',
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          padding: spacing.sm,
+          borderRadius: borderRadius.sm,
+          marginTop: spacing.sm,
+        },
+        expandableReasonLabel: {
+          fontWeight: '600',
+          color: colors.midnightBlue,
+          fontStyle: 'normal',
+        },
+        expandableFeatures: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+        },
+        expandableFeature: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.white,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: 4,
+          borderRadius: borderRadius.sm,
+          gap: 4,
+        },
+        expandableFeatureText: {
+          fontSize: 11,
+          color: colors.gray,
+          fontWeight: '600',
         },
         modalBody: {
           flex: 1,

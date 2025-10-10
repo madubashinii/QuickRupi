@@ -1,45 +1,73 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getDefaultPaymentMethod, TYPES } from '../../services/paymentMethods/paymentMethodsService';
+import { withdrawFunds, checkSufficientBalance } from '../../services/wallet/walletService';
 
-const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
+const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance, userId }) => {
   const [amount, setAmount] = useState('');
+  const [defaultBank, setDefaultBank] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Mock saved account data
-  const savedAccount = {
-    accountNumber: '1234567890',
-    bank: 'Commercial Bank',
-    branch: 'Colombo 03'
-  };
+  useEffect(() => {
+    const fetchDefaultBank = async () => {
+      if (!userId) return;
+      try {
+        const bank = await getDefaultPaymentMethod(userId, TYPES.BANK);
+        setDefaultBank(bank);
+      } catch (error) {
+        console.error('Failed to fetch default bank:', error);
+      }
+    };
+    fetchDefaultBank();
+  }, [userId]);
+
+  useEffect(() => {
+    if (amount) setError(null);
+  }, [amount]);
 
   const getMaskedAccountNumber = (accountNumber) => {
     return `****${accountNumber.slice(-4)}`;
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
-      return;
-    }
-    
-    if (parseFloat(amount) > parseFloat(walletBalance.replace(/[^\d.]/g, ''))) {
-      Alert.alert('Insufficient Balance', 'Amount cannot exceed wallet balance');
+      setError('Please enter a valid amount');
       return;
     }
 
-    const accountData = savedAccount;
-    onConfirm({
-      amount: parseFloat(amount),
-      account: accountData
-    });
-    
-    setAmount('');
-    onClose();
+    if (!defaultBank) {
+      setError('Please add a default bank account to withdraw funds');
+      return;
+    }
+
+    try {
+      const hasSufficient = await checkSufficientBalance(userId, parseFloat(amount));
+      if (!hasSufficient) {
+        setError('Insufficient balance for this withdrawal');
+        return;
+      }
+
+      setIsProcessing(true);
+      await withdrawFunds(userId, parseFloat(amount));
+      
+      Alert.alert('Success', 'Withdrawal successful');
+      onConfirm({ amount: parseFloat(amount), account: defaultBank });
+      setAmount('');
+      setError(null);
+      onClose();
+    } catch (error) {
+      setError(error.message || 'Failed to process withdrawal');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCancel = () => {
     setAmount('');
+    setError(null);
     onClose();
   };
 
@@ -69,32 +97,54 @@ const WithdrawModal = ({ visible, onClose, onConfirm, walletBalance }) => {
             </View>
             <Text style={styles.balanceText}>Available: {walletBalance}</Text>
 
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color={colors.error || '#dc2626'} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
             <View style={styles.accountSection}>
               <Text style={styles.sectionTitle}>Withdrawal Method</Text>
               
-              <View style={styles.accountOption}>
-                <View style={styles.accountInfo}>
-                  <Ionicons name="business" size={18} color={colors.blueGreen} />
-                  <View style={styles.accountDetails}>
-                    <Text style={styles.accountText}>
-                      {savedAccount.bank}
-                    </Text>
-                    <Text style={styles.accountSubtext}>
-                      {getMaskedAccountNumber(savedAccount.accountNumber)} • {savedAccount.branch}
-                    </Text>
+              {defaultBank ? (
+                <View style={styles.accountOption}>
+                  <View style={styles.accountInfo}>
+                    <Ionicons name="business" size={18} color={colors.blueGreen} />
+                    <View style={styles.accountDetails}>
+                      <Text style={styles.accountText}>
+                        {defaultBank.bankName}
+                      </Text>
+                      <Text style={styles.accountSubtext}>
+                        {defaultBank.accountNumberMasked || getMaskedAccountNumber(defaultBank.accountNumber)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              ) : (
+                <View style={styles.noBankContainer}>
+                  <Ionicons name="alert-circle-outline" size={20} color={colors.gray} />
+                  <Text style={styles.noAccountText}>No default bank account</Text>
+                </View>
+              )}
 
             </View>
           </View>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel} disabled={isProcessing}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>Confirm Withdraw</Text>
+            <TouchableOpacity 
+              style={[styles.confirmButton, isProcessing && styles.buttonDisabled]} 
+              onPress={handleConfirm}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.confirmButtonText}>Confirm Withdraw</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -166,8 +216,22 @@ const styles = StyleSheet.create({
   balanceText: {
     fontSize: fontSize.sm,
     color: colors.gray,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: 'right',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  errorText: {
+    fontSize: fontSize.sm,
+    color: '#dc2626',
+    flex: 1,
   },
   accountSection: {
     marginBottom: spacing.sm,
@@ -204,6 +268,17 @@ const styles = StyleSheet.create({
     color: colors.gray,
     marginTop: spacing.xs,
   },
+  noBankContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  noAccountText: {
+    fontSize: fontSize.base,
+    color: colors.gray,
+  },
   modalFooter: {
     flexDirection: 'row',
     padding: spacing.lg,
@@ -235,6 +310,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: '600',
     color: colors.white,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 
