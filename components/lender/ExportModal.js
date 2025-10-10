@@ -172,7 +172,7 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
           {/* Body */}
           <View style={styles.modalBody}>
             {/* Export Scope Section */}
-            <Text style={styles.sectionTitle}>Export Scope</Text>
+            <Text style={styles.sectionTitle}>Scope</Text>
             <TouchableOpacity 
               style={[styles.scopeOption, exportScope === 'current' && styles.activeScopeOption]}
               onPress={() => setExportScope('current')}
@@ -186,7 +186,7 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
                   Current View
                 </Text>
                 <Text style={styles.scopeSubtext}>
-                  Export {currentViewSummary.count} transactions currently displayed
+                  {currentViewSummary.count} transactions
                 </Text>
               </View>
             </TouchableOpacity>
@@ -207,14 +207,14 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
                   <ActivityIndicator size="small" color={colors.blueGreen} />
                 ) : (
                   <Text style={styles.scopeSubtext}>
-                    Export all {allTransactionsSummary.count} transactions from history
+                    All {allTransactionsSummary.count} transactions
                   </Text>
                 )}
               </View>
             </TouchableOpacity>
 
             {/* Format Section */}
-            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Export Format</Text>
+            <Text style={[styles.sectionTitle, { marginTop: spacing.sm }]}>Format</Text>
             
             <TouchableOpacity 
               style={[styles.formatOption, exportFormat === 'csv' && styles.activeFormatOption]}
@@ -224,8 +224,8 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
               <View style={styles.radioButton}>
                 {exportFormat === 'csv' && <View style={styles.radioButtonSelected} />}
               </View>
-              <Ionicons name="document-text" size={20} color={colors.blueGreen} style={styles.formatIcon} />
-              <Text style={styles.formatText}>CSV (Excel/Sheets)</Text>
+              <Ionicons name="document-text" size={18} color={colors.blueGreen} style={styles.formatIcon} />
+              <Text style={styles.formatText}>CSV</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -236,8 +236,8 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
               <View style={styles.radioButton}>
                 {exportFormat === 'pdf' && <View style={styles.radioButtonSelected} />}
               </View>
-              <Ionicons name="document" size={20} color={colors.blueGreen} style={styles.formatIcon} />
-              <Text style={styles.formatText}>PDF (Portable Document)</Text>
+              <Ionicons name="document" size={18} color={colors.blueGreen} style={styles.formatIcon} />
+              <Text style={styles.formatText}>PDF</Text>
             </TouchableOpacity>
 
             {/* Transaction Count Preview */}
@@ -334,7 +334,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
   },
@@ -344,22 +345,24 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   modalBody: {
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   sectionTitle: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: '600',
-    color: colors.black,
-    marginBottom: spacing.sm,
+    color: colors.gray,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   scopeOption: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: colors.lightGray,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   activeScopeOption: {
     borderColor: colors.blueGreen,
@@ -370,61 +373,60 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   scopeText: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: '500',
     color: colors.black,
-    marginBottom: spacing.xs / 2,
   },
   activeScopeText: {
     color: colors.blueGreen,
     fontWeight: '600',
   },
   scopeSubtext: {
-    fontSize: fontSize.sm,
+    fontSize: 11,
     color: colors.gray,
   },
   formatOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: colors.lightGray,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   activeFormatOption: {
     borderColor: colors.blueGreen,
     backgroundColor: colors.babyBlue,
   },
   radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 2,
     borderColor: colors.blueGreen,
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioButtonSelected: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.blueGreen,
   },
   formatIcon: {
     marginLeft: spacing.sm,
   },
   formatText: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     color: colors.black,
     marginLeft: spacing.sm,
     fontWeight: '500',
   },
   previewSection: {
     backgroundColor: colors.lightGray,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.sm,
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    marginTop: spacing.xs,
   },
   previewHeader: {
     flexDirection: 'row',
@@ -471,15 +473,16 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     flexDirection: 'row',
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.lightGray,
   },
   cancelButton: {
     flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.lightGray,
     alignItems: 'center',
   },
@@ -491,8 +494,8 @@ const styles = StyleSheet.create({
   exportButton: {
     flex: 1,
     flexDirection: 'row',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
