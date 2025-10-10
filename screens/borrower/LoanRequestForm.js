@@ -1,113 +1,207 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { db } from "../../services/firebaseConfig"; // adjust path
-import { collection, addDoc } from "firebase/firestore";
 import Toast from "react-native-root-toast";
 import { useNavigation } from "@react-navigation/native";
+import { db } from "../../services/firebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const LoanRequestForm = () => {
-  const [loanAmount, setLoanAmount] = useState('');
-  const [loanTerm, setLoanTerm] = useState('');
-  const [loanPurpose, setLoanPurpose] = useState('');
-  const [loanRate, setLoanRate] = useState('');
   const navigation = useNavigation();
-  const borrowerId = "B001"; // Replace with current user ID
-  const interestRate = 12.5; // example fixed value
+
+  // === State Variables ===
+  const [loanAmount, setLoanAmount] = useState("");
+  const [loanPurpose, setLoanPurpose] = useState("");
+  const [repaymentPeriodMonths, setRepaymentPeriodMonths] = useState("");
+  const [notes, setNotes] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [guarantor, setGuarantor] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [existingLoanEMI, setExistingLoanEMI] = useState("");
+  const [loanRate, setLoanRate] = useState('');
+  // Replace this with logged-in user ID
+  const userId = "USER001";
 
   const submitLoanRequest = async () => {
-    if (!loanAmount || !loanTerm || !loanPurpose) {
-      Toast.show("Please fill all fields");
+    if (!loanAmount || !loanPurpose || !repaymentPeriodMonths) {
+      Toast.show("Please fill all required fields", { duration: 2000 });
       return;
     }
 
     try {
-      // Generate unique loanId (can use timestamp)
-      const loanId = `L${new Date().getTime()}`;
-
-      await addDoc(collection(db, "loans"), {
-        amountRequested: Number(loanAmount),
-        borrowerId,
-        createdAt: new Date(),
-        loanRate,
-        loanId,
-        purpose: loanPurpose,
+      const loanRequest = {
+        userId,
+        appliedDate: new Date(),
         status: "Pending",
-        termMonths: Number(loanTerm),
-      });
+        loanAmount: Number(loanAmount),
+        loanPurpose,
+        repaymentPeriodMonths: Number(repaymentPeriodMonths),
+        rate:Number(loanRate),
+        notes: notes || "",
+        existingLoanEMI: Number(existingLoanEMI) || 0,
+        guarantor: guarantor || "",
+        kycSnapshot: businessName ? { businessName } : {},
+        bankDetails: {
+          bankName: bankName || "",
+          accountNumber: bankAccount || "",
+        },
+        docs: {
+          bankStatement: null,
+          salarySlip: null,
+          businessRegistration: null,
+        },
+        createdAt: serverTimestamp(),
+      };
 
-      Toast.show("Loan request submitted!", ToastAndroid.SHORT);
+      await addDoc(collection(db, "loans"), loanRequest);
 
-      // Reset form
-      setLoanAmount('');
-      setLoanTerm('');
-      setLoanPurpose('');
-      setLoanRate('');
+      Toast.show("Loan request submitted successfully!", { duration: 2000 });
 
-      navigation.goBack(); // or navigate to Loans list
+      // Clear form
+      setLoanAmount("");
+      setLoanPurpose("");
+      setRepaymentPeriodMonths("");
+      setNotes("");
+      setBusinessName("");
+      setGuarantor("");
+      setBankName("");
+      setBankAccount("");
+      setExistingLoanEMI("");
+
+      navigation.goBack();
     } catch (error) {
       console.error("Error submitting loan request:", error);
-      Toast.show("Failed to submit loan request");
+      Toast.show("Failed to submit loan request", { duration: 2000 });
     }
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
+    <ScrollView contentContainerStyle={styles.container}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Ionicons name="chevron-back" size={28} color="#000" />
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
       <Text style={styles.title}>Loan Request Form</Text>
 
+      {/* Loan Amount */}
       <TextInput
-        placeholder="Loan Amount"
+        placeholder="Loan Amount (LKR)"
         keyboardType="numeric"
         value={loanAmount}
         onChangeText={setLoanAmount}
         style={styles.input}
       />
 
+      {/* Loan Purpose */}
       <TextInput
-        placeholder="Loan Term (in months)"
+        placeholder="Purpose of Loan"
+        value={loanPurpose}
+        onChangeText={setLoanPurpose}
+        style={styles.input}
+      />
+
+      {/* Repayment Period */}
+      <TextInput
+        placeholder="Repayment Period (in months)"
         keyboardType="numeric"
-        value={loanTerm}
-        onChangeText={setLoanTerm}
+        value={repaymentPeriodMonths}
+        onChangeText={setRepaymentPeriodMonths}
+        style={styles.input}
+      />
+
+      {/* Existing EMI */}
+      <TextInput
+        placeholder="Existing Loan EMI (if any)"
+        keyboardType="numeric"
+        value={existingLoanEMI}
+        onChangeText={setExistingLoanEMI}
         style={styles.input}
       />
 
       <TextInput
         placeholder="Loan Rate"
         keyboardType="numeric"
-        value={loanTerm}
+        value={loanRate}
         onChangeText={setLoanRate}
         style={styles.input}
       />
 
+      {/* Business Name / KYC */}
       <TextInput
-        placeholder="Loan Purpose"
-        value={loanPurpose}
-        onChangeText={setLoanPurpose}
+        placeholder="Business Name (if applicable)"
+        value={businessName}
+        onChangeText={setBusinessName}
         style={styles.input}
       />
 
+      {/* Guarantor */}
+      <TextInput
+        placeholder="Guarantor Name (optional)"
+        value={guarantor}
+        onChangeText={setGuarantor}
+        style={styles.input}
+      />
+
+      {/* Bank Name */}
+      <TextInput
+        placeholder="Bank Name"
+        value={bankName}
+        onChangeText={setBankName}
+        style={styles.input}
+      />
+
+      {/* Bank Account */}
+      <TextInput
+        placeholder="Bank Account Number"
+        keyboardType="numeric"
+        value={bankAccount}
+        onChangeText={setBankAccount}
+        style={styles.input}
+      />
+
+      {/* Notes */}
+      <TextInput
+        placeholder="Additional Notes (optional)"
+        value={notes}
+        onChangeText={setNotes}
+        style={[styles.input, { height: 80 }]}
+        multiline
+      />
+
       <TouchableOpacity style={styles.submitButton} onPress={submitLoanRequest}>
-        <Text style={styles.submitText}>Submit Request</Text>
+        <Text style={styles.submitText}>Submit Loan Request</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginVertical: 10 },
-  submitButton: { backgroundColor: "#0C6170", padding: 15, borderRadius: 10, marginTop: 20 },
-  submitText: { color: "#fff", textAlign: 'center', fontWeight: 'bold' },
-  backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  container: { flexGrow: 1, padding: 20, backgroundColor: "#fff" },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#0C6170",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    fontSize: 16,
+  },
+  submitButton: {
+    backgroundColor: "#0C6170",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  submitText: { color: "#fff", textAlign: "center", fontWeight: "bold" },
+  backButton: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   backText: { fontSize: 16, marginLeft: 5 },
 });
 

@@ -23,7 +23,7 @@ const KYCView = () => {
   useEffect(() => {
     const fetchKYC = async () => {
       try {
-        const q = query(collection(db, "kyc"), where("user", "==", userId));
+        const q = query(collection(db, "kyc"), where("userId", "==", userId));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           setKyc(snapshot.docs[0].data());
@@ -71,6 +71,13 @@ const KYCView = () => {
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.navigate("BorrowerProfile")}
+            >
+              <Ionicons name="chevron-back" size={28} color="#000" />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
       <Text style={styles.title}>KYC Details</Text>
 
       <Text style={styles.label}>Full Name:</Text>
@@ -117,7 +124,7 @@ const KYCView = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, padding: 20},
   title: {
     fontSize: 24,
     fontWeight: "bold",

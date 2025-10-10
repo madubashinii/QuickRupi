@@ -16,7 +16,7 @@ const PaymentRecords = () => {
     const fetchRecords = async () => {
       try {
         const q = query(
-          collection(db, "repayments"),
+          collection(db, "escow_borrower"),
           where("userId", "==", fixedUserId) //replace this with correct id after testing
         );
         const snapshot = await getDocs(q);

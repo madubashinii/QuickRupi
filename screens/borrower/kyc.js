@@ -1,33 +1,49 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Button, ScrollView, Image,TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Button,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { db } from "../../services/firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Toast from "react-native-root-toast";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 const KYCForm = () => {
+  const navigation = useNavigation();
+
+  // Form states
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [occupation, setOccupation] = useState("");
   const [monthlyIncome, setMonthlyIncome] = useState("");
+  const [employerName, setEmployerName] = useState("");
   const [frontImage, setFrontImage] = useState(null);
   const [backImage, setBackImage] = useState(null);
-  const navigation = useNavigation();
 
+  const userId = "B001"; // TODO: Replace with actual logged-in user's ID from Firebase Auth
+
+  // Image picker
   const pickImage = async (setImage) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Toast.show("Permission denied", "Please allow gallery access.");
+      Toast.show("Please allow gallery access to upload ID images.");
       return;
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
@@ -38,65 +54,140 @@ const KYCForm = () => {
     }
   };
 
+  // Submit KYC
   const submitKYC = async () => {
     if (!fullName || !email || !phone || !frontImage || !backImage) {
-      Toast.show("Error", "Please fill all required fields.");
+      Toast.show("Please fill all required fields.");
       return;
     }
 
     try {
       await addDoc(collection(db, "kyc"), {
+        userId,
         fullName,
         businessName,
         city,
-        dateOfBirth: new Date(dateOfBirth),
+        postalCode,
+        dateOfBirth,
         email,
         phone,
         occupation,
         monthlyIncome,
-        identityProofFront: frontImage,
-        identityProofBack: backImage,
+        employerName,
+        identityProofFront: frontImage ? "uploaded" : null,
+        identityProofBack: backImage ? "uploaded" : null,
         kycStatus: "pending",
-        submittedAt: new Date(),
-        user: "B001", // replace with current userId
+        submittedAt: serverTimestamp(),
       });
 
-      Toast.show("Success", "KYC submitted successfully!");
+      Toast.show(" KYC submitted successfully!");
+
       // Reset form
-      setFullName(""); setBusinessName(""); setCity(""); setDateOfBirth("");
-      setEmail(""); setPhone(""); setOccupation(""); setMonthlyIncome("");
-      setFrontImage(null); setBackImage(null);
+      setFullName("");
+      setBusinessName("");
+      setCity("");
+      setPostalCode("");
+      setDateOfBirth("");
+      setEmail("");
+      setPhone("");
+      setOccupation("");
+      setMonthlyIncome("");
+      setEmployerName("");
+      setFrontImage(null);
+      setBackImage(null);
     } catch (error) {
       console.error("Error submitting KYC:", error);
-      Toast.show("Error", "Failed to submit KYC.");
+      Toast.show(" Failed to submit KYC.");
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.contentContainer}>
+      {/* Back Button */}
       <TouchableOpacity
-                 style={styles.kycButton}
-                 onPress={() => navigation.navigate("BorrowerProfile")}
-              >
-                <Ionicons name="chevron-back" size={28} color="#000" />
-                <Text style={styles.kycButtonText}>Back</Text>
+        style={styles.backButton}
+        onPress={() => navigation.navigate("BorrowerProfile")}
+      >
+        <Ionicons name="chevron-back" size={28} color="#000" />
+        <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
+
       <Text style={styles.title}>KYC Form</Text>
 
-      <TextInput placeholder="Full Name" value={fullName} onChangeText={setFullName} style={styles.input} />
-      <TextInput placeholder="Business Name" value={businessName} onChangeText={setBusinessName} style={styles.input} />
-      <TextInput placeholder="City" value={city} onChangeText={setCity} style={styles.input} />
-      <TextInput placeholder="Date of Birth (YYYY-MM-DD)" value={dateOfBirth} onChangeText={setDateOfBirth} style={styles.input} />
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} keyboardType="email-address" />
-      <TextInput placeholder="Phone" value={phone} onChangeText={setPhone} style={styles.input} keyboardType="phone-pad" />
-      <TextInput placeholder="Occupation" value={occupation} onChangeText={setOccupation} style={styles.input} />
-      <TextInput placeholder="Monthly Income" value={monthlyIncome} onChangeText={setMonthlyIncome} style={styles.input} keyboardType="numeric" />
+      {/* Form Fields */}
+      <TextInput
+        placeholder="Full Name"
+        value={fullName}
+        onChangeText={setFullName}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Business Name"
+        value={businessName}
+        onChangeText={setBusinessName}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="City"
+        value={city}
+        onChangeText={setCity}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Postal Code"
+        value={postalCode}
+        onChangeText={setPostalCode}
+        style={styles.input}
+        keyboardType="numeric"
+      />
+      <TextInput
+        placeholder="Date of Birth (YYYY-MM-DD)"
+        value={dateOfBirth}
+        onChangeText={setDateOfBirth}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+        keyboardType="email-address"
+      />
+      <TextInput
+        placeholder="Phone Number"
+        value={phone}
+        onChangeText={setPhone}
+        style={styles.input}
+        keyboardType="phone-pad"
+      />
+      <TextInput
+        placeholder="Occupation"
+        value={occupation}
+        onChangeText={setOccupation}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Monthly Income (LKR)"
+        value={monthlyIncome}
+        onChangeText={setMonthlyIncome}
+        style={styles.input}
+        keyboardType="numeric"
+      />
+      <TextInput
+        placeholder="Employer Name (optional)"
+        value={employerName}
+        onChangeText={setEmployerName}
+        style={styles.input}
+      />
 
+      {/* Image Pickers */}
       <Button title="Pick Front ID Image" onPress={() => pickImage(setFrontImage)} />
       {frontImage && <Image source={{ uri: frontImage }} style={styles.image} />}
+
       <Button title="Pick Back ID Image" onPress={() => pickImage(setBackImage)} />
       {backImage && <Image source={{ uri: backImage }} style={styles.image} />}
 
+      {/* Submit Button */}
       <View style={{ marginTop: 20 }}>
         <Button title="Submit KYC" onPress={submitKYC} />
       </View>
@@ -104,11 +195,17 @@ const KYCForm = () => {
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginBottom: 10 },
+  scroll: { flex: 1, backgroundColor: "#fff" }, // ScrollView itself
+  contentContainer: { padding: 20 }, // content inside ScrollView
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center", color: "#0C6170" },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 12, marginVertical: 8, fontSize: 16 },
   image: { width: "100%", height: 200, marginVertical: 10, borderRadius: 8 },
+  backButton: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  backButtonText: { fontSize: 16, marginLeft: 5 },
 });
 
 export default KYCForm;
+
+      
