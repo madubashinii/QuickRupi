@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import PropTypes from 'prop-types';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { OngoingLoanDetailsModal } from './InvestmentModals';
+import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
 
 // Constants
 const STATUS_CONFIG = {
-  'On time': { color: colors.blueGreen, icon: 'checkmark-circle', textColor: colors.white },
-  'Due soon': { color: '#FFB347', icon: 'time', textColor: colors.white },
-  'Overdue': { color: colors.red, icon: 'alert-circle', textColor: colors.white },
+  'Awaiting admin escrow approval': { color: '#FFB347', icon: 'time', textColor: colors.white },
+  'Money cleared for disbursement': { color: colors.blueGreen, icon: 'checkmark-circle', textColor: colors.white },
+  'Repayment in progress': { color: colors.forestGreen, icon: 'sync', textColor: colors.white },
   default: { color: colors.gray, icon: 'help-circle', textColor: colors.white }
 };
 
@@ -20,7 +22,12 @@ const DETAIL_ICONS = {
 };
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 const calculateProgress = (repaid, total) => Math.min(Math.max((repaid / total) * 100, 0), 100);
 
 // Common styles
@@ -66,7 +73,50 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 // Investment Card Component
 const InvestmentCard = ({ investment, onDetailsPress }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const progress = calculateProgress(investment.amountRepaid, investment.repaymentAmount);
+  // Calculate progress and amounts based on repayment data
+  const [repaymentData, setRepaymentData] = useState(null);
+
+  useEffect(() => {
+    const fetchRepaymentData = async () => {
+      if (!investment?.repaymentId) return;
+      
+      try {
+        const data = await getRepaymentSchedule(investment.repaymentId);
+        setRepaymentData(data);
+      } catch (err) {
+        console.error('Failed to fetch repayment data:', err);
+      }
+    };
+
+    fetchRepaymentData();
+  }, [investment?.repaymentId]);
+
+  const calculateRepaymentProgress = () => {
+    if (!repaymentData?.schedule) return 0;
+    
+    const totalInstallments = repaymentData.schedule.length;
+    const paidInstallments = repaymentData.schedule.filter(payment => payment.status === 'Paid').length;
+    
+    return (paidInstallments / totalInstallments) * 100;
+  };
+
+  const getTotalAmounts = () => {
+    if (!repaymentData?.schedule) {
+      return {
+        amountRepaid: investment.amountRepaid || 0,
+        totalAmount: investment.repaymentAmount || 0
+      };
+    }
+    
+    const paidPayments = repaymentData.schedule.filter(payment => payment.status === 'Paid');
+    const amountRepaid = paidPayments.reduce((sum, payment) => sum + payment.totalPayment, 0);
+    const totalAmount = repaymentData.totalAmount;
+    
+    return { amountRepaid, totalAmount };
+  };
+
+  const progress = calculateRepaymentProgress();
+  const { amountRepaid, totalAmount } = getTotalAmounts();
 
   const handleDetailsPress = () => {
     setShowDetailsModal(true);
@@ -93,7 +143,7 @@ const InvestmentCard = ({ investment, onDetailsPress }) => {
           />
           <DetailRow 
             icon={DETAIL_ICONS.apr} 
-            label="APR" 
+            label="Interest Rate" 
             value={`${investment.apr}%`} 
             isApr 
           />
@@ -114,7 +164,7 @@ const InvestmentCard = ({ investment, onDetailsPress }) => {
           </View>
           <ProgressBar progress={progress} />
           <Text style={styles.progressText}>
-            {formatCurrency(investment.amountRepaid)} of {formatCurrency(investment.repaymentAmount)}
+            {formatCurrency(amountRepaid)} of {formatCurrency(totalAmount)}
           </Text>
         </View>
 
@@ -270,5 +320,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default InvestmentCard;

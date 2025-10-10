@@ -1,27 +1,27 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
 
 // Constants
 const STATUS_CONFIG = {
-  'On time': { color: colors.blueGreen, icon: 'checkmark-circle', bgColor: '#E8F5F3' },
+  'Pending': { color: '#FF6B35', icon: 'hourglass', bgColor: '#FFF0E6' },
   'Due soon': { color: '#FFB347', icon: 'time', bgColor: '#FFF3E0' },
   'Overdue': { color: colors.red, icon: 'alert-circle', bgColor: '#FFEBEE' },
   'Paid': { color: colors.forestGreen, icon: 'checkmark-done', bgColor: '#E8F5E8' },
-  'Pending': { color: '#FF6B35', icon: 'hourglass', bgColor: '#FFF0E6' },
   default: { color: colors.gray, icon: 'help-circle', bgColor: '#F5F5F5' }
 };
 
-const SAMPLE_SCHEDULE = [
-  { dueDate: '2024-01-15', amount: 25000, status: 'Paid', paidDate: '2024-01-14' },
-  { dueDate: '2024-02-15', amount: 25000, status: 'Pending', paidDate: null },
-  { dueDate: '2024-03-15', amount: 25000, status: 'Pending', paidDate: null },
-  { dueDate: '2024-04-15', amount: 25000, status: 'Pending', paidDate: null }
-];
+// Repayment schedule will be fetched from the service
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { 
   year: 'numeric', 
   month: 'short', 
@@ -70,16 +70,42 @@ const DetailRow = ({ label, value, isHighlight = false, icon = null }) => (
   </View>
 );
 
-const RepaymentRow = ({ installment }) => (
-  <View style={styles.repaymentRow}>
-    <Text style={styles.repaymentDate}>{formatDate(installment.dueDate)}</Text>
-    <Text style={styles.repaymentAmount}>{formatCurrency(installment.amount)}</Text>
-    <View style={styles.statusContainer}>
-      <StatusChip status={installment.status} />
+const RepaymentRow = ({ installment }) => {
+  const isPaid = installment.status === 'Paid';
+  
+  return (
+    <View style={[styles.repaymentRow, isPaid && styles.paidRow]}>
+      <Text style={[styles.repaymentDate, isPaid && styles.paidText]}>
+        {formatDate(installment.dueDate)}
+      </Text>
+      <Text style={[styles.repaymentAmount, isPaid && styles.paidText]}>
+        {formatCurrency(installment.totalPayment)}
+      </Text>
+      <View style={styles.statusContainer}>
+        <StatusChip status={installment.status} />
+      </View>
+      <View style={styles.paidDateContainer}>
+        {installment.paidDate ? (
+          <>
+            {isPaid && (
+              <Ionicons 
+                name="checkmark-circle" 
+                size={14} 
+                color={colors.forestGreen} 
+                style={styles.paidDateIcon} 
+              />
+            )}
+            <Text style={[styles.repaymentPaidDate, isPaid && styles.paidDateHighlight]}>
+              {formatDate(installment.paidDate)}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.repaymentPaidDate}>-</Text>
+        )}
+      </View>
     </View>
-    <Text style={styles.repaymentPaidDate}>{installment.paidDate ? formatDate(installment.paidDate) : '-'}</Text>
-  </View>
-);
+  );
+};
 
 // Section Components
 const BorrowerSection = ({ investment }) => (
@@ -95,7 +121,7 @@ const BorrowerSection = ({ investment }) => (
   </View>
 );
 
-const LoanInfoSection = ({ investment, progress }) => (
+const LoanInfoSection = ({ investment, progress, amountRepaid, totalAmount }) => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>Loan Information</Text>
     <View style={styles.infoCard}>
@@ -124,7 +150,7 @@ const LoanInfoSection = ({ investment, progress }) => (
         </View>
         <ProgressBar progress={progress} />
         <Text style={styles.progressText}>
-          {formatCurrency(investment.amountRepaid)} of {formatCurrency(investment.repaymentAmount)}
+          {formatCurrency(amountRepaid)} of {formatCurrency(totalAmount)}
         </Text>
       </View>
     </View>
@@ -146,21 +172,63 @@ const PurposeSection = ({ investment }) => (
   </View>
 );
 
-const RepaymentStatusSection = ({ investment }) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionTitle}>Repayment Status</Text>
-    <View style={styles.infoCard}>
-      <DetailRow 
-        label="Next Due" 
-        value={`${formatDate(investment.nextDueDate || '2024-02-15')} - ${formatCurrency(investment.nextDueAmount || 25000)}`} 
-        isHighlight 
-        icon="calendar"
-      />
-    </View>
-  </View>
-);
+const RepaymentStatusSection = ({ repaymentData, loading, error }) => {
+  if (loading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Repayment Status</Text>
+        <View style={styles.infoCard}>
+          <ActivityIndicator size="small" color={colors.midnightBlue} />
+        </View>
+      </View>
+    );
+  }
 
-const RepaymentScheduleSection = ({ schedule }) => (
+  if (error || !repaymentData) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Repayment Status</Text>
+        <View style={styles.infoCard}>
+          <Text style={styles.errorText}>Failed to load repayment status</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Find all pending payments
+  const pendingPayments = repaymentData.schedule.filter(payment => 
+    payment.status === 'Pending' || payment.status === 'Due soon'
+  ).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+  // Get the next payment
+  const nextPayment = pendingPayments[0];
+
+  // Calculate total pending amount
+  const totalPending = pendingPayments.reduce((sum, payment) => sum + payment.totalPayment, 0);
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Repayment Status</Text>
+      <View style={styles.infoCard}>
+        <DetailRow 
+          label="Next Due" 
+          value={nextPayment ? `${formatDate(nextPayment.dueDate)} - ${formatCurrency(nextPayment.totalPayment)}` : 'No pending payments'} 
+          isHighlight 
+          icon="calendar"
+        />
+        {pendingPayments.length > 0 && (
+          <DetailRow 
+            label="Pending Payments" 
+            value={`${pendingPayments.length} (${formatCurrency(totalPending)})`}
+            icon="alert-circle"
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+const RepaymentScheduleSection = ({ repaymentData, loading, error }) => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>Repayment Schedule</Text>
     <View style={styles.repaymentTable}>
@@ -170,19 +238,91 @@ const RepaymentScheduleSection = ({ schedule }) => (
         <Text style={styles.repaymentHeaderText}>Status</Text>
         <Text style={styles.repaymentHeaderText}>Paid Date</Text>
       </View>
-      {schedule.map((installment, index) => (
-        <RepaymentRow key={index} installment={installment} />
-      ))}
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.midnightBlue} />
+          <Text style={styles.loadingText}>Loading repayment schedule...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning" size={20} color={colors.red} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : (
+        repaymentData?.schedule?.map((installment, index) => (
+          <RepaymentRow key={index} installment={installment} />
+        ))
+      )}
     </View>
   </View>
 );
 
 // Main Modal Component
 export const OngoingLoanDetailsModal = ({ visible, onClose, investment }) => {
+  const [loading, setLoading] = useState(false);
+  const [repaymentData, setRepaymentData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRepaymentData = async () => {
+      if (!visible || !investment) {
+        return;
+      }
+      
+      if (!investment.repaymentId) {
+        setError("No repayment schedule found for this loan");
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const data = await getRepaymentSchedule(investment.repaymentId);
+        setRepaymentData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch repayment schedule:', err);
+        setError("Failed to load repayment schedule");
+        setRepaymentData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRepaymentData();
+  }, [visible, investment?.repaymentId]);
+
   if (!visible || !investment) return null;
 
-  const progress = calculateProgress(investment.amountRepaid, investment.repaymentAmount);
-  const schedule = investment.repaymentSchedule || SAMPLE_SCHEDULE;
+  // Calculate progress based on number of months paid
+  const calculateRepaymentProgress = () => {
+    if (!repaymentData?.schedule) return 0;
+    
+    const totalInstallments = repaymentData.schedule.length;
+    const paidInstallments = repaymentData.schedule.filter(payment => payment.status === 'Paid').length;
+    
+    return (paidInstallments / totalInstallments) * 100;
+  };
+
+  const progress = calculateRepaymentProgress();
+  
+  // Calculate total amounts for display
+  const getTotalAmounts = () => {
+    if (!repaymentData?.schedule) {
+      return {
+        amountRepaid: investment.amountRepaid || 0,
+        totalAmount: investment.repaymentAmount || 0
+      };
+    }
+    
+    const paidPayments = repaymentData.schedule.filter(payment => payment.status === 'Paid');
+    const amountRepaid = paidPayments.reduce((sum, payment) => sum + payment.totalPayment, 0);
+    const totalAmount = repaymentData.totalAmount;
+    
+    return { amountRepaid, totalAmount };
+  };
+  
+  const { amountRepaid, totalAmount } = getTotalAmounts();
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -207,10 +347,23 @@ export const OngoingLoanDetailsModal = ({ visible, onClose, investment }) => {
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
             <View style={styles.content}>
               <BorrowerSection investment={investment} />
-              <LoanInfoSection investment={investment} progress={progress} />
+              <LoanInfoSection 
+                investment={investment} 
+                progress={progress}
+                amountRepaid={amountRepaid}
+                totalAmount={totalAmount}
+              />
               <PurposeSection investment={investment} />
-              <RepaymentStatusSection investment={investment} />
-              <RepaymentScheduleSection schedule={schedule} />
+              <RepaymentStatusSection 
+                repaymentData={repaymentData}
+                loading={loading}
+                error={error}
+              />
+              <RepaymentScheduleSection 
+                repaymentData={repaymentData}
+                loading={loading}
+                error={error}
+              />
             </View>
           </ScrollView>
         </View>
@@ -417,6 +570,30 @@ const styles = StyleSheet.create({
     color: colors.forestGreen,
     fontWeight: '500',
   },
+  loadingContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    fontSize: fontSize.sm,
+    color: colors.gray,
+  },
+  errorContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: '#FFEBEE',
+  },
+  errorText: {
+    fontSize: fontSize.sm,
+    color: colors.red,
+    fontWeight: '500',
+  },
   
   // Purpose Section
   purposeTitle: {
@@ -466,6 +643,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.babyBlue,
+  },
+  paidRow: {
+    backgroundColor: '#F0F9F4',
+  },
+  paidText: {
+    color: colors.forestGreen,
+    fontWeight: '500',
+  },
+  paidDateHighlight: {
+    color: colors.forestGreen,
+    fontWeight: '600',
+  },
+  paidDateContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paidDateIcon: {
+    marginRight: spacing.xs,
   },
   repaymentDate: {
     flex: 1,

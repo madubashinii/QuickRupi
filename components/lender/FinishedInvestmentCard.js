@@ -22,7 +22,12 @@ const ACTION_CONFIG = [
 ];
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 const calculateReturnPercentage = (interest, principal) => ((interest / principal) * 100).toFixed(1);
 
 // Common styles
@@ -150,53 +155,53 @@ const styles = StyleSheet.create({
   finishedCard: {
     ...cardStyle,
     marginBottom: spacing.sm,
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: borderRadius.lg,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xs - 2,
   },
   borrowerInfo: {
     flex: 1,
   },
   borrowerName: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: 'bold',
     color: colors.midnightBlue,
     marginBottom: 1,
   },
   borrowerId: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.gray,
   },
   purpose: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.forestGreen,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     fontWeight: '500',
   },
   performanceSection: {
     backgroundColor: colors.babyBlue,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
+    padding: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
   },
   performanceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   performanceItem: {
     flex: 1,
     alignItems: 'center',
   },
   performanceLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.gray,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   performanceValue: {
     fontSize: fontSize.sm,
@@ -204,27 +209,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   detailsSection: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   detailLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.gray,
   },
   detailValue: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.midnightBlue,
     fontWeight: '600',
   },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   actionButton: {
     flex: 1,
@@ -232,15 +237,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.babyBlue,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   actionButtonText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.midnightBlue,
     fontWeight: '600',
-    marginLeft: spacing.xs,
+    marginLeft: spacing.xs - 2,
   },
 });
 

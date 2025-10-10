@@ -26,7 +26,7 @@ export const fetchRepayments = async () => {
 
         let loans = [];
         if (loanIds.length > 0) {
-            const loansQuery = query(collection(db, "loans"), where("loanId", "in", loanIds));
+            const loansQuery = query(collection(db, "Loans"), where("loanId", "in", loanIds));
             const loansSnap = await getDocs(loansQuery);
             loans = loansSnap.docs.map(doc => doc.data());
         }

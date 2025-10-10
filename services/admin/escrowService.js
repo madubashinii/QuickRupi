@@ -1,5 +1,27 @@
 import { db } from "../firebaseConfig";
-import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
+
+// Create new escrow entry
+export const createEscrow = async ({ loanId, lenderId, borrowerId, amount }) => {
+    try {
+        const escrowRef = doc(collection(db, "escrow"));
+        const escrowData = {
+            escrowId: escrowRef.id,
+            loanId,
+            lenderId,
+            borrowerId,
+            amount,
+            status: "pending",
+            createdAt: serverTimestamp()
+        };
+        
+        await setDoc(escrowRef, escrowData);
+        return { escrowId: escrowRef.id, ...escrowData };
+    } catch (error) {
+        console.error("Error creating escrow:", error);
+        throw error;
+    }
+};
 
 // Fetch all escrows with borrower, lender, and loan info
 export const fetchEscrows = async () => {
@@ -18,7 +40,7 @@ export const fetchEscrows = async () => {
             const lenderName = lenderSnap.exists() ? lenderSnap.data().name : "Unknown";
 
             // Fetch loan info
-            const loanSnap = await getDoc(doc(db, "loans", escrow.loanId));
+            const loanSnap = await getDoc(doc(db, "Loans", escrow.loanId));
             const loan = loanSnap.exists() ? loanSnap.data() : {};
             const amount = loan.amountRequested || escrow.amount;
             const purpose = loan.purpose || "";

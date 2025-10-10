@@ -12,7 +12,7 @@ export const fetchDashboardData = async () => {
         // Fetch collections
         const [escrowSnap, loansSnap, repaymentsSnap, usersSnap] = await Promise.all([
             getDocs(collection(db, "escrow")),
-            getDocs(collection(db, "loans")),
+            getDocs(collection(db, "Loans")),
             getDocs(collection(db, "repayments")),
             getDocs(collection(db, "users")),
         ]);
