@@ -134,7 +134,7 @@ const handleExport = async () => {
     console.log(`Exporting ${summary.count} transactions...`);
     
     const result = await exportAndShareCSV(transactions, 'deposits');
-    console.log(`✅ ${result.message}`);
+    console.log(` ${result.message}`);
   } catch (error) {
     console.error('Export failed:', error.message);
   }
@@ -151,15 +151,82 @@ const csvData = exportToCSV(transactions);
 ```
 
 ### Export Features
-- ✅ Saves to device cache directory
-- ✅ Triggers native share dialog (iOS/Android)
-- ✅ Automatic cleanup after sharing
-- ✅ UTF-8 BOM for Excel compatibility
-- ✅ Handles special characters
-- ✅ Dynamic filenames with timestamps
+-  Saves to device cache directory
+-  Triggers native share dialog (iOS/Android)
+-  Automatic cleanup after sharing
+-  UTF-8 BOM for Excel compatibility
+-  Handles special characters
+-  Dynamic filenames with timestamps
 
 ### Export Workflow
 1. Generate CSV → 2. Save to cache → 3. Share → 4. Cleanup
+
+## PDF Export Functionality
+
+### Quick PDF Export (Recommended)
+```javascript
+import { exportAndSharePDF } from '../services/transactions';
+
+// One-line PDF export
+const handlePDFExport = async () => {
+  try {
+    const result = await exportAndSharePDF(transactions, 'all');
+    console.log(` ${result.count} transactions exported to PDF`);
+  } catch (error) {
+    console.error('PDF export failed:', error.message);
+  }
+};
+```
+
+### Generate PDF Only
+```javascript
+import { exportToPDF } from '../services/transactions';
+
+const pdfData = await exportToPDF(transactions);
+// pdfData = { uri, filename, count, success }
+```
+
+### Custom Template (Advanced)
+```javascript
+import { 
+  buildPdfHeader,
+  buildPdfSummarySection,
+  buildPdfTransactionTable,
+  buildPdfFooter 
+} from '../services/transactions';
+
+// Build custom PDF HTML
+const customHtml = `
+  <!DOCTYPE html>
+  <html>
+    <body>
+      ${buildPdfHeader({ count: 25 })}
+      ${buildPdfSummarySection({ count: 25, totalCredits: 150000, totalDebits: 50000 })}
+      ${buildPdfTransactionTable(formattedTransactions)}
+      ${buildPdfFooter()}
+    </body>
+  </html>
+`;
+```
+
+### PDF Features
+-  Professional A4-sized documents
+-  Brand colors and styling
+-  Transaction summary statistics
+-  Formatted currency and dates
+-  Color-coded credits/debits
+-  Native share dialog
+-  Print-ready output
+
+### Both CSV & PDF Support
+```javascript
+// Choose format dynamically
+const exportFormat = 'pdf'; // or 'csv'
+
+const result = exportFormat === 'pdf'
+  ? await exportAndSharePDF(transactions, filterType)
+  : await exportAndShareCSV(transactions, filterType);
+```
 
 ## Important Notes
 

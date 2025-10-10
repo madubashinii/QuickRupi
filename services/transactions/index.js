@@ -38,3 +38,15 @@ export {
   capitalize,
   getTransactionSign
 } from './transactionTypeUtils';
+
+
+// Export PDF export functions
+export {
+  buildPdfHeader,
+  buildPdfSummarySection,
+  buildPdfTransactionTable,
+  buildPdfFooter,
+  generatePdfHtml,
+  exportToPDF,
+  exportAndSharePDF
+} from './transactionPdfExportService';

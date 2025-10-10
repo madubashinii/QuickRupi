@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
-import { exportAndShareCSV, getExportSummary, getAllTransactionsForExport, formatTransactionForDisplay } from '../../services/transactions';
+import { exportAndShareCSV, exportAndSharePDF, getExportSummary, getAllTransactionsForExport, formatTransactionForDisplay } from '../../services/transactions';
 import Toast from 'react-native-toast-message';
 
 // Helper function to get user-friendly error message
@@ -33,6 +33,7 @@ const getUserFriendlyError = (error) => {
 const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userId }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportScope, setExportScope] = useState('current'); // 'current' or 'all'
+  const [exportFormat, setExportFormat] = useState('csv'); // 'csv' or 'pdf'
   const [isLoadingCount, setIsLoadingCount] = useState(false);
   const [allTransactionsSummary, setAllTransactionsSummary] = useState({ count: 0, totalCredits: 0, totalDebits: 0 });
 
@@ -120,14 +121,16 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
         throw new Error('No transactions available to export');
       }
 
-      const result = await exportAndShareCSV(transactionsToExport, filterType);
+      // Export based on selected format
+      const result = exportFormat === 'pdf' 
+        ? await exportAndSharePDF(transactionsToExport, filterType)
+        : await exportAndShareCSV(transactionsToExport, filterType);
 
-      // Note: In clipboard mode, Alert is already shown with instructions
-      // Only show toast for successful file exports
+      // Show success toast (CSV clipboard mode handles its own Alert)
       if (!result.usedClipboard) {
         Toast.show({
           type: 'success',
-          text1: '✅ Export Complete',
+          text1: ' Export Complete',
           text2: `${result.filename} shared successfully`
         });
       }
@@ -210,15 +213,32 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
               </View>
             </TouchableOpacity>
 
-            {/* Format Section - CSV Only for Phase 1 */}
+            {/* Format Section */}
             <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Export Format</Text>
-            <View style={styles.formatOption}>
+            
+            <TouchableOpacity 
+              style={[styles.formatOption, exportFormat === 'csv' && styles.activeFormatOption]}
+              onPress={() => setExportFormat('csv')}
+              disabled={isExporting}
+            >
               <View style={styles.radioButton}>
-                <View style={styles.radioButtonSelected} />
+                {exportFormat === 'csv' && <View style={styles.radioButtonSelected} />}
               </View>
               <Ionicons name="document-text" size={20} color={colors.blueGreen} style={styles.formatIcon} />
               <Text style={styles.formatText}>CSV (Excel/Sheets)</Text>
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.formatOption, exportFormat === 'pdf' && styles.activeFormatOption]}
+              onPress={() => setExportFormat('pdf')}
+              disabled={isExporting}
+            >
+              <View style={styles.radioButton}>
+                {exportFormat === 'pdf' && <View style={styles.radioButtonSelected} />}
+              </View>
+              <Ionicons name="document" size={20} color={colors.blueGreen} style={styles.formatIcon} />
+              <Text style={styles.formatText}>PDF (Portable Document)</Text>
+            </TouchableOpacity>
 
             {/* Transaction Count Preview */}
             <View style={styles.previewSection}>
@@ -366,10 +386,15 @@ const styles = StyleSheet.create({
   formatOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.babyBlue,
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+    marginBottom: spacing.sm,
+  },
+  activeFormatOption: {
+    borderColor: colors.blueGreen,
+    backgroundColor: colors.babyBlue,
   },
   radioButton: {
     width: 20,
@@ -399,6 +424,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGray,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+    marginTop: spacing.sm,
   },
   previewHeader: {
     flexDirection: 'row',
