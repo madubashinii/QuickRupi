@@ -5,7 +5,9 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-root-toast";
 import { db } from "../../services/firebaseConfig";
-import { collection, addDoc, getDocs, query } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc,  setDoc, updateDoc, increment, query } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const PaymentForm = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -13,6 +15,21 @@ const PaymentForm = () => {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [image, setImage] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const navigation = useNavigation();
+  const getNextEscrowId = async () => {
+  const counterRef = doc(db, "counters", "repayEscrowCounter");
+  const counterSnap = await getDoc(counterRef);
+
+  let nextNumber = 1;
+  if (counterSnap.exists()) {
+    nextNumber = counterSnap.data().value + 1;
+    await updateDoc(counterRef, { value: increment(1) });
+  } else {
+    await setDoc(counterRef, { value: 1 });
+  }
+
+  return `repay_escrow_${String(nextNumber).padStart(3, "0")}`;
+};
 
   // Fetch payment methods on mount
   useEffect(() => {
@@ -57,16 +74,23 @@ const PaymentForm = () => {
   const savePayment = async () => {
     // Check if method matches existing one
     const matchedMethod = paymentMethods.find(m => m.type.toLowerCase() === paymentMethod.toLowerCase());
+    const collectionName = await getNextEscrowId();
 
     try {
-      await addDoc(collection(db, "repayments"), {
-        amount: paymentAmount,
-        paidAt: paymentDate,
-        method: paymentMethod,
-        matchedMethodId: matchedMethod ? matchedMethod.id : null,
-        imageUri: image,
-        createdAt: new Date(),
-      });
+      await addDoc(collection(db, "escrow"), {
+      repaymentAmount: Number(paymentAmount),
+      borrowerId: "borrower789",
+      lenderId: "lender456",
+      loanId: "loan123",
+      type: "repayment",
+      status: "repayment_pending",
+      createdAt: new Date(),
+      lastUpdated: new Date(),
+      releasedAt: null,
+      method: paymentMethod,
+      matchedMethodId: matchedMethod ? matchedMethod.id : null,
+      imageUri: image,
+    });
 
       Toast.show("Payment saved successfully!", { duration: Toast.durations.SHORT });
 
@@ -82,6 +106,13 @@ const PaymentForm = () => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.kycButton}
+        onPress={() => navigation.navigate("BorrowerRepayment")}
+      >
+        <Ionicons name="chevron-back" size={28} color="#000" />
+        <Text style={styles.kycButtonText}>Back</Text>
+      </TouchableOpacity>
       <Text style={styles.text}>Payment Form</Text>
 
       {/* Amount */}

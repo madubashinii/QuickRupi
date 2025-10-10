@@ -17,11 +17,16 @@ const Stack = createNativeStackNavigator();
 export default function borrowerStack() {
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="AdminHome" component={AdminBottomNav} />
-            <Stack.Screen name="UsersManagement" component={UsersManagementScreen} />
-            <Stack.Screen name="EscrowApproval" component={EscrowApprovalScreen} />
-            <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
-            <Stack.Screen name="KYCApproval" component={KYCApprovalScreen} />
+            <Stack.Screen name="BorrowerHome" component={BorrowerBottomNav} />
+            <Stack.Screen name="BorrowerDashboard" component={BorrowerDashboard} />
+            <Stack.Screen name="BorrowerPayment" component={BorrowerPayment} />
+            <Stack.Screen name="BorrowerRepayment" component={BorrowerRepayment} />
+            <Stack.Screen name="BorrowerSchedule" component={BorrowerSchedule} />
+            <Stack.Screen name="BorrowerLoan" component={BorrowerLoan} />
+            <Stack.Screen name="BorrowerLoanForm" component={BorrowerLoanForm} />
+            <Stack.Screen name="BorrowerViewKYC" component={BorrowerViewKYC} />
+            <Stack.Screen name="BorrowerKYC" component={BorrowerKYC} />
+            <Stack.Screen name="BorrowerProfile" component={BorrowerProfile} />
         </Stack.Navigator>
     );
 }

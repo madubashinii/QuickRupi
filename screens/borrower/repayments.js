@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity} from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
 import InfoText from "../../components/borrower/infoBox"; 
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const PaymentRecords = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const navigation = useNavigation();
   const fixedUserId = "B001";// replace with a test user ID
 
   useEffect(() => {
@@ -45,12 +47,33 @@ const PaymentRecords = () => {
     return (
       <View style={styles.container}>
         <Text>No payment records found for this user.</Text>
+        <TouchableOpacity
+            style={styles.kycButton}
+            onPress={() => navigation.navigate("BorrowerPayment")}
+             >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
+          <Text style={styles.kycButtonText}>Add Payment</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity
+            style={styles.kycButton}
+            onPress={() => navigation.navigate("BorrowerSchedule")}
+             >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
+          <Text style={styles.kycButtonText}>Payment Schedules</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+            style={styles.kycButton}
+            onPress={() => navigation.navigate("BorrowerPayment")}
+             >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
+          <Text style={styles.kycButtonText}>Add Payment</Text>
+        </TouchableOpacity>
       {records.map((record) => (
         <View key={record.id} style={styles.recordCard}>
           <InfoText title="Amount" value={record.amount} />

@@ -3,6 +3,8 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native
 import { Calendar } from "react-native-calendars";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../../services/firebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 // EMI calculation
 const calc_EMI = (rate, loanAmount, tenure) => {
@@ -63,10 +65,11 @@ const generateSchedule = (loanAmount, rate, tenure, startDate) => {
   return schedule;
 };
 
-export default function PaymentSchedule({ navigation }) {
+export default function PaymentSchedule() {
   const [loans, setLoans] = useState([]);
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchLoans = async () => {

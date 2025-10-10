@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { View, TextInput, Button, Text, ScrollView, StyleSheet } from "react-native";
+import { View, TextInput, Button, Text, ScrollView, StyleSheet,TouchableOpacity } from "react-native";
 import Constants from "expo-constants";
-import 'dotenv/config';
+import { Ionicons } from "@expo/vector-icons";
+//import 'dotenv/config';
+import { useNavigation } from "@react-navigation/native";
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-
+  const navigation = useNavigation();
   const sendMessage = async () => {
     if (!input.trim()) return;
 
@@ -38,6 +40,13 @@ const Chatbot = () => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.chatBox}>
+              <TouchableOpacity
+                         style={styles.kycButton}
+                         onPress={() => navigation.navigate("BorrowerProfile")}
+                      >
+                        <Ionicons name="chevron-back" size={28} color="#000" />
+                        <Text style={styles.kycButtonText}>Back</Text>
+              </TouchableOpacity>
         {messages.map((msg, index) => (
           <Text
             key={index}

@@ -1,8 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Button, ScrollView, Alert, Image } from "react-native";
+import { View, Text, TextInput, StyleSheet, Button, ScrollView, Image,TouchableOpacity } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { db } from "../../services/firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
+import Toast from "react-native-root-toast";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const KYCForm = () => {
   const [fullName, setFullName] = useState("");
@@ -15,11 +18,12 @@ const KYCForm = () => {
   const [monthlyIncome, setMonthlyIncome] = useState("");
   const [frontImage, setFrontImage] = useState(null);
   const [backImage, setBackImage] = useState(null);
+  const navigation = useNavigation();
 
   const pickImage = async (setImage) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission denied", "Please allow gallery access.");
+      Toast.show("Permission denied", "Please allow gallery access.");
       return;
     }
 
@@ -36,7 +40,7 @@ const KYCForm = () => {
 
   const submitKYC = async () => {
     if (!fullName || !email || !phone || !frontImage || !backImage) {
-      Alert.alert("Error", "Please fill all required fields.");
+      Toast.show("Error", "Please fill all required fields.");
       return;
     }
 
@@ -57,19 +61,26 @@ const KYCForm = () => {
         user: "B001", // replace with current userId
       });
 
-      Alert.alert("Success", "KYC submitted successfully!");
+      Toast.show("Success", "KYC submitted successfully!");
       // Reset form
       setFullName(""); setBusinessName(""); setCity(""); setDateOfBirth("");
       setEmail(""); setPhone(""); setOccupation(""); setMonthlyIncome("");
       setFrontImage(null); setBackImage(null);
     } catch (error) {
       console.error("Error submitting KYC:", error);
-      Alert.alert("Error", "Failed to submit KYC.");
+      Toast.show("Error", "Failed to submit KYC.");
     }
   };
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity
+                 style={styles.kycButton}
+                 onPress={() => navigation.navigate("BorrowerProfile")}
+              >
+                <Ionicons name="chevron-back" size={28} color="#000" />
+                <Text style={styles.kycButtonText}>Back</Text>
+      </TouchableOpacity>
       <Text style={styles.title}>KYC Form</Text>
 
       <TextInput placeholder="Full Name" value={fullName} onChangeText={setFullName} style={styles.input} />

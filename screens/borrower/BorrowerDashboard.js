@@ -3,6 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import InfoBox from '../../components/borrower/infoBox';
 import { auth, db } from '../../services/firebaseConfig';
 import {doc, getDocs, collection, query, where,} from 'firebase/firestore';
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const BorrowerDashboard = () => {
 
@@ -17,8 +19,8 @@ const BorrowerDashboard = () => {
   const [userImg, setUserImg] = useState('');
   const [totalLoans, setTotalLoans] = useState(0);
   const [completedLoans, setCompletedLoans] = useState(0);
-const [pendingLoans, setPendingLoans] = useState(0);
-
+  const [pendingLoans, setPendingLoans] = useState(0);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const userType = 'borrower';

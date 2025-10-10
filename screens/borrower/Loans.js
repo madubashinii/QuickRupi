@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator,TouchableOpacity } from "react-native";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
 import InfoText from "../../components/borrower/infoBox"; // adjust path if needed
+import { useNavigation } from "@react-navigation/native";
 
 const LoanRecords = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const navigation = useNavigation();
   const fixedUserId = "B001"; // replace with a test user ID
 
   useEffect(() => {
@@ -44,13 +46,27 @@ const LoanRecords = () => {
   if (records.length === 0) {
     return (
       <View style={styles.container}>
-        <Text>No payment records found for this user.</Text>
+        <Text>No loan records found for this user.</Text>
+        <TouchableOpacity
+           style={styles.kycButton}
+           onPress={() => navigation.navigate("BorrowerLoanForm")}
+        >
+          <Ionicons name="chevron-back" size={28} color="#000" />
+          <Text style={styles.kycButtonText}>New Loan Request</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity
+           style={styles.kycButton}
+           onPress={() => navigation.navigate("BorrowerLoanForm")}
+        >
+          <Ionicons name="chevron-back" size={28} color="#000" />
+          <Text style={styles.kycButtonText}>New Loan Request</Text>
+        </TouchableOpacity>
       {records.map((record) => (
         <View key={record.id} style={styles.recordCard}>
           <InfoText title="Amount" value={record.amount} />

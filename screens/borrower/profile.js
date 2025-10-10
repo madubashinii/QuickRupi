@@ -3,13 +3,13 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-root-toast";
+import { useNavigation } from "@react-navigation/native";
 
-
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [userName, setUserName] = useState("John Doe"); // for testing
   const [user, setUser] = useState([]);
-
+  const navigation = useNavigation();
   const fixedUserId = "B001";
 
   const pickImage = async () => {
@@ -55,7 +55,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container}> 
       <View style={styles.profileSection}>
         <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
           {profileImage ? (
@@ -74,19 +74,20 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.texts}>{userName}</Text>
 
         <TouchableOpacity
-           key={tab.name}
-           style={styles.tab}
-           onPress={() => navigation.navigate()}
+          style={styles.kycButton}
+          onPress={() => navigation.navigate("BorrowerViewKYC")} 
         >
-          <Ionicons 
-             name={tab.icon} 
-             size={24} 
-             color={ "#999"} 
-         />
-          <Text style={[styles.label, { color: "#007AFF"}]}>
-            {tab.label}
-          </Text>
-         </TouchableOpacity>
+          <Ionicons name="document-text-outline" size={22} color="#fff" />
+          <Text style={styles.kycButtonText}>Go to KYC</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+            style={styles.kycButton}
+            onPress={() => navigation.navigate("ChatBot")}
+             >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
+          <Text style={styles.kycButtonText}>ChatBot</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
