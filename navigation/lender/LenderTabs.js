@@ -1,13 +1,13 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { colors } from '../../theme';
 
 // Import screens
-import Dashboard from '../screens/LenderScreens/Dashboard';
-import Investments from '../screens/LenderScreens/Investments';
-import Transactions from '../screens/LenderScreens/Transactions';
-import Profile from '../screens/LenderScreens/Profile';
+import Dashboard from '../../screens/LenderScreens/Dashboard';
+import Investments from '../../screens/LenderScreens/Investments';
+import Transactions from '../../screens/LenderScreens/Transactions';
+import Profile from '../../screens/LenderScreens/Profile';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,7 +17,7 @@ const LenderTabs = () => {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          
+
           switch (route.name) {
             case 'Dashboard':
               iconName = focused ? 'grid' : 'grid-outline';
@@ -34,7 +34,7 @@ const LenderTabs = () => {
             default:
               iconName = 'help-outline';
           }
-          
+
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.midnightBlue,
@@ -55,32 +55,32 @@ const LenderTabs = () => {
         tabBarHideOnKeyboard: true,
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={Dashboard}
         options={{
           title: 'Dashboard',
           tabBarLabel: 'Dashboard',
         }}
       />
-      <Tab.Screen 
-        name="Investments" 
+      <Tab.Screen
+        name="Investments"
         component={Investments}
         options={{
           title: 'Investments',
           tabBarLabel: 'Investments',
         }}
       />
-      <Tab.Screen 
-        name="Transactions" 
+      <Tab.Screen
+        name="Transactions"
         component={Transactions}
         options={{
           title: 'Transactions',
           tabBarLabel: 'Transactions',
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={Profile}
         options={{
           title: 'Profile',
