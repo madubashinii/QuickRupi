@@ -21,11 +21,9 @@ const CONFIG = {
     { id: 2, title: 'Manage Payment Methods', icon: 'card-outline' },
     { id: 3, title: 'Push notifications', icon: 'notifications-outline' },
     { id: 4, title: 'Security', icon: 'shield-checkmark-outline' },
-    { id: 5, title: 'Other settings', icon: 'settings-outline' },
-    { id: 6, title: 'Rewards', icon: 'gift-outline' },
-    { id: 7, title: 'Language', subtitle: 'English', icon: 'language-outline' },
-    { id: 8, title: 'Agreements & Legal', icon: 'document-text-outline' },
-    { id: 9, title: 'Help', icon: 'help-circle-outline' },
+    { id: 5, title: 'Language', subtitle: 'English', icon: 'language-outline' },
+    { id: 6, title: 'Agreements & Legal', icon: 'document-text-outline' },
+    { id: 7, title: 'Help', icon: 'help-circle-outline' },
   ]
 };
 

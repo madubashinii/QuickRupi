@@ -25,6 +25,7 @@ import {
   formatDate,
   shouldShowDateSeparator,
 } from '../../services/chat';
+import MessageWithLinks from '../../components/admin/MessageWithLinks';
 
 // Constants
 const USER_ID = 'L001'; // TODO: Replace with actual authenticated user ID
@@ -104,28 +105,45 @@ const MessageBubble = ({ message, isLender, isNewMessage }) => {
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
       ]}
     >
-      {!isLender && (
-        <View style={styles.adminMessageAvatar}>
-          <Ionicons name="headset" size={16} color={colors.white} />
-        </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <View style={[styles.messageBubble, isLender ? styles.lenderBubble : styles.adminBubble]}>
-          <Text style={[styles.messageText, isLender ? styles.lenderText : styles.adminText]}>
-            {message.text}
-          </Text>
-        </View>
-        <View style={[styles.messageMeta, isLender ? styles.lenderMeta : styles.adminMeta]}>
-          <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
-          {isLender && (
+      {isLender ? (
+        // Lender message (right side)
+        <View style={styles.lenderMessageContent}>
+          <View style={[styles.messageBubble, styles.lenderBubble]}>
+            <MessageWithLinks 
+              text={message.text} 
+              style={[styles.messageText, styles.lenderText]}
+              linkColor={colors.white}
+            />
+          </View>
+          <View style={[styles.messageMeta, styles.lenderMeta]}>
+            <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
             <Ionicons 
               name={message.read ? "checkmark-done" : "checkmark"} 
-              size={14} 
+              size={12} 
               color={message.read ? colors.blueGreen : colors.gray} 
             />
-          )}
+          </View>
         </View>
-      </View>
+      ) : (
+        // Admin message (left side)
+        <>
+          <View style={styles.adminMessageAvatar}>
+            <Ionicons name="headset" size={14} color={colors.white} />
+          </View>
+          <View style={styles.messageContent}>
+            <View style={[styles.messageBubble, styles.adminBubble]}>
+              <MessageWithLinks 
+                text={message.text} 
+                style={[styles.messageText, styles.adminText]}
+                linkColor={colors.blueGreen}
+              />
+            </View>
+            <View style={[styles.messageMeta, styles.adminMeta]}>
+              <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
+            </View>
+          </View>
+        </>
+      )}
     </Animated.View>
   );
 };
@@ -445,31 +463,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   messageContainer: {
-    marginVertical: spacing.sm,
+    marginVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  lenderMessage: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  adminMessage: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
     alignItems: 'flex-end',
     gap: spacing.xs,
   },
-  lenderMessage: {
-    justifyContent: 'flex-end',
+  messageContent: {
+    flex: 1,
+    maxWidth: '75%',
   },
-  adminMessage: {
-    justifyContent: 'flex-start',
+  lenderMessageContent: {
+    maxWidth: '200%',
+    alignItems: 'flex-end',
   },
   adminMessageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
   },
   messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xl,
+    maxWidth: '75%',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
   },
   lenderBubble: {
     backgroundColor: colors.blueGreen,
@@ -502,7 +531,7 @@ const styles = StyleSheet.create({
   messageMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginTop: 4,
   },
   lenderMeta: {
     justifyContent: 'flex-end',
