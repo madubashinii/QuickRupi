@@ -11,51 +11,9 @@ const Formatter = {
   months: (value) => `${value} months`,
 };
 
-// Configuration management
-const Config = {
-  RISK_LEVELS: {
-    'Low': { color: colors.forestGreen, bgColor: '#E8F5E8', icon: 'shield-checkmark' },
-    'Medium': { color: '#FFB347', bgColor: '#FFF3E0', icon: 'shield-half' },
-    'High': { color: colors.red, bgColor: '#FFEBEE', icon: 'shield' },
-    default: { color: colors.gray, bgColor: '#F5F5F5', icon: 'help-circle' }
-  },
-  DEFAULT_VALUES: {
-    requestId: 'REQ001',
-    city: 'Colombo',
-    occupation: 'Business Owner',
-    incomeBand: 'LKR 50,000 - 100,000',
-    monthlyIncome: 75000,
-    employmentStatus: 'Self-Employed',
-    purpose: 'Business expansion and working capital requirements for small retail operations.',
-    businessType: 'Retail & Trade'
-  }
-};
-
-//  Data access abstraction
-const DataAccessor = {
-  getValue: (obj, key, fallback = '') => obj?.[key] ?? fallback,
-  getRequestId: (request) => DataAccessor.getValue(request, 'requestId', Config.DEFAULT_VALUES.requestId),
-  getCity: (request) => DataAccessor.getValue(request, 'city', Config.DEFAULT_VALUES.city),
-  getOccupation: (request) => DataAccessor.getValue(request, 'occupation', Config.DEFAULT_VALUES.occupation),
-  getIncomeBand: (request) => DataAccessor.getValue(request, 'incomeBand', Config.DEFAULT_VALUES.incomeBand),
-  getMonthlyIncome: (request) => DataAccessor.getValue(request, 'monthlyIncome', Config.DEFAULT_VALUES.monthlyIncome),
-  getEmploymentStatus: (request) => DataAccessor.getValue(request, 'employmentStatus', Config.DEFAULT_VALUES.employmentStatus),
-  getPurpose: (request) => DataAccessor.getValue(request, 'purpose', Config.DEFAULT_VALUES.purpose),
-  getBusinessType: (request) => DataAccessor.getValue(request, 'businessType', Config.DEFAULT_VALUES.businessType),
-};
-
 // Extensible component interfaces
 const ComponentFactory = {
   // Reusable atomic components
-  RiskChip: ({ riskLevel }) => {
-    const config = Config.RISK_LEVELS[riskLevel] || Config.RISK_LEVELS.default;
-    return (
-      <View style={[styles.riskChip, { backgroundColor: config.bgColor, borderColor: config.color }]}>
-        <Ionicons name={config.icon} size={12} color={config.color} style={styles.riskIcon} />
-        <Text style={[styles.riskChipText, { color: config.color }]}>{riskLevel}</Text>
-      </View>
-    );
-  },
 
   DetailRow: ({ label, value, isHighlight = false, icon = null }) => (
     <View style={styles.detailRow}>
@@ -67,17 +25,6 @@ const ComponentFactory = {
     </View>
   ),
 
-  RiskRow: ({ riskLevel }) => (
-    <View style={styles.detailRow}>
-      <View style={styles.detailLabelContainer}>
-        <Ionicons name="shield" size={14} color={colors.gray} style={styles.detailIcon} />
-        <Text style={styles.detailLabel}>Risk Level</Text>
-      </View>
-      <View style={styles.riskValueContainer}>
-        <ComponentFactory.RiskChip riskLevel={riskLevel} />
-      </View>
-    </View>
-  ),
 
   Section: ({ title, children }) => (
     <View style={styles.section}>
@@ -88,12 +35,10 @@ const ComponentFactory = {
 
   HeaderCard: ({ request }) => (
     <View style={styles.headerCard}>
-      <Text style={styles.requestId}>Request #{DataAccessor.getRequestId(request)}</Text>
-      <Text style={styles.borrowerName}>{request.borrowerName}</Text>
-      <View style={styles.locationContainer}>
-        <Ionicons name="location-outline" size={14} color={colors.gray} style={styles.locationIcon} />
-        <Text style={styles.location}>{request.location}</Text>
-      </View>
+      <>
+        <Text style={styles.requestId}>Request #{request.id}</Text>
+        <Text style={styles.borrowerName}>{request.borrowerName}</Text>
+      </>
     </View>
   ),
 };
@@ -108,73 +53,54 @@ const SectionComponents = {
 
   LoanInfo: ({ request }) => (
     <ComponentFactory.Section title="Loan Request Information">
-      <ComponentFactory.DetailRow 
-        label="Amount Requested" 
-        value={Formatter.currency(request.amountRequested)} 
-        isHighlight 
-        icon="wallet"
-      />
-      <ComponentFactory.DetailRow 
-        label="Estimated APR" 
-        value={Formatter.percentage(request.estAPR)} 
-        isHighlight 
-        icon="trending-up"
-      />
-      <ComponentFactory.DetailRow 
-        label="Term (months)" 
-        value={Formatter.months(request.termMonths)} 
-        icon="calendar"
-      />
-      <ComponentFactory.RiskRow riskLevel={request.riskLevel} />
+      <>
+        <ComponentFactory.DetailRow 
+          label="Amount Requested" 
+          value={Formatter.currency(request.amountRequested)} 
+          isHighlight 
+          icon="wallet"
+        />
+        <ComponentFactory.DetailRow 
+          label="Interest Rate" 
+          value={Formatter.percentage(request.interestRate)} 
+          isHighlight 
+          icon="trending-up"
+        />
+        <ComponentFactory.DetailRow 
+          label="Term (months)" 
+          value={Formatter.months(request.termMonths)} 
+          icon="calendar"
+        />
+      </>
     </ComponentFactory.Section>
   ),
 
-  BorrowerKYC: ({ request }) => (
-    <ComponentFactory.Section title="Borrower Info (from KYC snapshot)">
-      <ComponentFactory.DetailRow 
-        label="Full Name" 
-        value={request.borrowerName} 
-        isHighlight 
-        icon="person"
-      />
-      <ComponentFactory.DetailRow 
-        label="City" 
-        value={DataAccessor.getCity(request)} 
-        icon="location"
-      />
-      <ComponentFactory.DetailRow 
-        label="Occupation" 
-        value={DataAccessor.getOccupation(request)} 
-        icon="briefcase"
-      />
-      <ComponentFactory.DetailRow 
-        label="Income Band" 
-        value={DataAccessor.getIncomeBand(request)} 
-        icon="cash"
-      />
-      <ComponentFactory.DetailRow 
-        label="Monthly Income" 
-        value={Formatter.currency(DataAccessor.getMonthlyIncome(request))} 
-        isHighlight 
-        icon="trending-up"
-      />
-      <ComponentFactory.DetailRow 
-        label="Employment Status" 
-        value={DataAccessor.getEmploymentStatus(request)} 
-        icon="checkmark-circle"
-      />
+  BorrowerInfo: ({ request }) => (
+    <ComponentFactory.Section title="Borrower Information">
+      <>
+        <ComponentFactory.DetailRow 
+          label="Full Name" 
+          value={request.borrowerName} 
+          isHighlight 
+          icon="person"
+        />
+      </>
     </ComponentFactory.Section>
   ),
 
   Purpose: ({ request }) => (
     <ComponentFactory.Section title="Purpose">
-      <Text style={styles.purposeTitle}>Business description / reason for loan</Text>
-      <Text style={styles.purposeDescription}>
-        {DataAccessor.getPurpose(request)}
-      </Text>
-      <Text style={styles.businessType}>
-        Business type: {DataAccessor.getBusinessType(request)}
-      </Text>
+      <>
+        <Text style={styles.purposeTitle}>Purpose</Text>
+        <Text style={styles.purposeDescription}>
+          {request.purpose}
+        </Text>
+        {request.description && (
+          <Text style={styles.description}>
+            {request.description}
+          </Text>
+        )}
+      </>
     </ComponentFactory.Section>
   ),
 };
@@ -203,8 +129,10 @@ export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress
               <View style={styles.titleContainer}>
                 <Ionicons name="document-text-outline" size={24} color={colors.midnightBlue} style={styles.titleIcon} />
                 <View>
-                  <Text style={styles.modalTitle}>Browse Loan Request</Text>
-                  <Text style={styles.modalTitle}>Details</Text>
+                  <>
+                    <Text style={styles.modalTitle}>Browse Loan Request</Text>
+                    <Text style={styles.modalTitle}>Details</Text>
+                  </>
                 </View>
               </View>
             </View>
@@ -215,10 +143,12 @@ export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress
           
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
             <View style={styles.content}>
-              <SectionComponents.Header request={request} />
-              <SectionComponents.LoanInfo request={request} />
-              <SectionComponents.BorrowerKYC request={request} />
-              <SectionComponents.Purpose request={request} />
+              <>
+                <SectionComponents.Header request={request} />
+                <SectionComponents.LoanInfo request={request} />
+                <SectionComponents.BorrowerInfo request={request} />
+                <SectionComponents.Purpose request={request} />
+              </>
             </View>
           </ScrollView>
 
@@ -333,18 +263,6 @@ const styles = StyleSheet.create({
     color: colors.midnightBlue,
     marginBottom: spacing.xs,
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationIcon: {
-    marginRight: spacing.xs,
-  },
-  location: {
-    fontSize: fontSize.base,
-    color: colors.gray,
-    fontWeight: '500',
-  },
   
   // Detail Row Styles
   detailRow: {
@@ -387,33 +305,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
-  // Risk Styles
-  riskValueContainer: {
-    flex: 0.4,
-    alignItems: 'flex-end',
-    marginLeft: spacing.sm,
-  },
-  riskChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    elevation: 1,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  riskIcon: {
-    marginRight: spacing.xs,
-  },
-  riskChipText: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  
   // Purpose Styles
   purposeTitle: {
     fontSize: fontSize.base,
@@ -427,10 +318,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: spacing.sm,
   },
-  businessType: {
+  description: {
     fontSize: fontSize.sm,
-    color: colors.forestGreen,
-    fontWeight: '600',
+    color: colors.gray,
+    lineHeight: 18,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   
   // Action Styles

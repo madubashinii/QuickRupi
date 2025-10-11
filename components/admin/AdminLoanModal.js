@@ -35,8 +35,8 @@ export default function AdminLoanModal({ loan, onClose, onUpdate }) {
     // Handle the confirmed action
     const confirmActionHandler = () => {
         if (confirmAction.type === "approve") {
-            // Move loan to 'funding' when approved
-            onUpdate({ ...loan, status: "funding" });
+            // Move loan to 'approved' when approved
+            onUpdate({ ...loan, status: "approved" });
         } else if (confirmAction.type === "reject") {
             onUpdate({ ...loan, status: "rejected", rejectionReason: confirmAction.reason || "No reason provided" });
         } else if (confirmAction.type === "disburse") {

@@ -14,7 +14,12 @@ const DETAIL_ICONS = {
 };
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 
 // Common styles
 const cardStyle = {
@@ -30,11 +35,15 @@ const cardStyle = {
 // Detail Row Component
 const DetailRow = ({ icon, label, value, isApr = false }) => (
   <View style={styles.detailRow}>
-    <View style={styles.detailLabelContainer}>
-      <Ionicons name={icon} size={12} color={colors.gray} style={styles.detailIcon} />
-      <Text style={styles.detailLabel}>{label}</Text>
-    </View>
-    <Text style={[styles.detailValue, isApr && styles.aprValue]}>{value}</Text>
+    <>
+      <View style={styles.detailLabelContainer}>
+        <>
+          <Ionicons name={icon} size={12} color={colors.gray} style={styles.detailIcon} />
+          <Text style={styles.detailLabel}>{label}</Text>
+        </>
+      </View>
+      <Text style={[styles.detailValue, isApr && styles.aprValue]}>{value}</Text>
+    </>
   </View>
 );
 
@@ -75,68 +84,72 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
 
   return (
     <View style={styles.loanRequestCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.borrowerInfo}>
-          <Text style={styles.borrowerName}>{request.borrowerName}</Text>
+      <>
+        <View style={styles.cardHeader}>
+          <View style={styles.borrowerInfo}>
+            <Text style={styles.borrowerName}>{request.borrowerName}</Text>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.purpose}>{request.purpose}</Text>
-      <View style={styles.locationContainer}>
-        <Ionicons name="location-outline" size={12} color={colors.gray} style={styles.locationIcon} />
-        <Text style={styles.location}>{request.location}</Text>
-      </View>
+        <Text style={styles.purpose}>{request.purpose}</Text>
+        {request.description && (
+          <Text style={styles.description}>{request.description}</Text>
+        )}
 
-      <View style={styles.requestDetails}>
-        <DetailRow 
-          icon={DETAIL_ICONS.amount} 
-          label="Amount Requested" 
-          value={formatCurrency(request.amountRequested)} 
+        <View style={styles.requestDetails}>
+          <>
+            <DetailRow 
+              icon={DETAIL_ICONS.amount} 
+              label="Amount Requested" 
+              value={formatCurrency(request.amountRequested)} 
+            />
+            <DetailRow 
+              icon={DETAIL_ICONS.apr} 
+              label="Interest Rate" 
+              value={`${request.apr || request.interestRate}%`} 
+              isApr 
+            />
+            <DetailRow 
+              icon={DETAIL_ICONS.term} 
+              label="Term" 
+              value={`${request.termMonths} months`} 
+            />
+          </>
+        </View>
+
+        <View style={styles.cardActions}>
+          <>
+            <TouchableOpacity style={styles.detailsButton} onPress={handleDetailsPress}>
+              <>
+                <Ionicons name="eye" size={14} color={colors.midnightBlue} style={styles.buttonIcon} />
+                <Text style={styles.detailsButtonText}>Details</Text>
+              </>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.fundButton} onPress={handleFundPress}>
+              <>
+                <Ionicons name="add-circle" size={14} color={colors.white} style={styles.buttonIcon} />
+                <Text style={styles.fundButtonText}>Fund</Text>
+              </>
+            </TouchableOpacity>
+          </>
+        </View>
+
+        {/* Loan Request Details Modal */}
+        <LoanRequestDetailsModal
+          visible={showDetailsModal}
+          onClose={handleCloseDetailsModal}
+          request={request}
+          onFundPress={handleFundPressFromDetails}
         />
-        <DetailRow 
-          icon={DETAIL_ICONS.apr} 
-          label="Est. APR" 
-          value={`${request.estAPR}%`} 
-          isApr 
-        />
-        <DetailRow 
-          icon={DETAIL_ICONS.term} 
-          label="Term" 
-          value={`${request.termMonths} months`} 
-        />
-        <DetailRow 
-          icon={DETAIL_ICONS.risk} 
-          label="Risk Level" 
-          value={request.riskLevel} 
-        />
-      </View>
 
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.detailsButton} onPress={handleDetailsPress}>
-          <Ionicons name="eye" size={14} color={colors.midnightBlue} style={styles.buttonIcon} />
-          <Text style={styles.detailsButtonText}>Details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.fundButton} onPress={handleFundPress}>
-          <Ionicons name="add-circle" size={14} color={colors.white} style={styles.buttonIcon} />
-          <Text style={styles.fundButtonText}>Fund</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Loan Request Details Modal */}
-      <LoanRequestDetailsModal
-        visible={showDetailsModal}
-        onClose={handleCloseDetailsModal}
-        request={request}
-        onFundPress={handleFundPressFromDetails}
-      />
-
-      {/* Loan Fund Modal */}
-      <LoanFundModal
-        visible={showFundModal}
-        onClose={handleCloseFundModal}
-        request={request}
-        onConfirm={handleConfirmFunding}
-      />
+        {/* Loan Fund Modal */}
+        <LoanFundModal
+          visible={showFundModal}
+          onClose={handleCloseFundModal}
+          request={request}
+          onConfirm={handleConfirmFunding}
+        />
+      </>
     </View>
   );
 };
@@ -164,17 +177,11 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     fontWeight: '500',
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  locationIcon: {
-    marginRight: 4,
-  },
-  location: {
-    fontSize: fontSize.sm,
+  description: {
+    fontSize: fontSize.xs,
     color: colors.gray,
+    marginBottom: spacing.sm,
+    lineHeight: 16,
   },
   requestDetails: {
     marginBottom: spacing.sm,

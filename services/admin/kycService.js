@@ -16,7 +16,7 @@ export const fetchKYCRequests = (onUpdate) => {
             try {
                 if (user.userId) {
                     const loansQuery = query(
-                        collection(db, "loans"),
+                        collection(db, "Loans"),
                         where("borrowerId", "==", user.userId)
                     );
                     const loanSnapshot = await getDocs(loansQuery);

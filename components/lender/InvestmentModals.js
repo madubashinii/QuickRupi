@@ -216,16 +216,12 @@ export const FundingSheet = ({ request, visible, onClose, onConfirm }) => {
           
           <View style={styles.loanDetails}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Est. APR</Text>
-              <Text style={styles.detailValue}>{request.estAPR}%</Text>
+              <Text style={styles.detailLabel}>Interest Rate</Text>
+              <Text style={styles.detailValue}>{request.interestRate}%</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Term</Text>
               <Text style={styles.detailValue}>{request.termMonths} months</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Risk Level</Text>
-              <Text style={styles.detailValue}>{request.riskLevel}</Text>
             </View>
           </View>
         </View>

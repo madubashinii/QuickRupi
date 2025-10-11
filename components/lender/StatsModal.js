@@ -19,7 +19,12 @@ const STATS_CONFIG = [
 ];
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 const formatValue = (value, isCurrency) => isCurrency ? formatCurrency(value) : `${value}%`;
 const calculateROI = (interest, principal) => ((interest / principal) * 100).toFixed(1);
 

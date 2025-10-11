@@ -11,7 +11,7 @@ import {
 // Fetch all loans with borrower and KYC details
 export const fetchAllLoans = async () => {
     try {
-        const loanSnapshot = await getDocs(collection(db, "loans"));
+        const loanSnapshot = await getDocs(collection(db, "Loans"));
         const loansData = loanSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
 
         const userSnapshot = await getDocs(collection(db, "users"));
@@ -48,12 +48,17 @@ export const fetchAllLoans = async () => {
 // Update loan status & send notification
 export const updateLoanStatus = async (updatedLoan) => {
     try {
-        const loanRef = doc(db, "loans", updatedLoan.id);
+        const loanRef = doc(db, "Loans", updatedLoan.id);
         await updateDoc(loanRef, { status: updatedLoan.status });
 
         // Notification message setup
         const getNotification = () => {
             switch (updatedLoan.status) {
+                case "approved":
+                    return {
+                        title: "Loan Approved",
+                        message: `Your loan request #${updatedLoan.id} has been approved and is now available for funding.`,
+                    };
                 case "funding":
                     return {
                         title: "Loan Approved",
