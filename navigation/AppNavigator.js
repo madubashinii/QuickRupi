@@ -3,6 +3,9 @@ import React from 'react';
 import BorrowerStack from "../navigation/borrower/borrowerStack";
 import ChatBot from "../screens/chatbot";
 import AdminStack from "../navigation/admin/AdminStack";
+import LenderTabs from '../navigation//LenderTabs';
+import NotificationsScreen from '../screens/LenderScreens/Notifications';
+import MessagesScreen from '../screens/LenderScreens/MessagesScreen';
 
 const Stack = createNativeStackNavigator();
 
