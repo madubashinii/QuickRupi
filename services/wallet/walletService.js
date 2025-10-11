@@ -12,6 +12,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { createTransaction, TRANSACTION_TYPES, TRANSACTION_STATUS } from '../transactions';
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from '../notifications/notificationService';
 
 const WALLETS_COLLECTION = 'wallets';
 
@@ -136,6 +137,21 @@ export const addFunds = async (userId, amount, paymentMethodId = null, descripti
     console.error('Failed to create transaction record for addFunds:', error);
     // Don't throw - wallet update succeeded, which is the source of truth
   }
+
+  // Send notification to user
+  try {
+    await createNotification({
+      userId,
+      type: NOTIFICATION_TYPES.FUNDS_ADDED,
+      title: 'Funds Added',
+      body: `LKR ${amount.toLocaleString()} added to your wallet successfully`,
+      priority: NOTIFICATION_PRIORITY.MEDIUM,
+      amount
+    });
+  } catch (error) {
+    console.error('Failed to create notification for addFunds:', error);
+    // Don't throw - wallet update succeeded
+  }
   
   return newBalance;
 };
@@ -168,6 +184,21 @@ export const withdrawFunds = async (userId, amount, paymentMethodId = null, desc
   } catch (error) {
     console.error('Failed to create transaction record for withdrawFunds:', error);
     // Don't throw - wallet update succeeded, which is the source of truth
+  }
+
+  // Send notification to user
+  try {
+    await createNotification({
+      userId,
+      type: NOTIFICATION_TYPES.WITHDRAWAL_PROCESSED,
+      title: 'Withdrawal Processed',
+      body: `LKR ${amount.toLocaleString()} withdrawn to your account successfully`,
+      priority: NOTIFICATION_PRIORITY.MEDIUM,
+      amount
+    });
+  } catch (error) {
+    console.error('Failed to create notification for withdrawFunds:', error);
+    // Don't throw - wallet update succeeded
   }
   
   return newBalance;

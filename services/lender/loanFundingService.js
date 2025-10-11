@@ -4,6 +4,7 @@ import { withdrawFunds } from "../wallet/walletService";
 import { createEscrow } from "../admin/escrowService";
 import { createTransaction, TRANSACTION_TYPES, TRANSACTION_STATUS } from "../transactions";
 import { createRepaymentSchedule } from "../repayment/repaymentService";
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
 
 /**
  * Fund a loan - orchestrates wallet deduction, escrow creation, and loan status update
@@ -76,6 +77,22 @@ export const fundLoan = async ({ loanId, lenderId, borrowerId, amount }) => {
             });
         } catch (error) {
             console.error('Failed to create transaction record:', error);
+            // Don't throw - main operations succeeded
+        }
+
+        // Step 5: Send notification to lender
+        try {
+            await createNotification({
+                userId: lenderId,
+                type: NOTIFICATION_TYPES.FUNDING_CONFIRMED,
+                title: 'Funding Confirmed',
+                body: `Your investment of LKR ${amount.toLocaleString()} in loan #${loanId} is pending admin approval`,
+                priority: NOTIFICATION_PRIORITY.HIGH,
+                loanId,
+                amount
+            });
+        } catch (error) {
+            console.error('Failed to create notification:', error);
             // Don't throw - main operations succeeded
         }
         

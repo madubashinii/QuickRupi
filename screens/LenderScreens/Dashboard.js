@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -14,6 +14,7 @@ import { subscribeToUserTransactions } from '../../services/transactions';
 import { formatTransactionForDisplay } from '../../services/transactions/transactionUtils';
 import { subscribeToWallet } from '../../services/wallet';
 import { fetchOngoingLoans, fetchCompletedLoans, calculateROIGrowth, calculateMonthlyReturns } from '../../services/lender/lenderLoanService';
+import { subscribeToUnreadCount } from '../../services/notifications/notificationService';
 
 // Constants
 const BACKGROUND_HEIGHT = 380;
@@ -85,9 +86,14 @@ const ProfileImage = () => (
   </View>
 );
 
-const ActionButton = ({ icon, onPress }) => (
+const ActionButton = ({ icon, onPress, badge }) => (
   <TouchableOpacity style={styles.actionButton} onPress={onPress}>
     <Ionicons name={icon} size={24} color={colors.white} />
+    {badge > 0 && (
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+      </View>
+    )}
   </TouchableOpacity>
 );
 
@@ -171,6 +177,7 @@ const Dashboard = () => {
   const [previousReturns, setPreviousReturns] = useState(0);
   const [roiGrowthData, setRoiGrowthData] = useState([]);
   const [monthlyReturnsData, setMonthlyReturnsData] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const userId = 'L001';
@@ -185,6 +192,11 @@ const Dashboard = () => {
       const formatted = data.transactions.map(formatTransactionForDisplay);
       setTransactions(formatted.slice(0, 2));
     }, 2);
+
+    // Subscribe to unread notification count
+    const unsubscribeNotifications = subscribeToUnreadCount(userId, (count) => {
+      setUnreadCount(count);
+    });
     
     // Fetch active investments and stats
     const loadActiveInvestments = async () => {
@@ -244,6 +256,7 @@ const Dashboard = () => {
     return () => {
       unsubscribeWallet();
       unsubscribeTransactions();
+      unsubscribeNotifications();
     };
   }, []);
 
@@ -287,7 +300,7 @@ const Dashboard = () => {
               </View>
             </View>
             <View style={styles.headerActions}>
-              <ActionButton icon="notifications-outline" onPress={handleNotificationPress(navigation)} />
+              <ActionButton icon="notifications-outline" onPress={handleNotificationPress(navigation)} badge={unreadCount} />
               <ActionButton icon="chatbubble-outline" onPress={handleMessagePress(navigation)} />
             </View>
           </View>
@@ -509,6 +522,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.red,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   balanceCard: {
     ...cardStyle,

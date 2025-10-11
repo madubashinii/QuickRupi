@@ -1,36 +1,51 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
+import { subscribeToUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../services/notifications/notificationService';
+import { formatTimestamp, getNotificationTypeConfig } from '../../services/notifications/notificationUtils';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const USER_ID = 'L001'; // TODO: Replace with actual user ID from auth context
 
-// Notification type configuration 
-const NOTIFICATION_TYPES = {
-  loan_request: { icon: 'document-text', color: colors.blueGreen },
-  repayment: { icon: 'wallet', color: colors.tealGreen },
-  message: { icon: 'chatbubble', color: colors.midnightBlue },
-};
-
-// Mock data
-const mockNotifications = [
-  { id: 1, type: 'loan_request', title: 'Loan Request Approved', body: 'Your request #LN102 was approved. Funds are now in escrow.', timestamp: '2h ago', isRead: false },
-  { id: 2, type: 'repayment', title: 'Repayment Due Tomorrow', body: 'LKR 3,500 repayment is due on Dec 15.', timestamp: '4h ago', isRead: false },
-  { id: 3, type: 'message', title: 'New Message from Admin', body: 'Admin: Please upload KYC docs.', timestamp: '1d ago', isRead: true },
-  { id: 4, type: 'loan_request', title: 'Loan Request Updated', body: 'Your request #LN103 status has been updated to Under Review.', timestamp: '2d ago', isRead: true },
-  { id: 5, type: 'repayment', title: 'Repayment Received', body: 'LKR 2,800 repayment received from John Silva.', timestamp: '3d ago', isRead: true },
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All Notifications' },
+  { value: 'FUNDING_CONFIRMED', label: 'Funding' },
+  { value: 'PAYMENT_RECEIVED', label: 'Payments' },
+  { value: 'LOAN_COMPLETED', label: 'Completed Loans' },
+  { value: 'FUNDS_ADDED', label: 'Wallet' },
+  { value: 'MONTHLY_RETURNS', label: 'Monthly Returns' },
+  { value: 'ROI_MILESTONE', label: 'Milestones' },
 ];
+
+// Navigation helper based on notification type
+const getNavigationTarget = (notification) => {
+  const typeMapping = {
+    FUNDING_CONFIRMED: { screen: 'Investments' },
+    ESCROW_APPROVED: { screen: 'Investments' },
+    LOAN_DISBURSED: { screen: 'Investments' },
+    LOAN_ACTIVE: { screen: 'Investments' },
+    PAYMENT_RECEIVED: { screen: 'Investments' },
+    LOAN_COMPLETED: { screen: 'Investments' },
+    MONTHLY_RETURNS: { screen: 'Investments' },
+    ROI_MILESTONE: { screen: 'Investments' },
+    FUNDS_ADDED: { screen: 'Transactions' },
+    WITHDRAWAL_PROCESSED: { screen: 'Transactions' },
+  };
+  return typeMapping[notification.type] || null;
+};
 
 // Notification Item Component 
 const NotificationItem = ({ item, onPress }) => {
-  const typeConfig = NOTIFICATION_TYPES[item.type] || { icon: 'help', color: colors.gray };
+  const typeConfig = getNotificationTypeConfig(item.type);
   
   return (
     <TouchableOpacity 
       style={[styles.notificationCard, !item.isRead && styles.unreadCard]}
-      onPress={() => onPress(item.id)}
+      onPress={() => onPress(item)}
+      activeOpacity={0.7}
     >
       <View style={styles.notificationContent}>
         <View style={[styles.iconContainer, { backgroundColor: typeConfig.color }]}>
@@ -41,13 +56,47 @@ const NotificationItem = ({ item, onPress }) => {
             {item.title}
           </Text>
           <Text style={styles.body}>{item.body}</Text>
-          <Text style={styles.timestamp}>{item.timestamp}</Text>
+          <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
         </View>
         {!item.isRead && <View style={styles.unreadDot} />}
       </View>
     </TouchableOpacity>
   );
 };
+
+// Filter Modal Component
+const FilterModal = ({ visible, onClose, selectedFilter, onSelectFilter }) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+      <View style={styles.filterModal}>
+        <Text style={styles.filterModalTitle}>Filter Notifications</Text>
+        {FILTER_OPTIONS.map(option => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.filterOption,
+              selectedFilter === option.value && styles.filterOptionSelected
+            ]}
+            onPress={() => {
+              onSelectFilter(option.value);
+              onClose();
+            }}
+          >
+            <Text style={[
+              styles.filterOptionText,
+              selectedFilter === option.value && styles.filterOptionTextSelected
+            ]}>
+              {option.label}
+            </Text>
+            {selectedFilter === option.value && (
+              <Ionicons name="checkmark" size={20} color={colors.teal} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    </TouchableOpacity>
+  </Modal>
+);
 
 // Empty State Component 
 const EmptyState = () => (
@@ -64,15 +113,77 @@ const EmptyState = () => (
 
 const NotificationsScreen = () => {
   const navigation = useNavigation();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, isRead: true }
-          : notification
-      )
+  useEffect(() => {
+    // Subscribe to real-time notifications
+    const unsubscribe = subscribeToUserNotifications(USER_ID, (notifs) => {
+      setNotifications(notifs);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Filter notifications based on selected filter
+  const filteredNotifications = useMemo(() => {
+    if (selectedFilter === 'all') return notifications;
+    return notifications.filter(n => n.type === selectedFilter);
+  }, [notifications, selectedFilter]);
+
+  const unreadCount = useMemo(() => 
+    notifications.filter(n => !n.isRead).length
+  , [notifications]);
+
+  const handleNotificationPress = async (notification) => {
+    try {
+      // Mark as read first
+      if (!notification.isRead) {
+        await markNotificationAsRead(notification.notificationId);
+      }
+      
+      // Get navigation target
+      const target = getNavigationTarget(notification);
+      
+      if (target) {
+        // Navigate to MainTabs and specify which tab to open
+        navigation.navigate('MainTabs', { 
+          screen: target.screen 
+        });
+      } else {
+        // No target, just go back
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Failed to handle notification press:', error);
+      // Fallback: just go back
+      navigation.goBack();
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    
+    Alert.alert(
+      'Mark All as Read',
+      `Mark ${unreadCount} notification${unreadCount !== 1 ? 's' : ''} as read?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark All',
+          onPress: async () => {
+            try {
+              await markAllNotificationsAsRead(USER_ID);
+            } catch (error) {
+              console.error('Failed to mark all as read:', error);
+              Alert.alert('Error', 'Failed to mark notifications as read');
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -84,23 +195,52 @@ const NotificationsScreen = () => {
           <Ionicons name="arrow-back" size={24} color={colors.midnightBlue} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter-outline" size={24} color={colors.midnightBlue} />
+        <TouchableOpacity 
+          style={styles.filterButton} 
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Ionicons 
+            name={selectedFilter === 'all' ? 'filter-outline' : 'filter'} 
+            size={24} 
+            color={selectedFilter === 'all' ? colors.midnightBlue : colors.teal} 
+          />
         </TouchableOpacity>
       </View>
 
+      {/* Mark All as Read Button */}
+      {unreadCount > 0 && (
+        <View style={styles.actionBar}>
+          <Text style={styles.unreadText}>{unreadCount} unread</Text>
+          <TouchableOpacity onPress={handleMarkAllAsRead}>
+            <Text style={styles.markAllButton}>Mark all as read</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Notifications List */}
-      {notifications.length > 0 ? (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.teal} />
+        </View>
+      ) : filteredNotifications.length > 0 ? (
         <FlatList
-          data={notifications}
-          renderItem={({ item }) => <NotificationItem item={item} onPress={markAsRead} />}
-          keyExtractor={(item) => item.id.toString()}
+          data={filteredNotifications}
+          renderItem={({ item }) => <NotificationItem item={item} onPress={handleNotificationPress} />}
+          keyExtractor={(item) => item.notificationId}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
         />
       ) : (
         <EmptyState />
       )}
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        selectedFilter={selectedFilter}
+        onSelectFilter={setSelectedFilter}
+      />
     </AnimatedScreen>
   );
 };
@@ -212,6 +352,71 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.gray,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xxl,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGray,
+  },
+  unreadText: {
+    fontSize: fontSize.sm,
+    color: colors.gray,
+  },
+  markAllButton: {
+    fontSize: fontSize.sm,
+    color: colors.teal,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterModal: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: SCREEN_WIDTH * 0.8,
+    maxHeight: '70%',
+  },
+  filterModalTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: 'bold',
+    color: colors.midnightBlue,
+    marginBottom: spacing.md,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGray,
+  },
+  filterOptionSelected: {
+    backgroundColor: colors.babyBlue,
+    borderRadius: borderRadius.sm,
+  },
+  filterOptionText: {
+    fontSize: fontSize.md,
+    color: colors.midnightBlue,
+  },
+  filterOptionTextSelected: {
+    fontWeight: '600',
+    color: colors.teal,
   },
 });
 

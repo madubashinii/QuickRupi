@@ -6,7 +6,9 @@ import {
     updateDoc,
     addDoc,
     serverTimestamp,
+    getDoc,
 } from "firebase/firestore";
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
 
 // Fetch all loans with borrower and KYC details
 export const fetchAllLoans = async () => {
@@ -51,6 +53,10 @@ export const updateLoanStatus = async (updatedLoan) => {
         const loanRef = doc(db, "Loans", updatedLoan.id);
         await updateDoc(loanRef, { status: updatedLoan.status });
 
+        // Get loan data to fetch lender info
+        const loanDoc = await getDoc(loanRef);
+        const loanData = loanDoc.exists() ? loanDoc.data() : null;
+
         // Notification message setup
         const getNotification = () => {
             switch (updatedLoan.status) {
@@ -90,6 +96,38 @@ export const updateLoanStatus = async (updatedLoan) => {
             createdAt: serverTimestamp(),
             isRead: false,
         });
+
+        // Send notifications to lender if applicable
+        if (loanData?.lenderId) {
+            try {
+                if (updatedLoan.status === "disbursed") {
+                    await createNotification({
+                        userId: loanData.lenderId,
+                        type: NOTIFICATION_TYPES.LOAN_DISBURSED,
+                        title: 'Loan Disbursed',
+                        body: `Funds disbursed to borrower for loan #${updatedLoan.id}`,
+                        priority: NOTIFICATION_PRIORITY.HIGH,
+                        loanId: updatedLoan.id,
+                        amount: loanData.fundedAmount || loanData.amountRequested
+                    });
+                } else if (updatedLoan.status === "repaying") {
+                    const firstPaymentDate = new Date();
+                    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
+                    await createNotification({
+                        userId: loanData.lenderId,
+                        type: NOTIFICATION_TYPES.LOAN_ACTIVE,
+                        title: 'Loan Active',
+                        body: `Loan #${updatedLoan.id} is now active. First payment due on ${firstPaymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+                        priority: NOTIFICATION_PRIORITY.MEDIUM,
+                        loanId: updatedLoan.id,
+                        amount: loanData.fundedAmount || loanData.amountRequested
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to create lender notification:', error);
+                // Don't throw - borrower notification succeeded
+            }
+        }
 
         return { success: true, message: `Loan #${updatedLoan.id} updated to ${updatedLoan.status}` };
     } catch (error) {

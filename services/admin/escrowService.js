@@ -1,5 +1,6 @@
 import { db } from "../firebaseConfig";
 import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, where , setDoc} from "firebase/firestore";
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
 
 // Create new escrow entry
 export const createEscrow = async ({ loanId, lenderId, borrowerId, amount }) => {
@@ -151,13 +152,22 @@ export const updateEscrowStatus = async (escrowId, newStatus, lenderId, amount) 
         }
 
         // Send notification to lender
-        await addDoc(collection(db, "notifications"), {
-            userId: lenderId,
-            message: `Your escrow for Loan #${escrowId} has been ${newStatus}`,
-            type: newStatus === "released" ? "fundReleased" : "fundRefunded",
-            isRead: false,
-            timestamp: serverTimestamp()
-        });
+        try {
+            if (newStatus === "released") {
+                await createNotification({
+                    userId: lenderId,
+                    type: NOTIFICATION_TYPES.ESCROW_APPROVED,
+                    title: 'Escrow Approved',
+                    body: `Your investment of LKR ${amount.toLocaleString()} has been approved and funds are secured in escrow`,
+                    priority: NOTIFICATION_PRIORITY.HIGH,
+                    loanId: escrow.loanId,
+                    amount
+                });
+            }
+        } catch (error) {
+            console.error('Failed to create notification:', error);
+            // Don't throw - main operations succeeded
+        }
 
         return { success: true, message: `Escrow ${newStatus} successfully!` };
     } catch (error) {
