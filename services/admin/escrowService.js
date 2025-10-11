@@ -1,5 +1,5 @@
 import { db } from "../firebaseConfig";
-import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, where, setDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, where , setDoc} from "firebase/firestore";
 
 // Create new escrow entry
 export const createEscrow = async ({ loanId, lenderId, borrowerId, amount }) => {
