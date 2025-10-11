@@ -19,6 +19,13 @@ const firebaseConfig = {
     appId: EXPO_PUBLIC_APP_ID,
 };
 
+if (firebaseConfig){
+    console.log("🔥 Firebase Config:", firebaseConfig);
+}
+else{
+    console.log("🔥 nothing");
+}
+
 
 const app = initializeApp(firebaseConfig);
 
