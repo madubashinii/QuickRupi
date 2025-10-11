@@ -3,41 +3,30 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions, 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
-import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import { subscribeToUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../services/notifications/notificationService';
 import { formatTimestamp, getNotificationTypeConfig } from '../../services/notifications/notificationUtils';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const USER_ID = 'L001'; // TODO: Replace with actual user ID from auth context
+const USER_ID = 'ADMIN001';
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All Notifications' },
-  { value: 'FUNDING_CONFIRMED', label: 'Funding' },
-  { value: 'PAYMENT_RECEIVED', label: 'Payments' },
-  { value: 'LOAN_COMPLETED', label: 'Completed Loans' },
-  { value: 'FUNDS_ADDED', label: 'Wallet' },
-  { value: 'MONTHLY_RETURNS', label: 'Monthly Returns' },
-  { value: 'ROI_MILESTONE', label: 'Milestones' },
+  { value: 'NEW_KYC_SUBMISSION', label: 'KYC Submissions' },
+  { value: 'NEW_LOAN_APPLICATION', label: 'Loan Applications' },
+  { value: 'ESCROW_PENDING_APPROVAL', label: 'Escrow Approvals' },
+  { value: 'PAYMENT_OVERDUE', label: 'Overdue Payments' },
 ];
 
-// Navigation helper based on notification type
 const getNavigationTarget = (notification) => {
   const typeMapping = {
-    FUNDING_CONFIRMED: { screen: 'Investments' },
-    ESCROW_APPROVED: { screen: 'Investments' },
-    LOAN_DISBURSED: { screen: 'Investments' },
-    LOAN_ACTIVE: { screen: 'Investments' },
-    PAYMENT_RECEIVED: { screen: 'Investments' },
-    LOAN_COMPLETED: { screen: 'Investments' },
-    MONTHLY_RETURNS: { screen: 'Investments' },
-    ROI_MILESTONE: { screen: 'Investments' },
-    FUNDS_ADDED: { screen: 'Transactions' },
-    WITHDRAWAL_PROCESSED: { screen: 'Transactions' },
+    NEW_KYC_SUBMISSION: { screen: 'KYCApproval' },
+    NEW_LOAN_APPLICATION: { screen: 'AdminHome', params: { screen: 'Loans' } },
+    ESCROW_PENDING_APPROVAL: { screen: 'AdminHome', params: { screen: 'Escrow' } },
+    PAYMENT_OVERDUE: { screen: 'AdminHome', params: { screen: 'Dashboard', params: { screen: 'Repayments' } } },
   };
   return typeMapping[notification.type] || null;
 };
 
-// Notification Item Component 
 const NotificationItem = ({ item, onPress }) => {
   const typeConfig = getNotificationTypeConfig(item.type);
   
@@ -64,7 +53,6 @@ const NotificationItem = ({ item, onPress }) => {
   );
 };
 
-// Filter Modal Component
 const FilterModal = ({ visible, onClose, selectedFilter, onSelectFilter }) => (
   <Modal visible={visible} transparent animationType="fade">
     <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
@@ -89,7 +77,7 @@ const FilterModal = ({ visible, onClose, selectedFilter, onSelectFilter }) => (
               {option.label}
             </Text>
             {selectedFilter === option.value && (
-              <Ionicons name="checkmark" size={20} color={colors.teal} />
+              <Ionicons name="checkmark" size={20} color={colors.midnightBlue} />
             )}
           </TouchableOpacity>
         ))}
@@ -98,7 +86,6 @@ const FilterModal = ({ visible, onClose, selectedFilter, onSelectFilter }) => (
   </Modal>
 );
 
-// Empty State Component 
 const EmptyState = () => (
   <View style={styles.emptyState}>
     <Image 
@@ -106,12 +93,12 @@ const EmptyState = () => (
       style={styles.emptyImage}
       resizeMode="contain"
     />
-    <Text style={styles.emptyTitle}>You're all caught up</Text>
+    <Text style={styles.emptyTitle}>All Caught Up</Text>
     <Text style={styles.emptySubtitle}>No new notifications</Text>
   </View>
 );
 
-const NotificationsScreen = () => {
+const AdminNotificationsScreen = () => {
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +106,6 @@ const NotificationsScreen = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
-    // Subscribe to real-time notifications
     const unsubscribe = subscribeToUserNotifications(USER_ID, (notifs) => {
       setNotifications(notifs);
       setLoading(false);
@@ -128,7 +114,6 @@ const NotificationsScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter notifications based on selected filter
   const filteredNotifications = useMemo(() => {
     if (selectedFilter === 'all') return notifications;
     return notifications.filter(n => n.type === selectedFilter);
@@ -140,36 +125,29 @@ const NotificationsScreen = () => {
 
   const handleNotificationPress = async (notification) => {
     try {
-      // Mark as read first
       if (!notification.isRead) {
         await markNotificationAsRead(notification.notificationId);
       }
       
-      // Get navigation target
       const target = getNavigationTarget(notification);
       
       if (target) {
-        // Navigate to MainTabs and specify which tab to open
-        navigation.navigate('MainTabs', { 
-          screen: target.screen 
-        });
-      } else {
-        // No target, just go back
-        navigation.goBack();
+        navigation.navigate(target.screen, target.params);
       }
     } catch (error) {
-      console.error('Failed to handle notification press:', error);
-      // Fallback: just go back
-      navigation.goBack();
+      console.error('Error handling notification press:', error);
     }
   };
 
   const handleMarkAllAsRead = async () => {
-    if (unreadCount === 0) return;
-    
+    if (unreadCount === 0) {
+      Alert.alert('No Unread Notifications', 'All notifications are already marked as read.');
+      return;
+    }
+
     Alert.alert(
       'Mark All as Read',
-      `Mark ${unreadCount} notification${unreadCount !== 1 ? 's' : ''} as read?`,
+      `Mark all ${unreadCount} notifications as read?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -177,9 +155,9 @@ const NotificationsScreen = () => {
           onPress: async () => {
             try {
               await markAllNotificationsAsRead(USER_ID);
+              Alert.alert('Success', 'All notifications marked as read');
             } catch (error) {
-              console.error('Failed to mark all as read:', error);
-              Alert.alert('Error', 'Failed to mark notifications as read');
+              Alert.alert('Error', 'Failed to mark all as read');
             }
           }
         }
@@ -187,196 +165,219 @@ const NotificationsScreen = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.midnightBlue} />
+        <Text style={styles.loadingText}>Loading notifications...</Text>
+      </View>
+    );
+  }
+
   return (
-    <AnimatedScreen style={styles.container}>
-      {/* Header */}
+    <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.midnightBlue} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity 
-          style={styles.filterButton} 
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Ionicons 
-            name={selectedFilter === 'all' ? 'filter-outline' : 'filter'} 
-            size={24} 
-            color={selectedFilter === 'all' ? colors.midnightBlue : colors.teal} 
-          />
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.filterButton}>
+          <Ionicons name="filter" size={22} color={colors.white} />
         </TouchableOpacity>
       </View>
 
-      {/* Mark All as Read Button */}
-      {unreadCount > 0 && (
-        <View style={styles.actionBar}>
-          <Text style={styles.unreadText}>{unreadCount} unread</Text>
+      <View style={styles.toolbar}>
+        <Text style={styles.toolbarText}>
+          {selectedFilter === 'all' ? 'All' : FILTER_OPTIONS.find(o => o.value === selectedFilter)?.label}
+        </Text>
+        {unreadCount > 0 && (
           <TouchableOpacity onPress={handleMarkAllAsRead}>
             <Text style={styles.markAllButton}>Mark all as read</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
-      {/* Notifications List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.teal} />
-        </View>
-      ) : filteredNotifications.length > 0 ? (
+      {filteredNotifications.length === 0 ? (
+        <EmptyState />
+      ) : (
         <FlatList
           data={filteredNotifications}
-          renderItem={({ item }) => <NotificationItem item={item} onPress={handleNotificationPress} />}
           keyExtractor={(item) => item.notificationId}
-          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => (
+            <NotificationItem item={item} onPress={handleNotificationPress} />
+          )}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
-      ) : (
-        <EmptyState />
       )}
 
-      {/* Filter Modal */}
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         selectedFilter={selectedFilter}
         onSelectFilter={setSelectedFilter}
       />
-    </AnimatedScreen>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.babyBlue,
+    backgroundColor: colors.lightGray,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.lightGray,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: colors.gray,
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.midnightBlue,
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+  badge: {
+    backgroundColor: colors.red,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  filterButton: {
+    padding: 8,
+  },
+  toolbar: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: 80,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
   },
-  backButton: {
-    padding: spacing.xs,
+  toolbarText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.gray,
   },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: 'bold',
+  markAllButton: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.midnightBlue,
   },
-  filterButton: {
-    padding: spacing.sm,
-  },
-  listContainer: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+  listContent: {
+    paddingVertical: 8,
   },
   notificationCard: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-    shadowColor: colors.black,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
     elevation: 2,
   },
   unreadCard: {
+    backgroundColor: '#f0f9ff',
     borderLeftWidth: 4,
-    borderLeftColor: colors.blueGreen,
+    borderLeftColor: colors.midnightBlue,
   },
   notificationContent: {
     flexDirection: 'row',
-    padding: spacing.md,
     alignItems: 'flex-start',
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    alignItems: 'center',
+    marginRight: 12,
   },
   textContent: {
     flex: 1,
   },
   title: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.midnightBlue,
-    marginBottom: 2,
+    fontSize: 16,
+    color: colors.black,
+    marginBottom: 4,
   },
   body: {
-    fontSize: fontSize.xs,
+    fontSize: 14,
     color: colors.gray,
-    lineHeight: 16,
-    marginBottom: spacing.xs,
+    marginBottom: 6,
   },
   timestamp: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.gray,
-    alignSelf: 'flex-end',
   },
   unreadDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.blueGreen,
-    marginTop: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.midnightBlue,
+    marginLeft: 8,
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
   emptyImage: {
-    width: SCREEN_WIDTH * 0.5,
-    height: SCREEN_WIDTH * 0.5,
-    marginBottom: spacing.md,
+    width: SCREEN_WIDTH * 0.6,
+    height: SCREEN_WIDTH * 0.6,
   },
   emptyTitle: {
-    fontSize: fontSize.lg,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.midnightBlue,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
+    color: colors.gray,
+    marginTop: 16,
   },
   emptySubtitle: {
-    fontSize: fontSize.sm,
+    fontSize: 14,
     color: colors.gray,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.xxl,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
-  },
-  unreadText: {
-    fontSize: fontSize.sm,
-    color: colors.gray,
-  },
-  markAllButton: {
-    fontSize: fontSize.sm,
-    color: colors.teal,
-    fontWeight: '600',
+    marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -386,38 +387,38 @@ const styles = StyleSheet.create({
   },
   filterModal: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    width: SCREEN_WIDTH * 0.8,
+    borderRadius: 16,
+    padding: 20,
+    width: SCREEN_WIDTH * 0.85,
     maxHeight: '70%',
   },
   filterModalTitle: {
-    fontSize: fontSize.lg,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: colors.midnightBlue,
-    marginBottom: spacing.md,
+    color: colors.black,
+    marginBottom: 16,
   },
   filterOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   filterOptionSelected: {
     backgroundColor: colors.babyBlue,
-    borderRadius: borderRadius.sm,
   },
   filterOptionText: {
-    fontSize: fontSize.md,
-    color: colors.midnightBlue,
+    fontSize: 16,
+    color: colors.black,
   },
   filterOptionTextSelected: {
     fontWeight: '600',
-    color: colors.teal,
+    color: colors.midnightBlue,
   },
 });
 
-export default NotificationsScreen;
+export default AdminNotificationsScreen;
+

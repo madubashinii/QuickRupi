@@ -1,5 +1,31 @@
 import { db } from "../firebaseConfig";
-import { collection, onSnapshot, getDocs, query, where, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, onSnapshot, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
+
+// Submit KYC documents (borrower submits)
+export const submitKYC = async (kycData) => {
+    try {
+        const kycDoc = await addDoc(collection(db, "kycSubmissions"), {
+            ...kycData,
+            kycStatus: "pending",
+            submittedAt: serverTimestamp()
+        });
+
+        await createNotification({
+            userId: 'ADMIN001',
+            type: NOTIFICATION_TYPES.NEW_KYC_SUBMISSION,
+            title: 'New KYC Submission',
+            body: `${kycData.fullName} submitted KYC documents for review`,
+            priority: NOTIFICATION_PRIORITY.HIGH,
+            metadata: { relatedUserId: kycData.userId }
+        });
+
+        return { success: true, kycId: kycDoc.id };
+    } catch (error) {
+        console.error("Error submitting KYC:", error);
+        return { success: false, error: error.message };
+    }
+};
 
 // Fetch all KYC submissions and map with loan info
 export const fetchKYCRequests = (onUpdate) => {

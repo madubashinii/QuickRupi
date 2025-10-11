@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import BorrowerDashboard from './screens/borrower/BorrowerDashboard';
@@ -12,11 +11,14 @@ import MessagesScreen from './screens/LenderScreens/MessagesScreen';
 import Toast from 'react-native-toast-message';
 const Stack = createNativeStackNavigator();
 
+
 export default function App() {
   return (
 
     <NavigationContainer>
       <AppNavigator />
+      <Toast />
+      <StatusBar style="light" />
     </NavigationContainer>
   );
 }

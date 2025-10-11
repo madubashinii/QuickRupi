@@ -6,6 +6,7 @@ import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import PaymentMethodsModal from '../../components/lender/PaymentMethodsModal';
 import AgreementsLegalModal from '../../components/lender/AgreementsLegalModal';
 import HelpModal from '../../components/lender/HelpModal';
+import NotificationSettingsModal from '../../components/lender/NotificationSettingsModal';
 
 // Configuration
 const CONFIG = {
@@ -33,6 +34,7 @@ const useProfileHandlers = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAgreementsModal, setShowAgreementsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   
   return {
     handleSettingPress: (title) => {
@@ -42,6 +44,8 @@ const useProfileHandlers = () => {
         setShowAgreementsModal(true);
       } else if (title === 'Help') {
         setShowHelpModal(true);
+      } else if (title === 'Push notifications') {
+        setShowNotificationModal(true);
       } else {
         console.log(`Pressed: ${title}`);
       }
@@ -54,6 +58,8 @@ const useProfileHandlers = () => {
     setShowAgreementsModal,
     showHelpModal,
     setShowHelpModal,
+    showNotificationModal,
+    setShowNotificationModal,
   };
 };
 
@@ -67,7 +73,9 @@ const Profile = () => {
     showAgreementsModal,
     setShowAgreementsModal,
     showHelpModal,
-    setShowHelpModal
+    setShowHelpModal,
+    showNotificationModal,
+    setShowNotificationModal
   } = useProfileHandlers();
 
   return (
@@ -90,6 +98,11 @@ const Profile = () => {
       <HelpModal
         visible={showHelpModal}
         onClose={() => setShowHelpModal(false)}
+      />
+      <NotificationSettingsModal
+        visible={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        userId={CONFIG.USER_DATA.id}
       />
     </AnimatedScreen>
   );

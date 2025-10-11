@@ -1,6 +1,8 @@
 import { db } from "../firebaseConfig";
-import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc, getDocs, query, where } from "firebase/firestore";
 import { generateRepaymentSchedule } from "./repaymentScheduleGenerator";
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
+import { checkAndNotifyROIMilestone } from "../notifications/roiMilestoneService";
 
 /**
  * Service for managing repayment schedules
@@ -174,5 +176,183 @@ const mapRepaymentStatus = (status, dueDate) => {
     return 'Due soon';
   } else {
     return 'Pending';
+  }
+};
+
+/**
+ * Mark an installment as paid and send notification to lender
+ * @param {string} repaymentId - ID of the repayment document
+ * @param {number} installmentNumber - Installment number to mark as paid
+ * @returns {Promise<{success: boolean, loanCompleted: boolean}>}
+ */
+export const markInstallmentAsPaid = async (repaymentId, installmentNumber) => {
+  try {
+    const docRef = doc(db, "repayments", repaymentId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error("Repayment schedule not found");
+    }
+
+    const data = docSnap.data();
+    const schedule = data.schedule;
+    
+    // Find and update the installment
+    const installmentIndex = schedule.findIndex(
+      inst => inst.installmentNumber === installmentNumber
+    );
+    
+    if (installmentIndex === -1) {
+      throw new Error("Installment not found");
+    }
+
+    const installment = schedule[installmentIndex];
+    
+    // Mark as paid
+    schedule[installmentIndex] = {
+      ...installment,
+      status: 'paid',
+      paidDate: new Date().toISOString()
+    };
+
+    // Update Firestore
+    await updateDoc(docRef, { schedule });
+
+    // Send PAYMENT_RECEIVED notification to lender
+    try {
+      const paymentStatus = installment.dueDate 
+        ? new Date(installment.dueDate) >= new Date() ? 'On Time' : 'Late'
+        : 'On Time';
+      
+      await createNotification({
+        userId: data.lenderId,
+        type: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
+        title: 'Payment Received',
+        body: `Payment of LKR ${Math.round(installment.totalPayment).toLocaleString()} received from loan #${data.loanId} (${paymentStatus})`,
+        priority: NOTIFICATION_PRIORITY.HIGH,
+        loanId: data.loanId,
+        amount: Math.round(installment.totalPayment)
+      });
+    } catch (error) {
+      console.error('Failed to send payment notification:', error);
+      // Don't throw - payment update succeeded
+    }
+
+    // Check if all installments are now paid
+    const allPaid = schedule.every(inst => inst.status.toLowerCase() === 'paid');
+    
+    if (allPaid) {
+      await handleLoanCompletion(repaymentId, data);
+      return { success: true, loanCompleted: true };
+    }
+
+    return { success: true, loanCompleted: false };
+  } catch (error) {
+    console.error("Error marking installment as paid:", error);
+    throw error;
+  }
+};
+
+/**
+ * Handle loan completion - update status and send notification
+ * @param {string} repaymentId - ID of the repayment document
+ * @param {Object} repaymentData - Repayment data
+ */
+const handleLoanCompletion = async (repaymentId, repaymentData) => {
+  try {
+    const { loanId, lenderId, schedule } = repaymentData;
+    
+    // Update loan status to completed
+    await updateLoanStatusIfComplete(loanId, schedule);
+
+    // Get loan details for total return calculation
+    const loanRef = doc(db, "Loans", loanId);
+    const loanDoc = await getDoc(loanRef);
+    
+    if (!loanDoc.exists()) {
+      console.error('Loan not found for completion notification');
+      return;
+    }
+
+    const loanData = loanDoc.data();
+    const principal = loanData.fundedAmount || loanData.amountRequested || 0;
+    
+    // Calculate totals from schedule
+    const totalReturn = schedule.reduce((sum, inst) => sum + (inst.totalPayment || 0), 0);
+    const interestEarned = totalReturn - principal;
+
+    // Send LOAN_COMPLETED notification to lender
+    try {
+      await createNotification({
+        userId: lenderId,
+        type: NOTIFICATION_TYPES.LOAN_COMPLETED,
+        title: 'Loan Completed',
+        body: `Loan #${loanId} completed! Total return: LKR ${Math.round(totalReturn).toLocaleString()} (LKR ${Math.round(interestEarned).toLocaleString()} interest earned)`,
+        priority: NOTIFICATION_PRIORITY.HIGH,
+        loanId,
+        amount: Math.round(totalReturn)
+      });
+    } catch (error) {
+      console.error('Failed to send loan completion notification:', error);
+      // Don't throw - loan status update succeeded
+    }
+
+    // Check for ROI milestone after loan completion
+    try {
+      await checkAndNotifyROIMilestone(lenderId);
+    } catch (error) {
+      console.error('Failed to check ROI milestone:', error);
+      // Don't throw - main notifications succeeded
+    }
+  } catch (error) {
+    console.error('Error handling loan completion:', error);
+    // Don't throw - this is a side effect
+  }
+};
+
+/**
+ * Check for overdue payments and send admin notifications
+ * Can be triggered daily or when admin views RepaymentMonitoringScreen
+ * @returns {Promise<number>} Number of overdue notifications sent
+ */
+export const checkOverduePayments = async () => {
+  try {
+    const repaymentsSnapshot = await getDocs(collection(db, "repayments"));
+    const today = new Date();
+    let notificationsSent = 0;
+
+    for (const repaymentDoc of repaymentsSnapshot.docs) {
+      const repaymentData = repaymentDoc.data();
+      const { schedule, loanId } = repaymentData;
+
+      if (!schedule || !Array.isArray(schedule)) continue;
+
+      for (const installment of schedule) {
+        const isPending = installment.status?.toLowerCase() === 'pending';
+        const dueDate = new Date(installment.dueDate);
+        const isOverdue = dueDate < today;
+
+        if (isPending && isOverdue) {
+          const daysLate = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+
+          await createNotification({
+            userId: 'ADMIN001',
+            type: NOTIFICATION_TYPES.PAYMENT_OVERDUE,
+            title: 'Payment Overdue',
+            body: `Loan #${loanId} payment overdue by ${daysLate} days`,
+            priority: NOTIFICATION_PRIORITY.MEDIUM,
+            loanId,
+            amount: installment.totalPayment
+          });
+
+          notificationsSent++;
+        }
+      }
+    }
+
+    return notificationsSent;
+  } catch (error) {
+    console.error('Error checking overdue payments:', error);
+    return 0;
   }
 };

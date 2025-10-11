@@ -49,7 +49,7 @@ const schedule = generateRepaymentSchedule({
 ---
 
 ### 2. `repaymentService.js`
-Manages repayment schedule storage, retrieval, and status tracking in Firestore.
+Manages repayment schedule storage, retrieval, status tracking, and payment notifications in Firestore.
 
 **Key Functions:**
 
@@ -71,6 +71,17 @@ const repaymentId = await createRepaymentSchedule({
 ```javascript
 // Retrieves repayment schedule with dynamic status
 const repaymentData = await getRepaymentSchedule(repaymentId)
+```
+
+#### Mark Installment as Paid
+```javascript
+// Mark an installment as paid and send notifications
+const result = await markInstallmentAsPaid(repaymentId, installmentNumber);
+// Returns: { success: true, loanCompleted: boolean }
+
+// Automatically sends:
+// 1. PAYMENT_RECEIVED notification to lender (with On Time/Late status)
+// 2. LOAN_COMPLETED notification if all installments are paid (includes total return and interest earned)
 ```
 
 **Returns:**
@@ -136,8 +147,13 @@ await updateDoc(loanRef, { repaymentId, status: 'repaying' });
 
 ### When Admin Marks Payment as Paid
 ```javascript
-// 1. Update installment status in schedule
-// 2. Call checkAndCompleteLoan to auto-complete if all paid
+// Mark installment as paid (sends PAYMENT_RECEIVED notification automatically)
+const result = await markInstallmentAsPaid(repaymentId, installmentNumber);
+
+// Returns: { success: true, loanCompleted: boolean }
+// If loanCompleted = true, LOAN_COMPLETED notification is sent automatically
+
+// Legacy method (manual checking):
 const isComplete = await checkAndCompleteLoan(repaymentId);
 // Automatically updates loan status to 'completed' if all installments paid
 ```
@@ -159,6 +175,8 @@ const totalPaid = repaymentData.schedule
 
 - **Firebase Firestore**: Storage for repayment schedules
 - **Loan Service**: Updates loan status when completed
+- **Notification Service**: Sends PAYMENT_RECEIVED and LOAN_COMPLETED notifications
+- **ROI Milestone Service**: Checks and sends ROI_MILESTONE notifications after loan completion
 - **Date Utilities**: ISO date strings for consistency
 
 ---
@@ -180,7 +198,13 @@ Admin/Lender views schedule via getRepaymentSchedule()
   ↓
 Admin marks payment as paid
   ↓
-checkAndCompleteLoan() → Auto-completes loan if all paid
+markInstallmentAsPaid() 
+  ├─ Update installment status to 'paid'
+  ├─ Send PAYMENT_RECEIVED notification to lender
+  └─ If all paid → handleLoanCompletion()
+      ├─ Update loan status to 'completed'
+      ├─ Send LOAN_COMPLETED notification (with total return & interest)
+      └─ Check ROI milestone → Send ROI_MILESTONE notification if threshold reached
 ```
 
 ---

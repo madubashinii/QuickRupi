@@ -4,12 +4,14 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
+import AdminNotificationSettingsModal from "../../components/admin/AdminNotificationSettingsModal";
 
 export default function AdminProfileScreen() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [loading, setLoading] = useState(true);
+    const [showNotificationSettings, setShowNotificationSettings] = useState(false);
     const navigation = useNavigation();
 
     const adminId = "Admin";
@@ -131,6 +133,13 @@ export default function AdminProfileScreen() {
             {/* Other Actions */}
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Other Actions</Text>
+                <TouchableOpacity 
+                    style={styles.actionBtn}
+                    onPress={() => setShowNotificationSettings(true)}
+                >
+                    <Ionicons name="notifications-outline" size={20} color="#0c6170" />
+                    <Text style={styles.actionText}>Notification Settings</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn}>
                     <Ionicons name="lock-closed-outline" size={20} color="#0c6170" />
                     <Text style={styles.actionText}>Change Password</Text>
@@ -139,8 +148,13 @@ export default function AdminProfileScreen() {
                     <FontAwesome5 name="sign-out-alt" size={20} color="#dc2626" />
                     <Text style={styles.actionText}>Logout</Text>
                 </TouchableOpacity>
-
             </View>
+
+            <AdminNotificationSettingsModal
+                visible={showNotificationSettings}
+                onClose={() => setShowNotificationSettings(false)}
+                userId="ADMIN001"
+            />
         </ScrollView>
     );
 }
