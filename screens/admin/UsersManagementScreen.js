@@ -214,7 +214,7 @@ export default function UsersManagementScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#dbf5f0" },
     loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center", position: "relative" },
+    header: { paddingTop: 80, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center", position: "relative" },
     backBtn: { position: "absolute", left: 20, top: 45, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(55, 190, 176, 0.3)", justifyContent: "center", alignItems: "center" },
     headerTitle: { fontSize: 22, color: "#fff", fontWeight: "700" },
     headerSubtitle: { color: "#a4e5e0", opacity: 0.9, marginTop: 4 },

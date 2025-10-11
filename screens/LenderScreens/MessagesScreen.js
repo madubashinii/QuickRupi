@@ -9,94 +9,61 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import {
+  getOrCreateConversation,
+  sendMessage,
+  subscribeToMessages,
+  markMessagesAsRead,
+  formatTime,
+  formatDate,
+  shouldShowDateSeparator,
+} from '../../services/chat';
 
 // Constants
-const SEND_DELAY = 1000;
+const USER_ID = 'L001'; // TODO: Replace with actual authenticated user ID
+const USER_ROLE = 'lender';
 const SCROLL_DELAY = 100;
 const MAX_MESSAGE_LENGTH = 500;
 
-// Mock data
-const mockData = [
-  {
-    id: '1',
-    text: 'Hello! How can I help you today?',
-    sender: 'admin',
-    timestamp: new Date(Date.now() - 3600000),
-    read: true,
-  },
-  {
-    id: '2',
-    text: 'Hi, I have a question about my recent loan investment',
-    sender: 'lender',
-    timestamp: new Date(Date.now() - 3500000),
-    read: true,
-  },
-  {
-    id: '3',
-    text: 'Of course! I\'d be happy to help. Which loan are you referring to?',
-    sender: 'admin',
-    timestamp: new Date(Date.now() - 3400000),
-    read: true,
-  },
-  {
-    id: '4',
-    text: 'It\'s loan LN-201 for John Silva. I noticed the borrower hasn\'t made the payment yet.',
-    sender: 'lender',
-    timestamp: new Date(Date.now() - 3300000),
-    read: true,
-  },
-  {
-    id: '5',
-    text: 'I see. Let me check the status of that loan for you. One moment please.',
-    sender: 'admin',
-    timestamp: new Date(Date.now() - 3200000),
-    read: true,
-  },
-  {
-    id: '6',
-    text: 'Thank you!',
-    sender: 'lender',
-    timestamp: new Date(Date.now() - 3000000),
-    read: false,
-  },
-  {
-    id: 'system-1',
-    text: 'Escrow approved for LN-201',
-    sender: 'system',
-    timestamp: new Date(Date.now() - 2800000),
-    read: false,
-  },
-];
-
-// Utility functions
-const formatTime = (timestamp) => 
-  timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
-const formatDate = (timestamp) => {
-  const now = new Date();
-  const messageDate = new Date(timestamp);
-  const diffDays = Math.ceil((now - messageDate) / (1000 * 60 * 60 * 24));
+// Components
+const ConnectionStatus = ({ isConnected }) => {
+  if (isConnected) return null;
   
-  if (diffDays === 1) return 'Today';
-  if (diffDays === 2) return 'Yesterday';
-  return messageDate.toLocaleDateString();
+  return (
+    <View style={styles.connectionStatus}>
+      <Ionicons name="cloud-offline-outline" size={14} color={colors.white} />
+      <Text style={styles.connectionStatusText}>Connecting...</Text>
+    </View>
+  );
 };
 
-const shouldShowDateSeparator = (current, previous) => 
-  !previous || new Date(current.timestamp).toDateString() !== new Date(previous.timestamp).toDateString();
-
-// Components
-const Header = ({ onBack }) => (
+const Header = ({ onBack, isConnected, onInfo }) => (
   <View style={styles.header}>
     <TouchableOpacity style={styles.backButton} onPress={onBack}>
-      <Ionicons name="arrow-back" size={24} color={colors.midnightBlue} />
+      <Ionicons name="arrow-back" size={24} color={colors.white} />
     </TouchableOpacity>
-    <Text style={styles.headerTitle}>Admin Support</Text>
-    <View style={styles.headerSpacer} />
+    <View style={styles.headerCenter}>
+      <View style={styles.adminAvatar}>
+        <Ionicons name="headset" size={20} color={colors.white} />
+      </View>
+      <View>
+        <Text style={styles.headerTitle}>Support Team</Text>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusDot, isConnected && styles.onlineDot]} />
+          <Text style={styles.statusText}>{isConnected ? 'Online' : 'Offline'}</Text>
+        </View>
+      </View>
+    </View>
+    <TouchableOpacity style={styles.infoButton} onPress={onInfo}>
+      <Ionicons name="information-circle-outline" size={24} color={colors.white} />
+    </TouchableOpacity>
   </View>
 );
 
@@ -108,25 +75,60 @@ const DateSeparator = ({ date }) => (
   </View>
 );
 
-const MessageBubble = ({ message, isLender }) => (
-  <View style={[styles.messageContainer, isLender ? styles.lenderMessage : styles.adminMessage]}>
-    <View style={[styles.messageBubble, isLender ? styles.lenderBubble : styles.adminBubble]}>
-      <Text style={[styles.messageText, isLender ? styles.lenderText : styles.adminText]}>
-        {message.text}
-      </Text>
-    </View>
-    <View style={[styles.messageMeta, isLender ? styles.lenderMeta : styles.adminMeta]}>
-      <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
-      {isLender && (
-        <Ionicons 
-          name={message.read ? "checkmark-done" : "checkmark"} 
-          size={12} 
-          color={colors.gray} 
-        />
+const MessageBubble = ({ message, isLender, isNewMessage }) => {
+  const slideAnim = useRef(new Animated.Value(isNewMessage ? 50 : 0)).current;
+  const fadeAnim = useRef(new Animated.Value(isNewMessage ? 0 : 1)).current;
+
+  useEffect(() => {
+    if (isNewMessage) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isNewMessage]);
+
+  return (
+    <Animated.View 
+      style={[
+        styles.messageContainer, 
+        isLender ? styles.lenderMessage : styles.adminMessage,
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+      ]}
+    >
+      {!isLender && (
+        <View style={styles.adminMessageAvatar}>
+          <Ionicons name="headset" size={16} color={colors.white} />
+        </View>
       )}
-    </View>
-  </View>
-);
+      <View style={{ flex: 1 }}>
+        <View style={[styles.messageBubble, isLender ? styles.lenderBubble : styles.adminBubble]}>
+          <Text style={[styles.messageText, isLender ? styles.lenderText : styles.adminText]}>
+            {message.text}
+          </Text>
+        </View>
+        <View style={[styles.messageMeta, isLender ? styles.lenderMeta : styles.adminMeta]}>
+          <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
+          {isLender && (
+            <Ionicons 
+              name={message.read ? "checkmark-done" : "checkmark"} 
+              size={14} 
+              color={message.read ? colors.blueGreen : colors.gray} 
+            />
+          )}
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
 
 const SystemMessage = ({ message }) => (
   <View style={styles.systemMessage}>
@@ -135,22 +137,27 @@ const SystemMessage = ({ message }) => (
 );
 
 const MessageItem = ({ item, index, messages }) => {
-  const isLender = item.sender === 'lender';
-  const isSystem = item.sender === 'system';
+  const isLender = item.senderRole === 'lender';
+  const isSystem = item.type === 'system';
   const showDateSeparator = shouldShowDateSeparator(item, messages[index - 1]);
+  const isNewMessage = index === messages.length - 1;
 
   return (
     <View>
       {showDateSeparator && <DateSeparator date={formatDate(item.timestamp)} />}
-      {isSystem ? <SystemMessage message={item} /> : <MessageBubble message={item} isLender={isLender} />}
+      {isSystem ? <SystemMessage message={item} /> : <MessageBubble message={item} isLender={isLender} isNewMessage={isNewMessage} />}
     </View>
   );
 };
 
 const EmptyState = () => (
   <View style={styles.emptyState}>
-    <Text style={styles.emptyStateEmoji}>👋</Text>
-    <Text style={styles.emptyStateText}>Say hi to support</Text>
+    <View style={styles.emptyStateIconContainer}>
+      <Ionicons name="chatbubbles-outline" size={64} color={colors.blueGreen} />
+    </View>
+    <Text style={styles.emptyStateTitle}>Start a Conversation</Text>
+    <Text style={styles.emptyStateSubtitle}>Need help? Our support team is here for you.</Text>
+    <Text style={styles.emptyStateHint}>💡 Tip: Get instant responses to your queries</Text>
   </View>
 );
 
@@ -164,65 +171,134 @@ const LoadingSkeleton = () => (
   </View>
 );
 
-const Composer = ({ newMessage, setNewMessage, isSending, onSend }) => (
-  <View style={styles.composer}>
-    <View style={styles.inputContainer}>
-      <TextInput
-        style={styles.textInput}
-        value={newMessage}
-        onChangeText={setNewMessage}
-        placeholder="Write a message…"
-        placeholderTextColor={colors.midnightBlue}
-        multiline
-        maxLength={MAX_MESSAGE_LENGTH}
-      />
-      <TouchableOpacity
-        style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
-        onPress={onSend}
-        disabled={!newMessage.trim() || isSending}
-      >
-        {isSending ? (
-          <ActivityIndicator size="small" color={colors.white} />
-        ) : (
-          <Ionicons name="send" size={20} color={colors.white} />
-        )}
-      </TouchableOpacity>
+const Composer = ({ newMessage, setNewMessage, isSending, onSend }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  
+  return (
+    <View style={styles.composer}>
+      <View style={[styles.inputContainer, isFocused && styles.inputContainerFocused]}>
+        <TextInput
+          style={styles.textInput}
+          value={newMessage}
+          onChangeText={setNewMessage}
+          placeholder="Type your message..."
+          placeholderTextColor={colors.gray}
+          multiline
+          maxLength={MAX_MESSAGE_LENGTH}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
+          onPress={onSend}
+          disabled={!newMessage.trim() || isSending}
+        >
+          {isSending ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Ionicons name="send" size={20} color={colors.white} />
+          )}
+        </TouchableOpacity>
+      </View>
+      {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
+        <Text style={styles.charCount}>
+          {newMessage.length}/{MAX_MESSAGE_LENGTH}
+        </Text>
+      )}
     </View>
-  </View>
-);
+  );
+};
 
 const MessagesScreen = () => {
   const navigation = useNavigation();
-  const [messages, setMessages] = useState(mockData);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
   const flatListRef = useRef(null);
+
+  // Initialize conversation and subscribe to messages
+  useEffect(() => {
+    let unsubscribe;
+
+    const initConversation = async () => {
+      try {
+        const conversation = await getOrCreateConversation(USER_ID);
+        setConversationId(conversation.conversationId);
+
+        // Subscribe to messages
+        unsubscribe = subscribeToMessages(conversation.conversationId, (msgs) => {
+          setMessages(msgs);
+          setIsLoading(false);
+          setIsConnected(true);
+        });
+
+        // Mark messages as read
+        await markMessagesAsRead(conversation.conversationId, USER_ID);
+      } catch (error) {
+        console.error('Failed to initialize conversation:', error);
+        Alert.alert('Error', 'Failed to load messages');
+        setIsLoading(false);
+        setIsConnected(false);
+      }
+    };
+
+    initConversation();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // Mark messages as read when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (conversationId) {
+        markMessagesAsRead(conversationId, USER_ID).catch(console.error);
+      }
+    }, [conversationId])
+  );
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), SCROLL_DELAY);
   }, []);
 
-  useEffect(() => scrollToBottom(), [messages]);
+  useEffect(() => {
+    if (messages.length > 0) scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || isSending) return;
+    if (!newMessage.trim() || isSending || !conversationId) return;
 
     setIsSending(true);
-    const message = {
-      id: Date.now().toString(),
-      text: newMessage.trim(),
-      sender: 'lender',
-      timestamp: new Date(),
-      read: false,
-    };
-
-    setMessages(prev => [...prev, message]);
+    const messageText = newMessage.trim();
     setNewMessage('');
-    
-    setTimeout(() => setIsSending(false), SEND_DELAY);
-  }, [newMessage, isSending]);
+
+    try {
+      await sendMessage(conversationId, USER_ID, USER_ROLE, messageText);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      Alert.alert('Error', 'Failed to send message');
+      setNewMessage(messageText); // Restore message on error
+    } finally {
+      setIsSending(false);
+    }
+  }, [newMessage, isSending, conversationId]);
+
+  const handleInfo = useCallback(() => {
+    Alert.alert(
+      'Support Information',
+      'Support Team\n\n' +
+      '• Available 24/7 for your queries\n' +
+      '• Average response time: < 1-5 hours\n' +
+      '• Topics: Loans, Investments, Payments\n\n' +
+      'Tip: Be specific with your questions for faster assistance!',
+      [{ text: 'Got it', style: 'default' }]
+    );
+  }, []);
 
   const renderMessage = useCallback(({ item, index }) => 
     <MessageItem item={item} index={index} messages={messages} />, [messages]);
@@ -233,7 +309,8 @@ const MessagesScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Header onBack={() => navigation.goBack()} />
+      <Header onBack={() => navigation.goBack()} isConnected={isConnected} onInfo={handleInfo} />
+      <ConnectionStatus isConnected={isConnected} />
 
       <View style={styles.messagesContainer}>
         {isLoading ? (
@@ -272,25 +349,75 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingTop: 80,
     paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    backgroundColor: colors.blueGreen,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
   backButton: {
     padding: spacing.xs,
+    marginRight: spacing.sm,
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  adminAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   headerTitle: {
-    flex: 1,
     fontSize: fontSize.lg,
     fontWeight: 'bold',
-    color: colors.midnightBlue,
-    textAlign: 'center',
+    color: colors.white,
   },
-  headerSpacer: {
-    width: 32,
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gray,
+  },
+  onlineDot: {
+    backgroundColor: '#4ade80',
+  },
+  statusText: {
+    fontSize: fontSize.xs,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  infoButton: {
+    padding: spacing.xs,
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray,
+    paddingVertical: spacing.xs,
+    gap: 6,
+  },
+  connectionStatusText: {
+    fontSize: fontSize.xs,
+    color: colors.white,
+    fontWeight: '500',
   },
   messagesContainer: {
     flex: 1,
@@ -318,32 +445,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   messageContainer: {
-    marginVertical: spacing.xs,
+    marginVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.xs,
   },
   lenderMessage: {
-    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
   adminMessage: {
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+  },
+  adminMessageAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.blueGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   messageBubble: {
-    maxWidth: '75%',
+    maxWidth: '80%',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.xl,
   },
   lenderBubble: {
     backgroundColor: colors.blueGreen,
     borderBottomRightRadius: borderRadius.xs,
+    shadowColor: colors.blueGreen,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   adminBubble: {
     backgroundColor: colors.white,
     borderBottomLeftRadius: borderRadius.xs,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   messageText: {
     fontSize: fontSize.base,
@@ -382,9 +526,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   composer: {
-    backgroundColor: colors.tiffanyBlue,
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: colors.tiffanyBlue,
+    borderTopColor: colors.lightGray,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     paddingBottom: spacing.xl,
@@ -392,16 +536,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.babyBlue,
+    borderRadius: borderRadius.xl,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     maxHeight: 100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+  },
+  inputContainerFocused: {
+    borderColor: colors.blueGreen,
+    borderWidth: 2,
+    backgroundColor: colors.white,
   },
   textInput: {
     flex: 1,
@@ -412,23 +558,29 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.deepForestGreen,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: colors.blueGreen,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 5,
   },
   sendButtonDisabled: {
-    backgroundColor: colors.gray,
-    shadowOpacity: 0.1,
-    elevation: 1,
+    backgroundColor: colors.lightGray,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  charCount: {
+    fontSize: fontSize.xs,
+    color: colors.gray,
+    textAlign: 'right',
+    marginTop: spacing.xs,
   },
   emptyState: {
     flex: 1,
@@ -436,14 +588,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  emptyStateEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
+  emptyStateIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(55, 190, 176, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-  emptyStateText: {
-    fontSize: fontSize.lg,
+  emptyStateTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: 'bold',
+    color: colors.midnightBlue,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: fontSize.base,
     color: colors.gray,
     textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyStateHint: {
+    fontSize: fontSize.sm,
+    color: colors.blueGreen,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
