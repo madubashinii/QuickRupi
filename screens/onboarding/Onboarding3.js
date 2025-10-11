@@ -14,7 +14,7 @@ const Onboarding3 = ({ navigation }) => (
       Every small loan helps families break the cycle of poverty — aligning with
       the UN Sustainable Development Goal: No Poverty.
     </Text>
-    <Button title="Get Started" onPress={() => navigation.navigate("LoginScreen")} />
+    <Button title="Get Started" onPress={() => navigation.navigate("AuthStack", { screen: "LoginScreen" })} />
   </View>
 );
 

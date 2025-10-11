@@ -1,10 +1,10 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import PersonalDetailsScreen from '../screens/kycBorrower/PersonalDetailsScreen';
 import LoanDetailsScreen from '../screens/kycBorrower/LoanDetailsScreen';
 import AccountDetailsScreen from '../screens/kycBorrower/AccountDetailsScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function KycBorrowerStack() {
   return (
@@ -21,24 +21,24 @@ export default function KycBorrowerStack() {
         cardStyle: { backgroundColor: '#FFFFFF' },
       }}
     >
-      <Stack.Screen 
-        name="PersonalDetailsScreen" 
+      <Stack.Screen
+        name="PersonalDetailsScreen"
         component={PersonalDetailsScreen}
         options={{
           title: 'Personal Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="LoanDetailsScreen" 
+      <Stack.Screen
+        name="LoanDetailsScreen"
         component={LoanDetailsScreen}
         options={{
           title: 'Loan Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="AccountDetailsScreen" 
+      <Stack.Screen
+        name="AccountDetailsScreen"
         component={AccountDetailsScreen}
         options={{
           title: 'Account Information',

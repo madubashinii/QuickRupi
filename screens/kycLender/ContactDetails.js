@@ -1,46 +1,32 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { CheckBox } from "react-native-elements";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { colors } from '../../theme/colors';
 
-export default function ContactDetails({ navigation }) {
-  const [permanentAddress, setPermanentAddress] = useState("");
-  const [isDifferentAddress, setIsDifferentAddress] = useState(false);
-  const [mobileNumber, setMobileNumber] = useState("");
-  const [telephoneNumber, setTelephoneNumber] = useState("");
-  const [email, setEmail] = useState("");
+export default function ContactDetails({ navigation, route }) {
+  const { personalData } = route.params;
+  
+  const [form, setForm] = useState({
+    permanentAddress: "",
+    isDifferentAddress: false,
+    mobileNumber: "",
+    telephoneNumber: "",
+    email: "",
+  });
 
-  const handleNext = async () => {
-    const user = auth.currentUser;
-    if (!user) { 
-      Alert.alert("Error", "Not logged in"); 
-      navigation.replace("Login"); 
-      return; 
-    }
-    
-    if (!permanentAddress || !mobileNumber) {
+  const handleChange = (key, value) => setForm({ ...form, [key]: value });
+
+  const handleNext = () => {
+    if (!form.permanentAddress || !form.mobileNumber) {
       Alert.alert("Error", "Please complete required contact details.");
       return;
     }
 
-    try {
-      await updateLenderDoc(user.uid, {
-        contactDetails: {
-          permanentAddress,
-          isDifferentAddress,
-          mobileNumber,
-          telephoneNumber,
-          email
-        },
-        kycStep: 2
-      });
-
-      navigation.navigate("EmploymentDetails");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save contact details.");
-    }
+    // Pass data to next screen
+    navigation.navigate("EmploymentDetails", {
+      personalData: personalData,
+      contactData: form
+    });
   };
 
   return (
@@ -55,11 +41,11 @@ export default function ContactDetails({ navigation }) {
         <Text style={styles.screenTitle}>Contact Details</Text>
 
         <Text style={styles.label}>Permanent Address</Text>
-        <TextInput 
-          placeholder="Permanent Address" 
-          value={permanentAddress} 
-          onChangeText={setPermanentAddress} 
-          style={[styles.input, styles.textArea]} 
+        <TextInput
+          placeholder="Permanent Address"
+          value={form.permanentAddress}
+          onChangeText={(t) => handleChange("permanentAddress", t)}
+          style={[styles.input, styles.textArea]}
           multiline
           numberOfLines={3}
           placeholderTextColor={colors.textLight}
@@ -67,39 +53,39 @@ export default function ContactDetails({ navigation }) {
 
         <CheckBox
           title="Select if Residential Address differs from Permanent Address"
-          checked={isDifferentAddress}
-          onPress={() => setIsDifferentAddress(!isDifferentAddress)}
+          checked={form.isDifferentAddress}
+          onPress={() => handleChange("isDifferentAddress", !form.isDifferentAddress)}
           containerStyle={styles.checkboxContainer}
           textStyle={styles.checkboxText}
           checkedColor={colors.primary}
         />
 
         <Text style={styles.label}>Mobile Number</Text>
-        <TextInput 
-          placeholder="Mobile Number" 
-          value={mobileNumber} 
-          onChangeText={setMobileNumber} 
-          style={styles.input} 
+        <TextInput
+          placeholder="Mobile Number"
+          value={form.mobileNumber}
+          onChangeText={(t) => handleChange("mobileNumber", t)}
+          style={styles.input}
           keyboardType="phone-pad"
           placeholderTextColor={colors.textLight}
         />
 
         <Text style={styles.label}>Telephone Number</Text>
-        <TextInput 
-          placeholder="Telephone Number" 
-          value={telephoneNumber} 
-          onChangeText={setTelephoneNumber} 
-          style={styles.input} 
+        <TextInput
+          placeholder="Telephone Number"
+          value={form.telephoneNumber}
+          onChangeText={(t) => handleChange("telephoneNumber", t)}
+          style={styles.input}
           keyboardType="phone-pad"
           placeholderTextColor={colors.textLight}
         />
 
         <Text style={styles.label}>Email Address</Text>
-        <TextInput 
-          placeholder="Email Address" 
-          value={email} 
-          onChangeText={setEmail} 
-          style={styles.input} 
+        <TextInput
+          placeholder="Email Address"
+          value={form.email}
+          onChangeText={(t) => handleChange("email", t)}
+          style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
           placeholderTextColor={colors.textLight}
@@ -109,7 +95,7 @@ export default function ContactDetails({ navigation }) {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
@@ -120,9 +106,9 @@ export default function ContactDetails({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,

@@ -1,208 +1,262 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, StatusBar } from "react-native";
 import { CheckBox } from "react-native-elements";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { colors } from '../../theme/colors';
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../../services/firebaseConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
-export default function AccountInformation({ navigation }) {
-  const [form, setForm] = useState({
+export default function AccountInformation({ navigation, route }) {
+  const { 
+    personalData, 
+    contactData, 
+    employmentData, 
+    bankData, 
+    documentsData 
+  } = route.params;
+
+  const [account, setAccount] = useState({
     username: "",
     password: "",
     confirmPassword: "",
     accepted: false
   });
 
-  const handleChange = (key, value) => setForm({ ...form, [key]: value });
+  const handleChange = (key, value) => setAccount({ ...account, [key]: value });
 
   const handleSubmit = async () => {
-    const user = auth.currentUser;
-    if (!user) { 
-      Alert.alert("Error", "Not logged in"); 
-      navigation.replace("Login"); 
-      return; 
-    }
-    
-    if (!form.username || !form.password || !form.confirmPassword) {
+    if (!account.username || !account.password || !account.confirmPassword) {
       Alert.alert("Error", "Please complete all account information.");
       return;
     }
 
-    if (form.password !== form.confirmPassword) {
+    if (account.password !== account.confirmPassword) {
       Alert.alert("Error", "Passwords do not match.");
       return;
     }
 
-    if (!form.accepted) {
+    if (!account.accepted) {
       Alert.alert("Error", "You must agree to the terms and conditions.");
       return;
     }
 
     try {
-      await updateLenderDoc(user.uid, {
-        accountInformation: {
-          username: form.username,
-          termsAccepted: true
+      // Create the Firebase Auth user
+      const userCredential = await createUserWithEmailAndPassword(auth, contactData.email, account.password);
+      const uid = userCredential.user.uid;
+
+      // Create Firestore document with all collected data
+      await setDoc(doc(db, "users", uid), {
+        personalDetails: personalData,
+        contactDetails: contactData,
+        employmentDetails: employmentData,
+        bankDetails: bankData,
+        documents: documentsData,
+        accountDetails: {
+          username: account.username
         },
-        kycStep: 6,
         kycCompleted: true,
-        kycStatus: "completed"
+        step: 3,
+        userType: "lender",
+        createdAt: new Date()
       });
 
-      Alert.alert("Success", "KYC process completed successfully!");
-      navigation.replace("Dashboard");
+      Alert.alert("Success", "Registration completed successfully!");
+      navigation.replace("Dashboard"); // Navigate to dashboard after signup
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Failed to complete KYC process.");
+      Alert.alert("Registration Failed", err.message);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Account Information</Text>
+    <View style={styles.container}>
+      <StatusBar backgroundColor={colors.primary} barStyle="light-content" />
 
-      <TextInput 
-        placeholder="Username" 
-        value={form.username}
-        style={styles.input} 
-        onChangeText={(t) => handleChange("username", t)}
-        autoCapitalize="none"
-      />
-      
-      <TextInput 
-        placeholder="Password" 
-        value={form.password}
-        style={styles.input} 
-        onChangeText={(t) => handleChange("password", t)}
-        secureTextEntry
-        autoCapitalize="none"
-      />
-      
-      <TextInput 
-        placeholder="Confirm Password" 
-        value={form.confirmPassword}
-        style={styles.input} 
-        onChangeText={(t) => handleChange("confirmPassword", t)}
-        secureTextEntry
-        autoCapitalize="none"
-      />
-
-      <View style={styles.termsBox}>
-        <Text style={styles.termsTitle}>LENDER'S TERMS OF USE</Text>
-        <ScrollView style={styles.termsScroll} nestedScrollEnabled={true}>
-          <Text style={styles.termsText}>
-            These tender terms and conditions apply to a user who wishes to register to lend through the site (i.e. a 'tender').  
-            A tender is at all times subject to the specific 'tender terms and conditions' set out below ('Lender T&C'), which are deemed part and parcel of the Terms and Conditions as applicable to him (which include the Privacy Policy (accessed by clicking here) and the General T&C (accessed by clicking here)). In the event of any conflict between the tender T&C and the other applicable components of the Terms and Conditions, the tender T&C shall prevail.
-            Please read these Lender T&C carefully. They impose contractual obligations which are binding and enforceable in law, and as such, should be carefully assessed before acceptance. By clicking 'I Accept'
-          </Text>
-        </ScrollView>
-        
-        <CheckBox
-          title="I have read and agree to the above Lender T&C (as well as the General T&C & Privacy Policy)"
-          checked={form.accepted}
-          onPress={() => handleChange("accepted", !form.accepted)}
-          containerStyle={styles.checkboxContainer}
-          textStyle={styles.checkboxText}
-          checkedColor={colors.primary}
-        />
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>QuickRupi</Text>
+        <Text style={styles.headerSubtitle}>New here? Sign up!</Text>
       </View>
 
-      <Text style={styles.humanVerification}>Confirm that you are human</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.screenTitle}>Account Information</Text>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>SUBMIT</Text>
-      </TouchableOpacity>
+        <TextInput
+          placeholder="Username"
+          value={account.username}
+          style={styles.input}
+          onChangeText={(t) => handleChange("username", t)}
+          autoCapitalize="none"
+          placeholderTextColor={colors.textLight}
+        />
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.secondaryText}>PREVIOUS</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TextInput
+          placeholder="Password"
+          value={account.password}
+          style={styles.input}
+          onChangeText={(t) => handleChange("password", t)}
+          secureTextEntry
+          autoCapitalize="none"
+          placeholderTextColor={colors.textLight}
+        />
+
+        <TextInput
+          placeholder="Confirm Password"
+          value={account.confirmPassword}
+          style={styles.input}
+          onChangeText={(t) => handleChange("confirmPassword", t)}
+          secureTextEntry
+          autoCapitalize="none"
+          placeholderTextColor={colors.textLight}
+        />
+
+        <View style={styles.termsContainer}>
+          <Text style={styles.termsTitle}>LENDER'S TERMS OF USE</Text>
+          <ScrollView style={styles.termsScroll} nestedScrollEnabled={true}>
+            <Text style={styles.termsText}>
+              These tender terms and conditions apply to a user who wishes to register to lend through the site (i.e. a 'tender').
+              A tender is at all times subject to the specific 'tender terms and conditions' set out below ('Lender T&C'), which are deemed part and parcel of the Terms and Conditions as applicable to him (which include the Privacy Policy (accessed by clicking here) and the General T&C (accessed by clicking here)). In the event of any conflict between the tender T&C and the other applicable components of the Terms and Conditions, the tender T&C shall prevail.
+              Please read these Lender T&C carefully. They impose contractual obligations which are binding and enforceable in law, and as such, should be carefully assessed before acceptance. By clicking 'I Accept'
+            </Text>
+          </ScrollView>
+
+          <CheckBox
+            title="I have read and agree to the above Lender T&C (as well as the General T&C & Privacy Policy)"
+            checked={account.accepted}
+            onPress={() => handleChange("accepted", !account.accepted)}
+            containerStyle={styles.checkboxContainer}
+            textStyle={styles.checkboxText}
+            checkedColor={colors.primary}
+          />
+        </View>
+
+        <Text style={styles.humanVerification}>Confirm that you are human</Text>
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>SUBMIT</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.secondaryText}>PREVIOUS</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flexGrow: 1, 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  header: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.white,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.white,
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  content: {
+    flex: 1,
     padding: 20,
-    backgroundColor: colors.background 
   },
-  header: { 
-    fontSize: 20, 
-    fontWeight: "bold", 
-    marginBottom: 20,
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
     color: colors.text,
-    textAlign: "center"
+    marginBottom: 24,
+    textAlign: "center",
   },
-  input: { 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    borderRadius: 8, 
-    padding: 12, 
-    marginVertical: 5,
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    padding: 14,
+    borderRadius: 8,
     fontSize: 16,
-    backgroundColor: colors.white
-  },
-  termsBox: { 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    borderRadius: 8, 
-    padding: 15, 
-    marginVertical: 10 
-  },
-  termsTitle: { 
-    fontWeight: "bold", 
-    marginBottom: 10,
     color: colors.text,
-    fontSize: 16
+    marginBottom: 12,
   },
-  termsScroll: { 
-    maxHeight: 150,
-    marginBottom: 10
+  termsContainer: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 16,
+    marginVertical: 16,
+    backgroundColor: colors.lightGray,
   },
-  termsText: { 
-    fontSize: 14, 
+  termsTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 12,
+    color: colors.text,
+    textAlign: "center",
+  },
+  termsScroll: {
+    maxHeight: 120,
+    marginBottom: 12,
+  },
+  termsText: {
+    fontSize: 14,
     color: colors.textLight,
-    lineHeight: 20
+    lineHeight: 20,
   },
   checkboxContainer: {
     backgroundColor: 'transparent',
     borderWidth: 0,
     padding: 0,
     marginLeft: 0,
-    marginTop: 10,
+    marginTop: 8,
   },
   checkboxText: {
     fontSize: 14,
     fontWeight: 'normal',
     color: colors.text,
   },
-  humanVerification: { 
-    textAlign: "center", 
-    marginVertical: 15, 
-    fontSize: 14, 
+  humanVerification: {
+    textAlign: "center",
+    marginVertical: 16,
+    fontSize: 14,
     color: colors.textLight,
-    fontStyle: 'italic'
+    fontStyle: 'italic',
   },
-  submitButton: { 
-    backgroundColor: colors.success, 
-    padding: 15, 
-    borderRadius: 10, 
-    marginTop: 10 
+  submitButton: {
+    backgroundColor: colors.success,
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  submitButtonText: { 
-    color: colors.white, 
-    textAlign: "center", 
+  submitButtonText: {
+    color: colors.white,
+    textAlign: "center",
     fontWeight: "bold",
-    fontSize: 16
+    fontSize: 16,
   },
-  secondaryButton: { 
-    backgroundColor: colors.gray, 
-    padding: 15, 
-    borderRadius: 10, 
-    marginTop: 10 
+  secondaryButton: {
+    backgroundColor: colors.lightGray,
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
-  secondaryText: { 
-    textAlign: "center", 
-    color: colors.text,
-    fontSize: 16
+  secondaryText: {
+    color: colors.primary,
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

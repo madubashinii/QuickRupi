@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import PersonalDetails from '../screens/kycLender/PersonalDetails1';
 import ContactDetails from '../screens/kycLender/ContactDetails';
 import EmploymentDetails from '../screens/kycLender/EmploymentInfo';
@@ -7,7 +7,7 @@ import BankDetails from '../screens/kycLender/BankDetails';
 import Documents from '../screens/kycLender/Documents';
 import AccountInformation from '../screens/kycLender/AccountInformation';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function KycLenderStack() {
   return (
@@ -24,48 +24,48 @@ export default function KycLenderStack() {
         cardStyle: { backgroundColor: '#FFFFFF' },
       }}
     >
-      <Stack.Screen 
-        name="PersonalDetails" 
+      <Stack.Screen
+        name="PersonalDetails"
         component={PersonalDetails}
         options={{
           title: 'Personal Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="ContactDetails" 
+      <Stack.Screen
+        name="ContactDetails"
         component={ContactDetails}
         options={{
           title: 'Contact Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="EmploymentDetails" 
+      <Stack.Screen
+        name="EmploymentDetails"
         component={EmploymentDetails}
         options={{
           title: 'Employment Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="BankDetails" 
+      <Stack.Screen
+        name="BankDetails"
         component={BankDetails}
         options={{
           title: 'Bank Details',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="Documents" 
+      <Stack.Screen
+        name="Documents"
         component={Documents}
         options={{
           title: 'Documents',
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen 
-        name="AccountInformation" 
+      <Stack.Screen
+        name="AccountInformation"
         component={AccountInformation}
         options={{
           title: 'Account Information',

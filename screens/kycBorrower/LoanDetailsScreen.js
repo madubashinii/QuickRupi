@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { colors } from '../../theme/colors';
+import { updateUserDoc } from '../../services/firestoreService';
 
 export default function LoanDetailsScreen({ navigation, route }) {
   const [loan, setLoan] = useState({
@@ -17,8 +19,15 @@ export default function LoanDetailsScreen({ navigation, route }) {
       alert("Please complete all loan details.");
       return;
     }
-    navigation.navigate("AccountDetailsScreen", { ...route.params, loanData: loan });
+
+    // Pass all collected data to next screen
+    navigation.navigate("AccountDetailsScreen", {
+      ...route.params,
+      loanData: loan
+    });
   };
+
+
 
   return (
     <View style={styles.container}>
@@ -31,29 +40,29 @@ export default function LoanDetailsScreen({ navigation, route }) {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Loan Details</Text>
 
-        <TextInput 
-          placeholder="Required Loan Amount" 
+        <TextInput
+          placeholder="Required Loan Amount"
           value={loan.amount}
-          keyboardType="numeric" 
-          style={styles.input} 
+          keyboardType="numeric"
+          style={styles.input}
           onChangeText={(t) => handleChange("amount", t)}
           placeholderTextColor={colors.textLight}
         />
-        
+
         <Text style={styles.notice}>A Commission fee of 1500 LKR will be deducted from the required loan</Text>
 
-        <TextInput 
-          placeholder="Re-payment Period (e.g. 3 Months)" 
+        <TextInput
+          placeholder="Re-payment Period (e.g. 3 Months)"
           value={loan.period}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("period", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Purpose of the Loan" 
+
+        <TextInput
+          placeholder="Purpose of the Loan"
           value={loan.purpose}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("purpose", t)}
           placeholderTextColor={colors.textLight}
         />
@@ -86,9 +95,9 @@ export default function LoanDetailsScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,
@@ -148,9 +157,9 @@ const styles = StyleSheet.create({
     height: 50,
     color: colors.text,
   },
-  notice: { 
-    color: colors.error, 
-    fontSize: 14, 
+  notice: {
+    color: colors.error,
+    fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
     fontStyle: 'italic'
@@ -160,29 +169,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 20,
   },
-  button: { 
-    backgroundColor: colors.primary, 
-    padding: 16, 
-    borderRadius: 8, 
+  button: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 8,
     flex: 0.48,
     alignItems: "center",
   },
-  buttonText: { 
-    color: colors.white, 
+  buttonText: {
+    color: colors.white,
     fontWeight: "bold",
     fontSize: 16
   },
-  secondaryButton: { 
-    backgroundColor: colors.lightGray, 
-    padding: 16, 
-    borderRadius: 8, 
+  secondaryButton: {
+    backgroundColor: colors.lightGray,
+    padding: 16,
+    borderRadius: 8,
     flex: 0.48,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.primary,
   },
-  secondaryText: { 
-    color: colors.primary, 
+  secondaryText: {
+    color: colors.primary,
     fontWeight: "600",
     fontSize: 16
   },

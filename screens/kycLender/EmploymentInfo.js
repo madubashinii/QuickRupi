@@ -1,40 +1,30 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { colors } from '../../theme/colors';
 
-export default function EmploymentDetails({ navigation }) {
-  const [employmentStatus, setEmploymentStatus] = useState("");
-  const [presentDesignation, setPresentDesignation] = useState("");
+export default function EmploymentDetails({ navigation, route }) {
+  const { personalData, contactData } = route.params;
+  
+  const [form, setForm] = useState({
+    employmentStatus: "",
+    presentDesignation: "",
+  });
 
-  const handleNext = async () => {
-    const user = auth.currentUser;
-    if (!user) { 
-      Alert.alert("Error", "Not logged in"); 
-      navigation.replace("Login"); 
-      return; 
-    }
-    
-    if (!employmentStatus) {
+  const handleChange = (key, value) => setForm({ ...form, [key]: value });
+
+  const handleNext = () => {
+    if (!form.employmentStatus) {
       Alert.alert("Error", "Please select employment status.");
       return;
     }
 
-    try {
-      await updateLenderDoc(user.uid, {
-        employmentDetails: {
-          employmentStatus,
-          presentDesignation
-        },
-        kycStep: 3
-      });
-
-      navigation.navigate("BankDetails");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save employment details.");
-    }
+    // Pass data to next screen
+    navigation.navigate("BankDetails", {
+      personalData: personalData,
+      contactData: contactData,
+      employmentData: form
+    });
   };
 
   return (
@@ -51,8 +41,8 @@ export default function EmploymentDetails({ navigation }) {
         <Text style={styles.label}>Employment Status</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={employmentStatus}
-            onValueChange={setEmploymentStatus}
+            selectedValue={form.employmentStatus}
+            onValueChange={(v) => handleChange("employmentStatus", v)}
             style={styles.picker}
           >
             <Picker.Item label="Please select employment status" value="" />
@@ -66,11 +56,11 @@ export default function EmploymentDetails({ navigation }) {
         </View>
 
         <Text style={styles.label}>Present Designation</Text>
-        <TextInput 
-          placeholder="Present Designation" 
-          value={presentDesignation} 
-          onChangeText={setPresentDesignation} 
-          style={styles.input} 
+        <TextInput
+          placeholder="Present Designation"
+          value={form.presentDesignation}
+          onChangeText={(t) => handleChange("presentDesignation", t)}
+          style={styles.input}
           placeholderTextColor={colors.textLight}
         />
 
@@ -78,7 +68,7 @@ export default function EmploymentDetails({ navigation }) {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
@@ -89,9 +79,9 @@ export default function EmploymentDetails({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,

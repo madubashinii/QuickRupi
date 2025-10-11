@@ -10,58 +10,21 @@ import Onboarding2 from "../screens/onboarding/Onboarding2";
 import Onboarding3 from "../screens/onboarding/Onboarding3";
 import AuthStack from "./AuthStack";
 
+import DocumentVerificationScreen from '../screens/common/DocumentVerificationScreen';
+import ReputationDashboard from '../screens/reputation/ReputationDashboard';
+
 import KycBorrowerStack from "./KycBorrowerStack";
 import KycLenderStack from "./KycLenderStack";
+import Dashboard from "../screens/Dashboard"; // Lender Dashboard
+import BorrowerDashboard from "../screens/BorrowerDashboard"; // Borrower Dashboard
 
-import { auth } from "../services/firebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../services/firebaseConfig";
+import { useAuth } from "../context/AuthContext";
+import { getLenderDoc, getBorrowerDoc } from "../services/firestoreService"; 
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    console.log("AppNavigator: Setting up auth listener");
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
-        console.log("Auth state changed:", currentUser ? "User exists" : "No user");
-        setUser(currentUser);
-
-        if (currentUser) {
-          try {
-            // Fetch user role from Firestore (optional)
-            const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setRole(userData.role || "borrower"); // Default to borrower
-              console.log("Fetched user role:", userData.role);
-            } else {
-              console.log("No user document found — defaulting to borrower");
-              setRole("borrower");
-            }
-          } catch (err) {
-            console.error("Error fetching user role:", err);
-            setRole("borrower");
-          }
-        }
-
-        setLoading(false);
-      },
-      (error) => {
-        console.error("AppNavigator - Auth error:", error);
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
-  }, []);
+  const { user, userData, loading } = useAuth(); 
 
   if (loading) {
     return (
@@ -71,22 +34,35 @@ export default function AppNavigator() {
     );
   }
 
-  console.log("Rendering navigator - user:", user ? "exists" : "null", "role:", role);
+  console.log("Rendering navigator - user:", user ? "exists" : "null", "userData:", userData);
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
+          // User is NOT logged in - show auth flow
           <>
             <Stack.Screen name="SplashScreen" component={SplashScreen} />
             <Stack.Screen name="Onboarding1" component={Onboarding1} />
             <Stack.Screen name="Onboarding2" component={Onboarding2} />
             <Stack.Screen name="Onboarding3" component={Onboarding3} />
             <Stack.Screen name="AuthStack" component={AuthStack} />
+            <Stack.Screen name="DocumentVerification" component={DocumentVerificationScreen} />
+            <Stack.Screen name="ReputationDashboard" component={ReputationDashboard} />
           </>
-        ) : role === "lender" ? (
+          
+        ) : userData?.kycCompleted ? (
+          // User is logged in AND KYC completed - show appropriate dashboard based on userType
+          userData?.userType === "lender" ? (
+            <Stack.Screen name="Dashboard" component={Dashboard} />
+          ) : (
+            <Stack.Screen name="BorrowerDashboard" component={BorrowerDashboard} />
+          )
+        ) : userData?.userType === "lender" ? (
+          // User is lender and KYC not completed - continue lender KYC
           <Stack.Screen name="KycLenderStack" component={KycLenderStack} />
         ) : (
+          // User is borrower and KYC not completed - continue borrower KYC
           <Stack.Screen name="KycBorrowerStack" component={KycBorrowerStack} />
         )}
       </Stack.Navigator>

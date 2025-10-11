@@ -1,38 +1,49 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { CheckBox } from "react-native-elements";
+import { colors } from '../../theme/colors';
+import { updateUserDoc } from '../../services/firestoreService';
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../../services/firebaseConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+
 
 export default function AccountDetailsScreen({ navigation, route }) {
-  const [account, setAccount] = useState({ 
-    username: "", 
-    password: "", 
-    confirm: "", 
-    accepted: false 
+  const [account, setAccount] = useState({
+    username: "",
+    password: "",
+    confirm: "",
+    accepted: false
   });
 
   const handleChange = (key, value) => setAccount({ ...account, [key]: value });
 
-  const handleSubmit = () => {
-    if (!account.username || !account.password || !account.confirm) {
-      alert("Please complete all account information.");
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!account.username || !account.password || !account.confirm) return alert("Complete all fields");
+    if (account.password !== account.confirm) return alert("Passwords do not match");
+    if (!account.accepted) return alert("You must agree to terms");
 
-    if (account.password !== account.confirm) {
-      alert("Passwords do not match.");
-      return;
-    }
+    try {
+      // Create the Firebase Auth user
+      const { personalData, loanData } = route.params; // passed from previous screens
+      const userCredential = await createUserWithEmailAndPassword(auth, personalData.email, account.password);
+      const uid = userCredential.user.uid;
 
-    if (!account.accepted) {
-      alert("You must agree to the terms and conditions.");
-      return;
-    }
+      //  Create Firestore document with all collected data
+      await setDoc(doc(db, "users", uid), {
+        personalDetails: personalData,
+        loanDetails: loanData,
+        accountDetails: account,
+        kycCompleted: true,
+        step: 3
+      });
 
-    console.log("All KYC data:", {
-      ...route.params,
-      accountData: account,
-    });
-    alert("KYC form submitted successfully!");
+      alert("Registration completed successfully!");
+      navigation.replace("DashboardScreen"); // Navigate to dashboard after signup
+    } catch (err) {
+      console.error(err);
+      alert("Registration failed: " + err.message);
+    }
   };
 
   return (
@@ -46,30 +57,30 @@ export default function AccountDetailsScreen({ navigation, route }) {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Account Information</Text>
 
-        <TextInput 
-          placeholder="Username" 
+        <TextInput
+          placeholder="Username"
           value={account.username}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("username", t)}
           autoCapitalize="none"
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Password" 
+
+        <TextInput
+          placeholder="Password"
           value={account.password}
-          secureTextEntry 
-          style={styles.input} 
+          secureTextEntry
+          style={styles.input}
           onChangeText={(t) => handleChange("password", t)}
           autoCapitalize="none"
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Confirm Password" 
+
+        <TextInput
+          placeholder="Confirm Password"
           value={account.confirm}
-          secureTextEntry 
-          style={styles.input} 
+          secureTextEntry
+          style={styles.input}
           onChangeText={(t) => handleChange("confirm", t)}
           autoCapitalize="none"
           placeholderTextColor={colors.textLight}
@@ -79,13 +90,13 @@ export default function AccountDetailsScreen({ navigation, route }) {
           <Text style={styles.termsTitle}>BORROWER'S TERMS OF USE</Text>
           <ScrollView style={styles.termsScroll} nestedScrollEnabled={true}>
             <Text style={styles.termsText}>
-              These Borrower terms and conditions apply to a user who wishes to register to obtain a loan through the app. 
-              Please read carefully before acceptance. By using our services, you agree to comply with all applicable terms 
-              and conditions. We reserve the right to modify these terms at any time. Continued use of the service constitutes 
+              These Borrower terms and conditions apply to a user who wishes to register to obtain a loan through the app.
+              Please read carefully before acceptance. By using our services, you agree to comply with all applicable terms
+              and conditions. We reserve the right to modify these terms at any time. Continued use of the service constitutes
               acceptance of the modified terms.
             </Text>
           </ScrollView>
-          
+
           <CheckBox
             title="I have read and agree to the above Borrower T&C (as well as the General T&C & Privacy Policy)"
             checked={account.accepted}
@@ -111,9 +122,9 @@ export default function AccountDetailsScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,

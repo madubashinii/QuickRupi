@@ -39,8 +39,13 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleBorrowerSignUp = () => {
-    navigation.navigate("PersonalDetails1");
+    navigation.navigate("KycBorrowerStack");
   };
+
+  const handleLenderSignUp = () => {
+    navigation.navigate("KycLenderStack");
+  };
+
 
   return (
     <View style={styles.container}>
@@ -73,11 +78,11 @@ const LoginScreen = ({ navigation }) => {
           autoCapitalize="none"
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Ionicons 
-            name={showPassword ? "eye-off-outline" : "eye-outline"} 
-            size={20} 
-            color="#fff" 
-            style={styles.icon} 
+          <Ionicons
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color="#fff"
+            style={styles.icon}
           />
         </TouchableOpacity>
       </View>
@@ -86,9 +91,9 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.forgotText}>Forgot Password?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.loginBtn, loading && styles.disabledBtn]} 
-        onPress={handleLogin} 
+      <TouchableOpacity
+        style={[styles.loginBtn, loading && styles.disabledBtn]}
+        onPress={handleLogin}
         disabled={loading}
       >
         <Text style={styles.loginText}>
@@ -102,7 +107,7 @@ const LoginScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.signUpBtn} onPress={handleBorrowerSignUp}>
             <Text style={styles.signUpText}>Sign Up | Borrower</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.signUpBtn}>
+          <TouchableOpacity style={styles.signUpBtn} onPress={handleLenderSignUp}>
             <Text style={styles.signUpText}>Sign Up | Investor</Text>
           </TouchableOpacity>
         </View>

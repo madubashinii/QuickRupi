@@ -1,42 +1,32 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { colors } from '../../theme/colors';
 
-export default function BankDetails({ navigation }) {
-  const [bankName, setBankName] = useState("");
-  const [branchName, setBranchName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
+export default function BankDetails({ navigation, route }) {
+  const { personalData, contactData, employmentData } = route.params;
+  
+  const [form, setForm] = useState({
+    bankName: "",
+    branchName: "",
+    accountNumber: "",
+  });
 
-  const handleNext = async () => {
-    const user = auth.currentUser;
-    if (!user) { 
-      Alert.alert("Error", "Not logged in"); 
-      navigation.replace("Login"); 
-      return; 
-    }
-    
-    if (!bankName || !branchName || !accountNumber) {
+  const handleChange = (key, value) => setForm({ ...form, [key]: value });
+
+  const handleNext = () => {
+    if (!form.bankName || !form.branchName || !form.accountNumber) {
       Alert.alert("Error", "Please complete all bank details.");
       return;
     }
 
-    try {
-      await updateLenderDoc(user.uid, {
-        bankDetails: { 
-          bankName, 
-          branchName, 
-          accountNumber 
-        },
-        kycStep: 4
-      });
-
-      navigation.navigate("Documents");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save bank details.");
-    }
+    // Pass data to next screen
+    navigation.navigate("Documents", {
+      personalData: personalData,
+      contactData: contactData,
+      employmentData: employmentData,
+      bankData: form
+    });
   };
 
   return (
@@ -53,8 +43,8 @@ export default function BankDetails({ navigation }) {
         <Text style={styles.label}>Bank Name</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={bankName}
-            onValueChange={setBankName}
+            selectedValue={form.bankName}
+            onValueChange={(v) => handleChange("bankName", v)}
             style={styles.picker}
           >
             <Picker.Item label="Please select your bank" value="" />
@@ -72,8 +62,8 @@ export default function BankDetails({ navigation }) {
         <Text style={styles.label}>Branch Name</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={branchName}
-            onValueChange={setBranchName}
+            selectedValue={form.branchName}
+            onValueChange={(v) => handleChange("branchName", v)}
             style={styles.picker}
           >
             <Picker.Item label="Please select your branch" value="" />
@@ -86,11 +76,11 @@ export default function BankDetails({ navigation }) {
         </View>
 
         <Text style={styles.label}>Bank Account No</Text>
-        <TextInput 
-          placeholder="Enter your account no" 
-          value={accountNumber} 
-          onChangeText={setAccountNumber} 
-          style={styles.input} 
+        <TextInput
+          placeholder="Enter your account no"
+          value={form.accountNumber}
+          onChangeText={(t) => handleChange("accountNumber", t)}
+          style={styles.input}
           keyboardType="numeric"
           placeholderTextColor={colors.textLight}
         />
@@ -99,7 +89,7 @@ export default function BankDetails({ navigation }) {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
@@ -110,9 +100,9 @@ export default function BankDetails({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,

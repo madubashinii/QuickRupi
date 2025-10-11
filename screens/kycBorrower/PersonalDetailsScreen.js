@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { colors } from '../../theme/colors';
+import { updateUserDoc } from '../../services/firestoreService';
+import { auth } from "../../services/firebaseConfig";
 
 export default function PersonalDetailsScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -20,18 +23,20 @@ export default function PersonalDetailsScreen({ navigation }) {
   const handleChange = (key, value) => setForm({ ...form, [key]: value });
 
   const handleNext = () => {
-    // Basic validation
     if (!form.title || !form.firstName || !form.lastName || !form.nic || !form.dob || !form.gender) {
       alert("Please complete all required fields.");
       return;
     }
+
+    // Pass data to next screen instead of saving to Firestore 
     navigation.navigate("LoanDetailsScreen", { personalData: form });
   };
+
 
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor={colors.primary} barStyle="light-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>QuickRupi</Text>
@@ -56,79 +61,79 @@ export default function PersonalDetailsScreen({ navigation }) {
           </Picker>
         </View>
 
-        <TextInput 
-          placeholder="First Name" 
+        <TextInput
+          placeholder="First Name"
           value={form.firstName}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("firstName", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Last Name" 
+
+        <TextInput
+          placeholder="Last Name"
           value={form.lastName}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("lastName", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Name with Initials" 
+
+        <TextInput
+          placeholder="Name with Initials"
           value={form.initials}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("initials", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Permanent Address" 
+
+        <TextInput
+          placeholder="Permanent Address"
           value={form.address}
-          style={[styles.input, styles.textArea]} 
+          style={[styles.input, styles.textArea]}
           onChangeText={(t) => handleChange("address", t)}
           multiline
           numberOfLines={3}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Mobile Number" 
+
+        <TextInput
+          placeholder="Mobile Number"
           value={form.mobile}
-          keyboardType="phone-pad" 
-          style={styles.input} 
+          keyboardType="phone-pad"
+          style={styles.input}
           onChangeText={(t) => handleChange("mobile", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Telephone Number" 
+
+        <TextInput
+          placeholder="Telephone Number"
           value={form.telephone}
-          keyboardType="phone-pad" 
-          style={styles.input} 
+          keyboardType="phone-pad"
+          style={styles.input}
           onChangeText={(t) => handleChange("telephone", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Email Address" 
+
+        <TextInput
+          placeholder="Email Address"
           value={form.email}
-          keyboardType="email-address" 
-          style={styles.input} 
+          keyboardType="email-address"
+          style={styles.input}
           onChangeText={(t) => handleChange("email", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="NIC Number" 
+
+        <TextInput
+          placeholder="NIC Number"
           value={form.nic}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("nic", t)}
           placeholderTextColor={colors.textLight}
         />
-        
-        <TextInput 
-          placeholder="Date of Birth (mm/dd/yyyy)" 
+
+        <TextInput
+          placeholder="Date of Birth (mm/dd/yyyy)"
           value={form.dob}
-          style={styles.input} 
+          style={styles.input}
           onChangeText={(t) => handleChange("dob", t)}
           placeholderTextColor={colors.textLight}
         />
@@ -156,9 +161,9 @@ export default function PersonalDetailsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,
@@ -222,15 +227,15 @@ const styles = StyleSheet.create({
     height: 50,
     color: colors.text,
   },
-  button: { 
-    backgroundColor: colors.primary, 
-    padding: 16, 
-    borderRadius: 8, 
-    marginTop: 20 
+  button: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 20
   },
-  buttonText: { 
-    color: colors.white, 
-    textAlign: "center", 
+  buttonText: {
+    color: colors.white,
+    textAlign: "center",
     fontWeight: "bold",
     fontSize: 16
   },

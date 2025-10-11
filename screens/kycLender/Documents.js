@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { colors } from '../../theme/colors';
 
-export default function Documents({ navigation }) {
+export default function Documents({ navigation, route }) {
+  const { personalData, contactData, employmentData, bankData } = route.params;
+  
   const [nicDocument, setNicDocument] = useState(null);
 
   const pickDocument = async () => {
@@ -24,32 +25,22 @@ export default function Documents({ navigation }) {
     }
   };
 
-  const handleNext = async () => {
-    const user = auth.currentUser;
-    if (!user) { 
-      Alert.alert("Error", "Not logged in"); 
-      navigation.replace("Login"); 
-      return; 
-    }
-    
+  const handleNext = () => {
     if (!nicDocument) {
       Alert.alert("Error", "Please upload your NIC document.");
       return;
     }
 
-    try {
-      await updateLenderDoc(user.uid, {
-        documents: {
-          nicDocument: nicDocument.name
-        },
-        kycStep: 5
-      });
-
-      navigation.navigate("AccountInformation");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save document information.");
-    }
+    // Pass all data to final screen
+    navigation.navigate("AccountInformation", {
+      personalData: personalData,
+      contactData: contactData,
+      employmentData: employmentData,
+      bankData: bankData,
+      documentsData: {
+        nicDocument: nicDocument.name
+      }
+    });
   };
 
   return (
@@ -64,7 +55,7 @@ export default function Documents({ navigation }) {
         <Text style={styles.screenTitle}>Documents</Text>
 
         <Text style={styles.label}>Copy of national identity card</Text>
-        
+
         <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
           <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
           <Text style={styles.uploadButtonText}>
@@ -76,7 +67,7 @@ export default function Documents({ navigation }) {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
@@ -87,9 +78,9 @@ export default function Documents({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   header: {
     backgroundColor: colors.primary,
