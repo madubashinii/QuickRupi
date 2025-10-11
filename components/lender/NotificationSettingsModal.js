@@ -100,7 +100,7 @@ const NotificationSettingsModal = ({ visible, onClose, userId = 'L001' }) => {
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.teal} />
+              <ActivityIndicator size="large" color={colors.tealGreen} />
             </View>
           ) : (
             <>
@@ -117,7 +117,7 @@ const NotificationSettingsModal = ({ visible, onClose, userId = 'L001' }) => {
                         <Switch
                           value={preferences[item.type] !== false}
                           onValueChange={() => handleToggle(item.type)}
-                          trackColor={{ false: colors.lightGray, true: colors.teal }}
+                          trackColor={{ false: colors.lightGray, true: colors.tealGreen }}
                           thumbColor={colors.white}
                         />
                       </View>
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.lightGray,
   },
   saveButton: {
-    backgroundColor: colors.teal,
+    backgroundColor: colors.midnightBlue,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',

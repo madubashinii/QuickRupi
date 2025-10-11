@@ -6,6 +6,7 @@ import EscrowApprovalScreen from "../../screens/admin/EscrowApprovalScreen";
 import AnalyticsScreen from "../../screens/admin/AnalyticsScreen";
 import KYCApprovalScreen from "../../screens/admin/KYCApprovalScreen";
 import AdminProfileScreen from "../../screens/admin/AdminProfileScreen";
+import AdminNotificationsScreen from "../../screens/admin/AdminNotificationsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +18,7 @@ export default function AdminStack() {
             <Stack.Screen name="EscrowApproval" component={EscrowApprovalScreen} />
             <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
             <Stack.Screen name="KYCApproval" component={KYCApprovalScreen} />
+            <Stack.Screen name="Notifications" component={AdminNotificationsScreen} />
         </Stack.Navigator>
     );
 }

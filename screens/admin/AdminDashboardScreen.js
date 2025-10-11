@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator } from "react-native";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { fetchDashboardData } from "../../services/admin/adminDashboardService";
+import { subscribeToUnreadCount } from "../../services/notifications/notificationService";
 
+/**
+ * Admin Dashboard Screen
+ * 
+ * Admin User ID: ADMIN001
+ * - Used for notification subscription (line 28)
+ * - All admin notifications are sent to this user ID
+ */
 export default function AdminDashboardScreen() {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [stats, setStats] = useState({
         totalEscrow: 0,
         activeLoans: 0,
@@ -22,6 +31,9 @@ export default function AdminDashboardScreen() {
             setLoading(false);
         };
         loadData();
+
+        const unsubscribe = subscribeToUnreadCount('ADMIN001', setUnreadCount);
+        return () => unsubscribe();
     }, []);
 
     if (loading) {
@@ -39,8 +51,23 @@ export default function AdminDashboardScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Admin Dashboard</Text>
-                <Text style={styles.headerSubtitle}>Platform Overview & Controls</Text>
+                <View style={styles.headerContent}>
+                    <View>
+                        <Text style={styles.headerTitle}>Admin Dashboard</Text>
+                        <Text style={styles.headerSubtitle}>Platform Overview & Controls</Text>
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.notificationButton}
+                        onPress={() => navigation.navigate('Notifications')}
+                    >
+                        <Ionicons name="notifications" size={24} color="#fff" />
+                        {unreadCount > 0 && (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -140,9 +167,25 @@ export default function AdminDashboardScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#dbf5f0" },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center" },
+    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", paddingHorizontal: 16 },
+    headerContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
     headerSubtitle: { color: "#a4e5e0", marginTop: 5 },
+    notificationButton: { padding: 8, position: "relative" },
+    notificationBadge: {
+        position: "absolute",
+        top: 4,
+        right: 4,
+        backgroundColor: "#dc2626",
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "#0c6170",
+    },
+    notificationBadgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
     content: { padding: 16, paddingBottom: 32 },
     statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
     statCard: {

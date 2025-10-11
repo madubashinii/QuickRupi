@@ -31,6 +31,17 @@ export const fundLoan = async ({ loanId, lenderId, borrowerId, amount }) => {
             borrowerId,
             amount
         });
+
+        await createNotification({
+            userId: 'ADMIN001',
+            type: NOTIFICATION_TYPES.ESCROW_PENDING_APPROVAL,
+            title: 'Escrow Pending Approval',
+            body: `Lender ${lenderId} funded loan #${loanId} with LKR ${amount.toLocaleString()}`,
+            priority: NOTIFICATION_PRIORITY.HIGH,
+            loanId,
+            amount,
+            metadata: { relatedUserId: lenderId }
+        });
         
         // Step 3: Get loan details for repayment schedule
         const loanRef = doc(db, "Loans", loanId);

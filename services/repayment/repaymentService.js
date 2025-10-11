@@ -1,5 +1,5 @@
 import { db } from "../firebaseConfig";
-import { collection, addDoc, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc, getDocs, query, where } from "firebase/firestore";
 import { generateRepaymentSchedule } from "./repaymentScheduleGenerator";
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
 import { checkAndNotifyROIMilestone } from "../notifications/roiMilestoneService";
@@ -307,5 +307,52 @@ const handleLoanCompletion = async (repaymentId, repaymentData) => {
   } catch (error) {
     console.error('Error handling loan completion:', error);
     // Don't throw - this is a side effect
+  }
+};
+
+/**
+ * Check for overdue payments and send admin notifications
+ * Can be triggered daily or when admin views RepaymentMonitoringScreen
+ * @returns {Promise<number>} Number of overdue notifications sent
+ */
+export const checkOverduePayments = async () => {
+  try {
+    const repaymentsSnapshot = await getDocs(collection(db, "repayments"));
+    const today = new Date();
+    let notificationsSent = 0;
+
+    for (const repaymentDoc of repaymentsSnapshot.docs) {
+      const repaymentData = repaymentDoc.data();
+      const { schedule, loanId } = repaymentData;
+
+      if (!schedule || !Array.isArray(schedule)) continue;
+
+      for (const installment of schedule) {
+        const isPending = installment.status?.toLowerCase() === 'pending';
+        const dueDate = new Date(installment.dueDate);
+        const isOverdue = dueDate < today;
+
+        if (isPending && isOverdue) {
+          const daysLate = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+
+          await createNotification({
+            userId: 'ADMIN001',
+            type: NOTIFICATION_TYPES.PAYMENT_OVERDUE,
+            title: 'Payment Overdue',
+            body: `Loan #${loanId} payment overdue by ${daysLate} days`,
+            priority: NOTIFICATION_PRIORITY.MEDIUM,
+            loanId,
+            amount: installment.totalPayment
+          });
+
+          notificationsSent++;
+        }
+      }
+    }
+
+    return notificationsSent;
+  } catch (error) {
+    console.error('Error checking overdue payments:', error);
+    return 0;
   }
 };

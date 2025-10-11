@@ -37,6 +37,11 @@ export const getNotificationTypeConfig = (type) => {
     ROI_MILESTONE: { icon: 'trophy', color: '#FFB300' },
     FUNDS_ADDED: { icon: 'add-circle', color: '#43A047' },
     WITHDRAWAL_PROCESSED: { icon: 'arrow-down-circle', color: '#E53935' },
+    // Admin notifications
+    NEW_KYC_SUBMISSION: { icon: 'document-text', color: '#1E88E5' },
+    NEW_LOAN_APPLICATION: { icon: 'briefcase', color: '#43A047' },
+    ESCROW_PENDING_APPROVAL: { icon: 'lock-closed', color: '#FB8C00' },
+    PAYMENT_OVERDUE: { icon: 'alert-circle', color: '#E53935' },
   };
   
   return typeMap[type] || { icon: 'notifications', color: '#607D8B' };

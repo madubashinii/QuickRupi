@@ -17,6 +17,7 @@ import {
     sendBulkReminders,
     exportRepaymentsCSV,
 } from "../../services/admin/adminRepaymentService";
+import { checkOverduePayments } from "../../services/repayment/repaymentService";
 
 export default function RepaymentMonitorScreen({ navigation }) {
     const [activeTab, setActiveTab] = useState("overdue");
@@ -35,6 +36,10 @@ export default function RepaymentMonitorScreen({ navigation }) {
             setDueSoonPayments(dueSoonPayments);
             setUpcomingPayments(upcomingPayments);
             setAllPayments(allPayments);
+            
+            // Check and notify admin about overdue payments
+            await checkOverduePayments();
+            
             setLoading(false);
         };
         loadData();
