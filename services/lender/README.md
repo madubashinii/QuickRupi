@@ -7,6 +7,12 @@ Service layer for lender-related operations in the QuickRupi platform.
 ### 1. `lenderLoanService.js`
 Handles loan data retrieval and filtering for lenders.
 
+### 2. `taxSummaryService.js`
+Generates annual tax summaries for lenders with investment income calculations.
+
+### 3. `portfolioReportService.js`
+Generates comprehensive portfolio reports for lenders with all investment metrics.
+
 **Key Functions:**
 ```javascript
 // Fetch approved loans available for funding (Browse tab)
@@ -166,6 +172,80 @@ UI Update / Share Dialog
 3. **Handle errors gracefully** with user-friendly messages
 4. **Avoid duplicate data fetching** - use component state effectively
 5. **Check sharing availability** before attempting PDF share (handled automatically in `exportAndShareLoanPDF`)
+
+---
+
+### 5. `taxSummaryService.js`
+Generates annual tax summaries and exports them as PDF for lenders.
+
+**Key Functions:**
+```javascript
+// Calculate tax summary for a year
+await calculateTaxSummary(userId, year)
+
+// Generate HTML for tax summary PDF
+generateTaxSummaryHTML(taxData)
+
+// Export and share tax summary PDF
+await exportTaxSummaryPDF(userId, year)
+
+// Get available tax years
+getAvailableTaxYears()
+```
+
+**Tax Summary Includes:**
+- Total interest income earned
+- Total principal invested
+- Completed loans breakdown
+- Monthly income breakdown
+- Tax liability estimate (8% rate)
+- Net income after tax
+- ROI calculation
+- Loan-by-loan details
+
+**Usage Example:**
+```javascript
+import { exportTaxSummaryPDF } from '../../services/lender/taxSummaryService';
+
+// Export tax summary for 2024
+const result = await exportTaxSummaryPDF('L001', 2024);
+// Generates PDF and shares via device
+```
+
+---
+
+### 6. `portfolioReportService.js`
+Generates comprehensive portfolio reports with investment overview and performance metrics.
+
+**Key Functions:**
+```javascript
+// Calculate portfolio metrics
+await calculatePortfolioMetrics(userId)
+
+// Generate HTML for portfolio report PDF
+generatePortfolioReportHTML(portfolioData)
+
+// Export and share portfolio report PDF
+await exportPortfolioReportPDF(userId)
+```
+
+**Portfolio Report Includes:**
+- Total portfolio value (wallet + investments)
+- Active loans summary (count, investment, expected returns)
+- Completed loans summary (count, total earned, avg ROI)
+- Overall ROI and success rate
+- Active loans table (all ongoing investments)
+- Completed loans table (all finished investments)
+- Performance metrics
+
+**Usage Example:**
+```javascript
+import { exportPortfolioReportPDF } from '../../services/lender/portfolioReportService';
+
+// Export current portfolio report
+const result = await exportPortfolioReportPDF('L001');
+// Generates PDF with all investment data and shares via device
+```
 
 ---
 

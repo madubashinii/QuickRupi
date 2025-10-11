@@ -285,3 +285,140 @@ export const fetchCompletedLoans = async (lenderId) => {
   }
 };
 
+/**
+ * Calculate ROI growth data for the last 6 months
+ * @param {string} lenderId - Lender user ID
+ * @returns {Promise<Array>} Array of monthly ROI data
+ */
+export const calculateROIGrowth = async (lenderId) => {
+  try {
+    const completedLoans = await fetchCompletedLoans(lenderId);
+    
+    // Get last 6 months
+    const months = [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        month: monthNames[date.getMonth()],
+        year: date.getFullYear(),
+        loans: []
+      });
+    }
+    
+    // Group completed loans by completion month
+    completedLoans.forEach(loan => {
+      if (!loan.completedAt) return;
+      
+      const completedDate = new Date(loan.completedAt);
+      const monthIndex = months.findIndex(m => 
+        m.month === monthNames[completedDate.getMonth()] && 
+        m.year === completedDate.getFullYear()
+      );
+      
+      if (monthIndex !== -1) {
+        months[monthIndex].loans.push(loan);
+      }
+    });
+    
+    // Calculate cumulative ROI for each month
+    let cumulativePrincipal = 0;
+    let cumulativeInterest = 0;
+    
+    return months.map(monthData => {
+      monthData.loans.forEach(loan => {
+        cumulativePrincipal += loan.principalAmount || 0;
+        cumulativeInterest += loan.interestEarned || 0;
+      });
+      
+      const roi = cumulativePrincipal > 0 
+        ? ((cumulativeInterest / cumulativePrincipal) * 100)
+        : 0;
+      
+      return {
+        month: monthData.month,
+        roi: parseFloat(roi.toFixed(1))
+      };
+    });
+  } catch (error) {
+    console.error("Failed to calculate ROI growth:", error);
+    // Return default data with 0 ROI
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const result = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push({
+        month: monthNames[date.getMonth()],
+        roi: 0
+      });
+    }
+    
+    return result;
+  }
+};
+
+/**
+ * Calculate monthly returns for the last 6 months
+ * @param {string} lenderId - Lender user ID
+ * @returns {Promise<Array>} Array of monthly returns data
+ */
+export const calculateMonthlyReturns = async (lenderId) => {
+  try {
+    const completedLoans = await fetchCompletedLoans(lenderId);
+    
+    // Get last 6 months
+    const months = [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        month: monthNames[date.getMonth()],
+        year: date.getFullYear(),
+        returns: 0
+      });
+    }
+    
+    // Sum returns by completion month
+    completedLoans.forEach(loan => {
+      if (!loan.completedAt) return;
+      
+      const completedDate = new Date(loan.completedAt);
+      const monthIndex = months.findIndex(m => 
+        m.month === monthNames[completedDate.getMonth()] && 
+        m.year === completedDate.getFullYear()
+      );
+      
+      if (monthIndex !== -1) {
+        months[monthIndex].returns += (loan.interestEarned || 0);
+      }
+    });
+    
+    return months.map(m => ({
+      month: m.month,
+      returns: Math.round(m.returns)
+    }));
+  } catch (error) {
+    console.error("Failed to calculate monthly returns:", error);
+    // Return default data with 0 returns
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const result = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push({
+        month: monthNames[date.getMonth()],
+        returns: 0
+      });
+    }
+    
+    return result;
+  }
+};
+
