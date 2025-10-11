@@ -89,10 +89,28 @@ export const formatDate = (timestamp) => formatDateLabel(timestamp);
 export const shouldShowDateSeparator = (currentMessage, previousMessage) => {
   if (!previousMessage) return true;
   
-  const currentDate = new Date(currentMessage.timestamp).toDateString();
-  const previousDate = new Date(previousMessage.timestamp).toDateString();
+  const currentDate = new Date(currentMessage.timestamp);
+  const previousDate = new Date(previousMessage.timestamp);
   
-  return currentDate !== previousDate;
+  // Use UTC date comparison to avoid timezone issues
+  const currentDateString = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  const previousDateString = previousDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  const shouldShow = currentDateString !== previousDateString;
+  
+  // Debug logging
+  if (shouldShow) {
+    console.log('[shouldShowDateSeparator] Showing separator:', {
+      currentTimestamp: currentMessage.timestamp,
+      currentDateString,
+      previousTimestamp: previousMessage.timestamp,
+      previousDateString,
+      currentFormatted: formatDateLabel(currentMessage.timestamp),
+      previousFormatted: formatDateLabel(previousMessage.timestamp)
+    });
+  }
+  
+  return shouldShow;
 };
 
 // Validate message text

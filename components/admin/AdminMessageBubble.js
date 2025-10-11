@@ -52,6 +52,7 @@ const AdminMessageBubble = ({ message, isNewMessage = false }) => {
         <MessageWithLinks 
           text={message.text}
           style={[styles.text, isAdmin ? styles.adminText : styles.lenderText]}
+          linkColor={isAdmin ? colors.white : colors.blueGreen}
         />
       </View>
       <View style={[styles.meta, isAdmin ? styles.adminMeta : styles.lenderMeta]}>

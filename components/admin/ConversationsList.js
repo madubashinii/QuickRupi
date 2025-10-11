@@ -1,38 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import ConversationCard from './ConversationCard';
 import ChatEmptyState from './ChatEmptyState';
 
-const BG = '#f5f7fa';
-const HEADER_BG = '#ffffff';
-const TEXT_PRIMARY = '#1e293b';
-const TEXT_SECONDARY = '#64748b';
-const ACCENT = '#3b82f6';
-const SEARCH_BG = '#ffffff';
-
 const SearchBar = ({ value, onChangeText }) => (
   <View style={styles.searchContainer}>
-    <Ionicons name="search" size={20} color={TEXT_SECONDARY} />
+    <Ionicons name="search" size={20} color={colors.gray} />
     <TextInput
       style={styles.searchInput}
       value={value}
       onChangeText={onChangeText}
       placeholder="Search conversations..."
-      placeholderTextColor={TEXT_SECONDARY}
+      placeholderTextColor={colors.gray}
     />
   </View>
 );
 
 const LoadingState = () => (
   <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color={ACCENT} />
+    <ActivityIndicator size="large" color={colors.midnightBlue} />
     <Text style={styles.loadingText}>Loading conversations...</Text>
   </View>
 );
 
-const ConversationsList = ({ conversations, onSelectConversation, selectedId, isLoading }) => {
+const EmptyState = () => (
+  <View style={styles.emptyState}>
+    <Ionicons name="chatbubbles-outline" size={64} color={colors.gray} />
+    <Text style={styles.emptyTitle}>No Conversations</Text>
+    <Text style={styles.emptySubtitle}>No conversations found</Text>
+  </View>
+);
+
+const ConversationsList = ({ conversations, onSelectConversation, selectedId, isLoading, unreadCount = 0 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredConversations = conversations.filter((conv) =>
@@ -44,31 +45,46 @@ const ConversationsList = ({ conversations, onSelectConversation, selectedId, is
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Conversations</Text>
-          <Text style={styles.subtitle}>Manage lender messages</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Conversations</Text>
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{conversations.length}</Text>
-        </View>
+      </View>
+
+      <View style={styles.toolbar}>
+        <Text style={styles.toolbarText}>
+          {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}
+        </Text>
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Text style={styles.clearButton}>Clear</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-      <FlatList
-        data={filteredConversations}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ConversationCard
-            conversation={item}
-            onPress={() => onSelectConversation(item)}
-            isActive={item.id === selectedId}
-          />
-        )}
-        ListEmptyComponent={() => <ChatEmptyState type="conversations" />}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+      {filteredConversations.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <FlatList
+          data={filteredConversations}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ConversationCard
+              conversation={item}
+              onPress={() => onSelectConversation(item)}
+              isActive={item.id === selectedId}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 };
@@ -76,64 +92,81 @@ const ConversationsList = ({ conversations, onSelectConversation, selectedId, is
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: colors.lightGray,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.lightGray,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: colors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    backgroundColor: colors.midnightBlue,
     paddingTop: 80,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    backgroundColor: HEADER_BG,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: TEXT_PRIMARY,
-    letterSpacing: -0.5,
+  headerTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    fontSize: 13,
-    color: TEXT_SECONDARY,
-    marginTop: 2,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.white,
   },
   badge: {
-    backgroundColor: ACCENT,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    minWidth: 40,
-    alignItems: 'center',
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.red,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
   },
   badgeText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGray,
+  },
+  toolbarText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: '600',
+    color: colors.gray,
+  },
+  clearButton: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.midnightBlue,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: SEARCH_BG,
-    margin: spacing.md,
-    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
-    gap: spacing.sm,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.lightGray,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -142,23 +175,29 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: TEXT_PRIMARY,
+    fontSize: 16,
+    color: colors.black,
+    marginLeft: 8,
   },
   listContent: {
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingVertical: 8,
   },
-  loadingContainer: {
+  emptyState: {
     flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
-  loadingText: {
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.gray,
+    marginTop: 16,
+  },
+  emptySubtitle: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
+    color: colors.gray,
+    marginTop: 8,
   },
 });
 

@@ -103,12 +103,20 @@ export const sendMessage = async (conversationId, senderId, senderRole, text, ty
     const messageRef = collection(db, COLLECTIONS.CONVERSATIONS, conversationId, COLLECTIONS.MESSAGES);
     const conversationRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
     
+    // Get conversation data to determine the other participant
+    const conversationSnap = await getDoc(conversationRef);
+    const conversationData = conversationSnap.data();
+    
+    // Determine the correct recipient (the other participant)
+    const recipientId = senderRole === 'lender' ? 'ADMIN001' : 
+                       conversationData?.participants?.lenderId || senderId;
+    
     const message = {
       conversationId,
       text: text.trim(),
       senderId,
       senderRole,
-      recipientId: senderRole === 'lender' ? 'ADMIN001' : senderId,
+      recipientId,
       type,
       status: 'sent',
       timestamp: serverTimestamp(),
@@ -120,8 +128,7 @@ export const sendMessage = async (conversationId, senderId, senderRole, text, ty
     
     const docRef = await addDoc(messageRef, message);
     
-    // Update conversation
-    const recipientId = senderRole === 'lender' ? 'ADMIN001' : senderId;
+    // Update conversation - increment unread count for the RECIPIENT
     await updateDoc(conversationRef, {
       lastMessage: {
         text: text.trim(),

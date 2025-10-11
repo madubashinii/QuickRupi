@@ -203,6 +203,11 @@ const AdminMessagesScreen = () => {
           onSelectConversation={handleSelectConversation}
           selectedId={selectedConversation?.id}
           isLoading={isLoading}
+          unreadCount={conversations.reduce((sum, conv) => {
+            const adminUnreadCount = conv.unreadCount?.ADMIN001 || 0;
+            const hasAdmin = conv.participantIds?.includes('ADMIN001');
+            return hasAdmin ? sum + adminUnreadCount : sum;
+          }, 0)}
         />
       </View>
     );

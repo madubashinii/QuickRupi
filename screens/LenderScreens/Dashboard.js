@@ -15,6 +15,7 @@ import { formatTransactionForDisplay } from '../../services/transactions/transac
 import { subscribeToWallet } from '../../services/wallet';
 import { fetchOngoingLoans, fetchCompletedLoans, calculateROIGrowth, calculateMonthlyReturns } from '../../services/lender/lenderLoanService';
 import { subscribeToUnreadCount } from '../../services/notifications/notificationService';
+import { subscribeToConversationsForUser } from '../../services/chat';
 
 // Constants
 const BACKGROUND_HEIGHT = 380;
@@ -178,6 +179,7 @@ const Dashboard = () => {
   const [roiGrowthData, setRoiGrowthData] = useState([]);
   const [monthlyReturnsData, setMonthlyReturnsData] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   useEffect(() => {
     const userId = 'L001';
@@ -196,6 +198,20 @@ const Dashboard = () => {
     // Subscribe to unread notification count
     const unsubscribeNotifications = subscribeToUnreadCount(userId, (count) => {
       setUnreadCount(count);
+    });
+    
+    // Subscribe to unread message count
+    const unsubscribeMessages = subscribeToConversationsForUser(userId, 'lender', (conversations) => {
+      const totalUnread = conversations.reduce((sum, conv) => {
+        // Only count unread messages for the lender
+        const lenderUnreadCount = conv.unreadCount?.[userId] || 0;
+        
+        // Additional check: ensure the conversation has the lender as a participant
+        const hasLender = conv.participantIds?.includes(userId);
+        
+        return hasLender ? sum + lenderUnreadCount : sum;
+      }, 0);
+      setUnreadMessagesCount(totalUnread);
     });
     
     // Fetch active investments and stats
@@ -257,6 +273,7 @@ const Dashboard = () => {
       unsubscribeWallet();
       unsubscribeTransactions();
       unsubscribeNotifications();
+      unsubscribeMessages();
     };
   }, []);
 
@@ -301,7 +318,7 @@ const Dashboard = () => {
             </View>
             <View style={styles.headerActions}>
               <ActionButton icon="notifications-outline" onPress={handleNotificationPress(navigation)} badge={unreadCount} />
-              <ActionButton icon="chatbubble-outline" onPress={handleMessagePress(navigation)} />
+              <ActionButton icon="chatbubble-outline" onPress={handleMessagePress(navigation)} badge={unreadMessagesCount} />
             </View>
           </View>
         </View>

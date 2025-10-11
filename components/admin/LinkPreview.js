@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
@@ -17,8 +17,18 @@ const LinkPreview = ({ url }) => {
     try {
       setLoading(true);
       
+      // Validate URL format first
+      let urlObj;
+      try {
+        urlObj = new URL(url);
+      } catch (urlError) {
+        // If URL is invalid, try to fix common issues
+        const fixedUrl = url.trim();
+        urlObj = new URL(fixedUrl);
+      }
+      
       // MVP: Simple domain extraction
-      const domain = new URL(url).hostname;
+      const domain = urlObj.hostname;
       const title = domain.replace('www.', '');
       
       setPreview({
@@ -29,13 +39,40 @@ const LinkPreview = ({ url }) => {
       });
     } catch (error) {
       console.error('Failed to extract preview:', error);
+      // Set a fallback preview for invalid URLs
+      setPreview({
+        title: 'Invalid Link',
+        description: 'This link may be malformed',
+        url: url,
+        domain: 'Invalid URL'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePress = () => {
-    Linking.openURL(url).catch(console.error);
+  const handlePress = async () => {
+    try {
+      // Validate URL format
+      const canOpen = await Linking.canOpenURL(url);
+      
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Invalid Link',
+          'This link cannot be opened. The URL may be malformed or unsupported.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+      Alert.alert(
+        'Error Opening Link',
+        'Unable to open this link. Please check if the URL is correct.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   if (loading) {
@@ -79,6 +116,7 @@ const LinkPreview = ({ url }) => {
 const styles = StyleSheet.create({
   container: {
     marginTop: spacing.xs,
+    marginBottom: spacing.xs,
   },
   preview: {
     backgroundColor: colors.babyBlue,

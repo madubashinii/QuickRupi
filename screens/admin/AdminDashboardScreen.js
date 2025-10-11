@@ -40,8 +40,27 @@ export default function AdminDashboardScreen() {
         // Subscribe to messages
         const unsubscribeMessages = subscribeToConversationsForUser('ADMIN001', 'admin', (conversations) => {
             const totalUnread = conversations.reduce((sum, conv) => {
-                return sum + (conv.unreadCount?.ADMIN001 || 0);
+                // Only count unread messages for the admin (ADMIN001)
+                // Ensure we only count messages that are actually unread for the admin
+                const adminUnreadCount = conv.unreadCount?.ADMIN001 || 0;
+                
+                // Additional check: ensure the conversation has the admin as a participant
+                const hasAdmin = conv.participantIds?.includes('ADMIN001');
+                
+                // Debug logging
+                if (adminUnreadCount > 0) {
+                    console.log(`Admin unread in conversation ${conv.id}:`, {
+                        adminUnreadCount,
+                        hasAdmin,
+                        allUnreadCounts: conv.unreadCount,
+                        participants: conv.participants
+                    });
+                }
+                
+                return hasAdmin ? sum + adminUnreadCount : sum;
             }, 0);
+            
+            console.log(`Total admin unread messages: ${totalUnread}`);
             setUnreadMessages(totalUnread);
         });
 

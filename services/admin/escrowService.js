@@ -98,8 +98,8 @@ export const updateEscrowStatus = async (escrowId, newStatus, lenderId, amount) 
                 console.warn("Borrower wallet not found for userId:", escrow.borrowerId);
             }
 
-            // Create repayment schedule
-            const loanRef = doc(db, "loans", escrow.loanId);
+            // Create repayment schedule and update loan status
+            const loanRef = doc(db, "Loans", escrow.loanId);
             const loanSnap = await getDoc(loanRef);
             if (loanSnap.exists()) {
                 const loan = loanSnap.data();
@@ -130,6 +130,27 @@ export const updateEscrowStatus = async (escrowId, newStatus, lenderId, amount) 
                 // Save repayments
                 const batchPromises = repayments.map(rep => addDoc(collection(db, "repayments"), rep));
                 await Promise.all(batchPromises);
+
+                // Update loan status to "funded"
+                await updateDoc(loanRef, {
+                    status: "funded",
+                    disbursedAt: serverTimestamp()
+                });
+
+                // Send notification to borrower about fund disbursement
+                try {
+                    await createNotification({
+                        userId: escrow.borrowerId,
+                        type: NOTIFICATION_TYPES.LOAN_DISBURSED,
+                        title: 'Funds Disbursed',
+                        body: `Your loan of LKR ${amount.toLocaleString()} has been disbursed to your wallet`,
+                        priority: NOTIFICATION_PRIORITY.HIGH,
+                        loanId: escrow.loanId,
+                        amount
+                    });
+                } catch (notifError) {
+                    console.error('Failed to send disbursement notification to borrower:', notifError);
+                }
             }
         }
 
