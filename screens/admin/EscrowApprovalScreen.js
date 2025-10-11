@@ -236,7 +236,7 @@ export default function EscrowApprovalScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#dbf5f0' },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: '#0c6170', alignItems: 'center' },
+    header: { paddingTop: 80, paddingBottom: 20, backgroundColor: '#0c6170', alignItems: 'center' },
     title: { fontSize: 22, color: '#fff', fontWeight: '700' },
     subtitle: { color: '#a4e5e0', opacity: 0.9, marginTop: 4 },
     content: { padding: 20, paddingBottom: 10 },

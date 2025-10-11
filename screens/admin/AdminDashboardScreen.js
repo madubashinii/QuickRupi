@@ -4,6 +4,7 @@ import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { fetchDashboardData } from "../../services/admin/adminDashboardService";
 import { subscribeToUnreadCount } from "../../services/notifications/notificationService";
+import { subscribeToConversationsForUser } from "../../services/chat";
 
 /**
  * Admin Dashboard Screen
@@ -15,7 +16,8 @@ import { subscribeToUnreadCount } from "../../services/notifications/notificatio
 export default function AdminDashboardScreen() {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
     const [stats, setStats] = useState({
         totalEscrow: 0,
         activeLoans: 0,
@@ -32,8 +34,21 @@ export default function AdminDashboardScreen() {
         };
         loadData();
 
-        const unsubscribe = subscribeToUnreadCount('ADMIN001', setUnreadCount);
-        return () => unsubscribe();
+        // Subscribe to notifications
+        const unsubscribeNotifications = subscribeToUnreadCount('ADMIN001', setUnreadNotifications);
+        
+        // Subscribe to messages
+        const unsubscribeMessages = subscribeToConversationsForUser('ADMIN001', 'admin', (conversations) => {
+            const totalUnread = conversations.reduce((sum, conv) => {
+                return sum + (conv.unreadCount?.ADMIN001 || 0);
+            }, 0);
+            setUnreadMessages(totalUnread);
+        });
+
+        return () => {
+            unsubscribeNotifications();
+            unsubscribeMessages();
+        };
     }, []);
 
     if (loading) {
@@ -56,17 +71,34 @@ export default function AdminDashboardScreen() {
                         <Text style={styles.headerTitle}>Admin Dashboard</Text>
                         <Text style={styles.headerSubtitle}>Platform Overview & Controls</Text>
                     </View>
-                    <TouchableOpacity 
-                        style={styles.notificationButton}
-                        onPress={() => navigation.navigate('Notifications')}
-                    >
-                        <Ionicons name="notifications" size={24} color="#fff" />
-                        {unreadCount > 0 && (
-                            <View style={styles.notificationBadge}>
-                                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.headerButtons}>
+                        <TouchableOpacity 
+                            style={styles.iconButton}
+                            onPress={() => navigation.navigate('AdminMessages')}
+                        >
+                            <Ionicons name="chatbubbles" size={24} color="#fff" />
+                            {unreadMessages > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>
+                                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.iconButton}
+                            onPress={() => navigation.navigate('Notifications')}
+                        >
+                            <Ionicons name="notifications" size={24} color="#fff" />
+                            {unreadNotifications > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>
+                                        {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -167,12 +199,13 @@ export default function AdminDashboardScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#dbf5f0" },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", paddingHorizontal: 16 },
+    header: { paddingTop: 80, paddingBottom: 20, backgroundColor: "#0c6170", paddingHorizontal: 16 },
     headerContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
     headerSubtitle: { color: "#a4e5e0", marginTop: 5 },
-    notificationButton: { padding: 8, position: "relative" },
-    notificationBadge: {
+    headerButtons: { flexDirection: "row", gap: 12 },
+    iconButton: { padding: 8, position: "relative" },
+    badge: {
         position: "absolute",
         top: 4,
         right: 4,
@@ -184,8 +217,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 2,
         borderColor: "#0c6170",
+        paddingHorizontal: 4,
     },
-    notificationBadgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
+    badgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
     content: { padding: 16, paddingBottom: 32 },
     statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
     statCard: {

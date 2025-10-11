@@ -161,7 +161,7 @@ export default function AdminProfileScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#dbf5f0" },
-    header: { paddingTop: 40, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center" },
+    header: { paddingTop: 80, paddingBottom: 20, backgroundColor: "#0c6170", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
     headerSubtitle: { fontSize: 14, color: "#a4e5e0", marginTop: 4 },
     avatarContainer: { alignItems: "center", marginVertical: 20 },

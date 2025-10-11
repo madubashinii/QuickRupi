@@ -7,6 +7,7 @@ import AnalyticsScreen from "../../screens/admin/AnalyticsScreen";
 import KYCApprovalScreen from "../../screens/admin/KYCApprovalScreen";
 import AdminProfileScreen from "../../screens/admin/AdminProfileScreen";
 import AdminNotificationsScreen from "../../screens/admin/AdminNotificationsScreen";
+import AdminMessagesScreen from "../../screens/admin/AdminMessagesScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +20,11 @@ export default function AdminStack() {
             <Stack.Screen name="AnalyticsScreen" component={AnalyticsScreen} />
             <Stack.Screen name="KYCApproval" component={KYCApprovalScreen} />
             <Stack.Screen name="Notifications" component={AdminNotificationsScreen} />
+            <Stack.Screen 
+                name="AdminMessages" 
+                component={AdminMessagesScreen}
+                options={{ headerShown: false }}
+            />
         </Stack.Navigator>
     );
 }
