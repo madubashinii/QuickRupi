@@ -829,12 +829,31 @@ const Investments = ({ route }) => {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [ongoingRefreshTrigger, setOngoingRefreshTrigger] = useState(0);
   const [metrics, setMetrics] = useState({ active: 0, pending: 0, repaid: 0, avgAPR: 0 });
+  const [finishedCount, setFinishedCount] = useState(0);
 
   useEffect(() => {
     if (route?.params?.initialTab && TABS.includes(route.params.initialTab)) {
       setActiveTab(route.params.initialTab);
     }
   }, [route?.params?.initialTab]);
+
+  // Load finished loans count for metrics
+  useEffect(() => {
+    const loadFinishedCount = async () => {
+      try {
+        // TODO: Replace 'L001' with actual authenticated user ID
+        const loans = await fetchCompletedLoans('L001');
+        const count = loans.length;
+        setFinishedCount(count);
+        // Update metrics immediately with the finished count
+        setMetrics(prev => ({ ...prev, repaid: count }));
+      } catch (err) {
+        console.error("Failed to load finished loans count:", err);
+        setFinishedCount(0);
+      }
+    };
+    loadFinishedCount();
+  }, [ongoingRefreshTrigger]); // Refresh when ongoing loans are updated
 
   const handleBrowsePress = useCallback(() => {
     setActiveTab('Browse');
@@ -846,8 +865,12 @@ const Investments = ({ route }) => {
   }, []);
 
   const handleMetricsUpdate = useCallback((newMetrics) => {
-    setMetrics(newMetrics);
-  }, []);
+    // Merge ongoing metrics with finished count
+    setMetrics({
+      ...newMetrics,
+      repaid: finishedCount
+    });
+  }, [finishedCount]);
 
   const renderContent = () => {
     switch (activeTab) {

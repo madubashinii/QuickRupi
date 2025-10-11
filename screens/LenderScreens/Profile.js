@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import PaymentMethodsModal from '../../components/lender/PaymentMethodsModal';
+import AgreementsLegalModal from '../../components/lender/AgreementsLegalModal';
+import HelpModal from '../../components/lender/HelpModal';
 
 // Configuration
 const CONFIG = {
@@ -29,11 +31,17 @@ const CONFIG = {
 // Event Handlers
 const useProfileHandlers = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAgreementsModal, setShowAgreementsModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   return {
     handleSettingPress: (title) => {
       if (title === 'Manage Payment Methods') {
         setShowPaymentModal(true);
+      } else if (title === 'Agreements & Legal') {
+        setShowAgreementsModal(true);
+      } else if (title === 'Help') {
+        setShowHelpModal(true);
       } else {
         console.log(`Pressed: ${title}`);
       }
@@ -42,11 +50,25 @@ const useProfileHandlers = () => {
     handleChatSupport: () => console.log('Chat support pressed'),
     showPaymentModal,
     setShowPaymentModal,
+    showAgreementsModal,
+    setShowAgreementsModal,
+    showHelpModal,
+    setShowHelpModal,
   };
 };
 
 const Profile = () => {
-  const { handleSettingPress, handleLogout, handleChatSupport, showPaymentModal, setShowPaymentModal } = useProfileHandlers();
+  const { 
+    handleSettingPress, 
+    handleLogout, 
+    handleChatSupport, 
+    showPaymentModal, 
+    setShowPaymentModal,
+    showAgreementsModal,
+    setShowAgreementsModal,
+    showHelpModal,
+    setShowHelpModal
+  } = useProfileHandlers();
 
   return (
     <AnimatedScreen style={styles.container}>
@@ -60,6 +82,14 @@ const Profile = () => {
       <PaymentMethodsModal 
         visible={showPaymentModal} 
         onClose={() => setShowPaymentModal(false)} 
+      />
+      <AgreementsLegalModal
+        visible={showAgreementsModal}
+        onClose={() => setShowAgreementsModal(false)}
+      />
+      <HelpModal
+        visible={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
       />
     </AnimatedScreen>
   );
