@@ -4,15 +4,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import BorrowerDashboard from './screens/borrower/BorrowerDashboard';
-import { NavigationContainer } from '@react-navigation/native';
-//import { createNativeStackNavigator } from '@react-navigation/native-stack';
+// import { NavigationContainer } from '@react-navigation/native';
+// import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AppNavigator from "./navigation/AppNavigator";
 import BorrowerBottomNav from "./navigation/borrower/borrowerNav";
 import LenderTabs from './navigation/LenderTabs';
 import NotificationsScreen from './screens/LenderScreens/Notifications';
 import MessagesScreen from './screens/LenderScreens/MessagesScreen';
 import Toast from 'react-native-toast-message';
-//const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator();
 
 
 export default function App() {
@@ -30,9 +30,9 @@ export default function App() {
     </NavigationContainer>
 
     //<View style={styles.container}>
-     // {/*<Text>Open up App.js to start working on your app!</Text>*/}     // <BorrowerDashboard />
+    // {/*<Text>Open up App.js to start working on your app!</Text>*/}     // <BorrowerDashboard />
     //  <StatusBar style="auto" />
     //</View>
-  //);
+  );
 }
 
