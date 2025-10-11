@@ -23,6 +23,29 @@ const LoanRequestForm = () => {
   // Replace this with logged-in user ID
   const userId = "USER001";
 
+   useEffect(() => {
+      const fetchRecords = async () => {
+        try {
+          const q = query(
+            collection(db, "escow_borrower"),
+            where("userId", "==", fixedUserId) //replace this with correct id after testing
+          );
+          const snapshot = await getDocs(q);
+          const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setRecords(data);
+        } catch (error) {
+          console.error("Error fetching payment records:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchRecords();
+    }, []);
+
   const submitLoanRequest = async () => {
     if (!loanAmount || !loanPurpose || !repaymentPeriodMonths) {
       Toast.show("Please fill all required fields", { duration: 2000 });
@@ -75,6 +98,29 @@ const LoanRequestForm = () => {
       Toast.show("Failed to submit loan request", { duration: 2000 });
     }
   };
+
+  if (!kyc) {
+      return (
+        <View style={styles.container}>
+          <TouchableOpacity
+             style={styles.kycButton}
+             onPress={() => navigation.navigate("BorrowerProfile")}
+          >
+            <Ionicons name="chevron-back" size={28} color="#000" />
+            <Text style={styles.kycButtonText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.noRecordText}>No KYC record found. 
+            You have to submit kyc first to apply for a loan.
+          </Text>
+          <TouchableOpacity
+            style={styles.kycButton}
+            onPress={() => navigation.navigate("BorrowerKYC")}
+          >
+            <Text style={styles.kycButtonText}>Submit KYC Form</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
