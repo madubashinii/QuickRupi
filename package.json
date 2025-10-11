@@ -9,6 +9,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.3",
+    "expo-image-picker": "^17.0.8",
+    "react-native-calendars": "^1.1313.0",
+    "react-native-dotenv": "^3.4.11",
+    "react-native-root-toast": "^4.0.1",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "^1.24.0",
