@@ -1,4 +1,7 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { fetchApprovedLoans, fetchOngoingLoans, fetchCompletedLoans } from '../../services/lender/lenderLoanService';
+import { exportAndShareLoanPDF } from '../../services/lender/loanPdfService';
+import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
 import { 
   View, 
   Text, 
@@ -8,8 +11,8 @@ import {
   Image,
   FlatList,
   RefreshControl,
-  Animated,
-  Modal 
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -18,49 +21,65 @@ import InvestmentCard from '../../components/lender/InvestmentCard';
 import LoanRequestCard from '../../components/lender/LoanRequestCard';
 import FinishedInvestmentCard from '../../components/lender/FinishedInvestmentCard';
 import StatsModal from '../../components/lender/StatsModal';
-import {
-  TABS,
-  STATUS_GROUPS,
-  SORT_CONFIG,
-  FILTER_OPTIONS,
-  BROWSE_STATUS_OPTIONS,
-  formatCurrency,
-  sortByKey,
-  mockOngoingInvestments,
-  mockLoanRequests,
-  mockFinishedInvestments,
-  mockInvestments
-} from '../../components/lender/investmentUtils';
-import {
-  OngoingHeaderBar,
-  HeaderBar,
-  BrowseHeaderBar,
-  FinishedHeaderBar
-} from '../../components/lender/InvestmentHeaders';
-import {
-  BaseModal,
-  FilterMenu,
-  SortMenu,
-  SortModal,
-  FundingSheet,
-  FinishedLoanDetailsModal
-} from '../../components/lender/InvestmentModals';
-import {
-  EmptyState,
-  BrowseEmptyState
-} from '../../components/lender/InvestmentEmptyStates';
-import {
-  useInvestmentMetrics,
-  useOngoingInvestments,
-  useBrowseRequests,
-  useFinishedInvestmentsSummary
-} from '../../components/lender/InvestmentHooks';
+import { TABS, FILTER_OPTIONS, formatCurrency, sortByKey, SORT_CONFIG } from '../../components/lender/investmentUtils';
+import { OngoingHeaderBar, BrowseHeaderBar, FinishedHeaderBar } from '../../components/lender/InvestmentHeaders';
+import { FilterMenu, SortMenu, SortModal, FinishedLoanDetailsModal } from '../../components/lender/InvestmentModals';
+import LoanFundModal from '../../components/lender/LoanFundModal';
+import { EmptyState, BrowseEmptyState } from '../../components/lender/InvestmentEmptyStates';
 
 const BACKGROUND_HEIGHT = 280;
 
-
-
 // UI Components
+/**
+ * Displays a loading state with a header component
+ * @param {Object} props
+ * @param {React.ReactNode} props.HeaderComponent - Component to display above loading indicator
+ */
+const LoadingView = ({ HeaderComponent }) => (
+  <View style={styles.content}>
+    {HeaderComponent}
+    <ActivityIndicator size="large" color={colors.midnightBlue} />
+  </View>
+);
+
+/**
+ * Reusable list component with pull-to-refresh
+ * @param {Object} props
+ * @param {Array<{id: string|number}>} props.data - Array of items to display
+ * @param {Function} props.renderItem - Function to render each item
+ * @param {boolean} props.refreshing - Whether refresh is in progress
+ * @param {Function} props.onRefresh - Function to call on pull-to-refresh
+ * @param {Object} [props.contentContainerStyle] - Optional styles for container
+ */
+const InvestmentList = ({ 
+  data, 
+  renderItem, 
+  refreshing, 
+  onRefresh, 
+  contentContainerStyle 
+}) => (
+  <FlatList
+    data={data}
+    renderItem={renderItem}
+    keyExtractor={(item) => item.id.toString()}
+    contentContainerStyle={contentContainerStyle}
+    showsVerticalScrollIndicator={false}
+    refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    }
+    onEndReachedThreshold={0.1}
+  />
+);
+/**
+ * Displays a metric chip with a label and value
+ * @param {Object} props
+ * @param {string} props.label - Label text to display
+ * @param {string|number} props.value - Value to display
+ * @param {boolean} [props.isAPR=false] - Whether to display value as percentage
+ * @param {string} [props.backgroundColor=colors.tiffanyBlue] - Background color
+ * @param {string} [props.textColor=colors.midnightBlue] - Text color
+ * @param {string} [props.labelColor=colors.forestGreen] - Label color
+ */
 const Chip = ({ label, value, isAPR = false, backgroundColor = colors.tiffanyBlue, textColor = colors.midnightBlue, labelColor = colors.forestGreen }) => (
   <View style={[
     styles.chip, 
@@ -77,6 +96,13 @@ const Chip = ({ label, value, isAPR = false, backgroundColor = colors.tiffanyBlu
   </View>
 );
 
+/**
+ * Tab button component for navigation
+ * @param {Object} props
+ * @param {string} props.tab - Tab name to display
+ * @param {boolean} props.isActive - Whether this tab is currently active
+ * @param {Function} props.onPress - Function to call when tab is pressed
+ */
 const Tab = ({ tab, isActive, onPress }) => (
   <TouchableOpacity
     style={[styles.tab, isActive && styles.activeTab]}
@@ -104,6 +130,15 @@ const Header = () => (
   </View>
 );
 
+/**
+ * Displays summary metrics in a horizontal strip
+ * @param {Object} props
+ * @param {Object} props.metrics - Metrics to display
+ * @param {number} props.metrics.pending - Number of pending investments
+ * @param {number} props.metrics.active - Number of active investments
+ * @param {number} props.metrics.repaid - Number of repaid investments
+ * @param {number} props.metrics.avgAPR - Average APR across investments
+ */
 const SummaryStrip = ({ metrics }) => (
   <View style={styles.summaryStrip}>
     <ScrollView 
@@ -112,16 +147,16 @@ const SummaryStrip = ({ metrics }) => (
       contentContainerStyle={styles.chipsContainer}
     >
       <Chip 
-        label="Active" 
-        value={metrics.active} 
-        backgroundColor={colors.blueGreen}
+        label="Pending" 
+        value={metrics.pending} 
+        backgroundColor="#FFB347"
         textColor={colors.white}
         labelColor={colors.white}
       />
       <Chip 
-        label="Pending" 
-        value={metrics.pending} 
-        backgroundColor="#FFB347"
+        label="Active" 
+        value={metrics.active} 
+        backgroundColor={colors.blueGreen}
         textColor={colors.white}
         labelColor={colors.white}
       />
@@ -144,6 +179,12 @@ const SummaryStrip = ({ metrics }) => (
   </View>
 );
 
+/**
+ * Navigation bar with tabs
+ * @param {Object} props
+ * @param {string} props.activeTab - Currently active tab name
+ * @param {Function} props.onTabChange - Function to call when tab changes
+ */
 const TabNavigation = ({ activeTab, onTabChange }) => (
   <View style={styles.tabContainer}>
     {TABS.map(tab => (
@@ -157,56 +198,53 @@ const TabNavigation = ({ activeTab, onTabChange }) => (
   </View>
 );
 
-
-
-
-// Filter and Sort Controls
-const FilterSortControls = ({ sortBy, filterBy, onSortChange, onFilterChange }) => (
-  <View style={styles.controlsContainer}>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
-      {FILTER_OPTIONS.map(option => (
-        <TouchableOpacity
-          key={option.key}
-          style={[styles.filterChip, filterBy === option.key && styles.activeFilterChip]}
-          onPress={() => onFilterChange(option.key)}
-        >
-          <Text style={[styles.filterChipText, filterBy === option.key && styles.activeFilterChipText]}>
-            {option.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-    
-    <TouchableOpacity style={styles.sortButton} onPress={() => {}}>
-      <Ionicons name="swap-vertical" size={16} color={colors.midnightBlue} />
-      <Text style={styles.sortButtonText}>Sort</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-
 // Ongoing Investments Content
-const OngoingContent = ({ onBrowsePress }) => {
+const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate }) => {
   const [sortBy, setSortBy] = useState('nextDue');
   const [filterBy, setFilterBy] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  
-  const filteredInvestments = useOngoingInvestments(mockOngoingInvestments, sortBy, filterBy);
+  const [loading, setLoading] = useState(true);
+  const [investments, setInvestments] = useState([]);
+  const [error, setError] = useState(null);
+
+  const loadOngoingInvestments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // TODO: Replace 'L001' with actual authenticated user ID
+      const loans = await fetchOngoingLoans('L001');
+      setInvestments(loans);
+      
+      // Calculate and update metrics
+      if (onMetricsUpdate) {
+        const updatedMetrics = calculateMetrics(loans);
+        onMetricsUpdate(updatedMetrics);
+      }
+    } catch (err) {
+      console.error("Failed to load ongoing investments. Please try again later.");
+      setError("Failed to load investments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOngoingInvestments();
+  }, [refreshTrigger]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => setRefreshing(false), 1000);
+    loadOngoingInvestments().finally(() => setRefreshing(false));
   }, []);
 
   const handleDetailsPress = useCallback((investment) => {
-    console.log('Details pressed for:', investment.borrowerName);
+    // No-op for now - will be implemented when details view is ready
   }, []);
 
   const handleTopUpPress = useCallback((investment) => {
-    console.log('Top-up pressed for:', investment.borrowerName);
+    // No-op for now - will be implemented when top-up feature is ready
   }, []);
 
   const handleFilterMenuToggle = useCallback(() => {
@@ -225,29 +263,148 @@ const OngoingContent = ({ onBrowsePress }) => {
     />
   ), [handleDetailsPress, handleTopUpPress]);
 
-  if (filteredInvestments.length === 0) {
+  if (loading) {
+    return (
+      <LoadingView 
+        HeaderComponent={
+          <OngoingHeaderBar
+            onFilterPress={handleFilterMenuToggle}
+            onSortPress={handleSortMenuToggle}
+          />
+        }
+      />
+    );
+  }
+
+  // Get filtered and sorted investments
+  const getFilteredAndSortedInvestments = () => {
+    let filtered = [...investments];
+
+    // Apply filters
+    if (filterBy !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(investment => {
+        if (filterBy === 'dueThisWeek') {
+          const nextPaymentDate = new Date(investment.nextPaymentDue);
+          const daysDiff = Math.ceil((nextPaymentDate - now) / (1000 * 60 * 60 * 24));
+          return daysDiff >= 0 && daysDiff <= 7;
+        } else if (filterBy === 'overdue') {
+          const nextPaymentDate = new Date(investment.nextPaymentDue);
+          return nextPaymentDate < now;
+        }
+        return true;
+      });
+    }
+
+    // Apply sorting
+    return sortByKey(filtered, sortBy);
+  };
+
+  const filteredAndSortedInvestments = getFilteredAndSortedInvestments();
+
+  // Custom empty state message based on filter
+  const getEmptyStateMessage = () => {
+    if (error) return "Failed to load investments";
+    if (investments.length === 0) return "No investments found";
+    
+    switch (filterBy) {
+      case 'dueThisWeek':
+        return "No payments due this week";
+      case 'overdue':
+        return "No overdue payments";
+      default:
+        return "No investments match the selected filter";
+    }
+  };
+
+  const renderOngoingEmptyState = () => {
+    if (error) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="Failed to load investments"
+            icon="alert-circle"
+            iconColor={colors.red}
+            showBrowseButton={false}
+          />
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.retryButton]}
+            onPress={loadOngoingInvestments}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (investments.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="Start your investment journey by browsing available loans"
+            icon="wallet-outline"
+            iconColor={colors.blueGreen}
+            onBrowsePress={onBrowsePress}
+            showBrowseButton={true}
+          />
+        </View>
+      );
+    }
+
+    if (filteredAndSortedInvestments.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message={getEmptyStateMessage()}
+            icon="filter-outline"
+            iconColor={colors.midnightBlue}
+            showBrowseButton={false}
+          />
+          {filterBy !== 'all' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.clearFilterButton]}
+              onPress={() => setFilterBy('all')}
+            >
+              <Text style={styles.actionButtonText}>Clear Filter</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+  };
+
+  if (error || investments.length === 0 || filteredAndSortedInvestments.length === 0) {
     return (
       <View style={styles.ongoingContent}>
         <OngoingHeaderBar
           onFilterPress={handleFilterMenuToggle}
           onSortPress={handleSortMenuToggle}
         />
-        <EmptyState onBrowsePress={onBrowsePress} />
+        {renderOngoingEmptyState()}
         <FilterMenu
           visible={showFilterMenu}
           onClose={() => setShowFilterMenu(false)}
           filterBy={filterBy}
-          onFilterChange={setFilterBy}
+          onFilterChange={(newFilter) => {
+            setFilterBy(newFilter);
+            setShowFilterMenu(false);
+          }}
+          options={FILTER_OPTIONS}
         />
         <SortMenu
           visible={showSortMenu}
           onClose={() => setShowSortMenu(false)}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={(newSort) => {
+            setSortBy(newSort);
+            setShowSortMenu(false);
+          }}
+          options={SORT_CONFIG.ongoing}
         />
       </View>
     );
   }
+
 
   return (
     <View style={styles.ongoingContent}>
@@ -256,67 +413,82 @@ const OngoingContent = ({ onBrowsePress }) => {
         onSortPress={handleSortMenuToggle}
       />
       
-      <FlatList
-        data={filteredInvestments}
+      <InvestmentList
+        data={filteredAndSortedInvestments}
         renderItem={renderInvestmentCard}
-        keyExtractor={(item) => item.id.toString()}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.investmentsList}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        onEndReached={() => {
-          // Implement infinite scroll here
-          console.log('Load more investments');
-        }}
-        onEndReachedThreshold={0.1}
       />
       
       <FilterMenu
         visible={showFilterMenu}
         onClose={() => setShowFilterMenu(false)}
         filterBy={filterBy}
-        onFilterChange={setFilterBy}
+        onFilterChange={(newFilter) => {
+          setFilterBy(newFilter);
+          setShowFilterMenu(false);
+        }}
+        options={FILTER_OPTIONS}
       />
       <SortMenu
         visible={showSortMenu}
         onClose={() => setShowSortMenu(false)}
         sortBy={sortBy}
-        onSortChange={setSortBy}
+        onSortChange={(newSort) => {
+          setSortBy(newSort);
+          setShowSortMenu(false);
+        }}
+        options={SORT_CONFIG.ongoing}
       />
     </View>
   );
 };
 
-
-
-
-
-
 // Browse Content Component
-const BrowseContent = () => {
+const BrowseContent = ({ onLoanFunded }) => {
+  const [loading, setLoading] = useState(true);
+  const [loanRequests, setLoanRequests] = useState([]);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showFundingSheet, setShowFundingSheet] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showSortModal, setShowSortModal] = useState(false);
   const [currentSort, setCurrentSort] = useState('newest');
-  const [sortedRequests, setSortedRequests] = useState(mockLoanRequests);
+  const [sortedRequests, setSortedRequests] = useState([]);
   
   const filteredRequests = sortedRequests; // Use sorted requests
 
-  const sortRequests = useCallback((sortKey) => {
-    const sortedRequests = sortByKey(mockLoanRequests, sortKey);
-    setSortedRequests(sortedRequests);
-    setCurrentSort(sortKey);
+  const loadApprovedLoans = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loans = await fetchApprovedLoans();
+      setLoanRequests(loans);
+      // Apply current sort when loading
+      const sorted = sortByKey(loans, currentSort);
+      setSortedRequests(sorted);
+    } catch (err) {
+      console.error("Failed to load loan requests. Please try again later.");
+      setError("Failed to load loan requests");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadApprovedLoans();
   }, []);
 
+  const sortRequests = useCallback((sortKey) => {
+    const sorted = sortByKey(loanRequests, sortKey);
+    setSortedRequests(sorted);
+    setCurrentSort(sortKey);
+  }, [loanRequests]);
+
   const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-      sortRequests(currentSort); // Re-sort after refresh
-    }, 1000);
-  }, [currentSort, sortRequests]);
+    loadApprovedLoans();
+  }, []);
 
   const handleFundPress = useCallback((request) => {
     setSelectedRequest(request);
@@ -325,13 +497,13 @@ const BrowseContent = () => {
 
   const handleDetailsPress = useCallback((request) => {
     console.log('Details pressed for:', request.borrowerName);
-    // Handle details navigation here
   }, []);
 
-  const handleFundingConfirm = useCallback((request, amount) => {
-    console.log('Funding confirmed:', request.borrowerName, 'Amount:', amount);
-    // Handle funding logic here
-  }, []);
+  const handleFundingConfirm = useCallback((fundingResult) => {
+    loadApprovedLoans();
+    setShowFundingSheet(false);
+    if (onLoanFunded) onLoanFunded();
+  }, [onLoanFunded, loadApprovedLoans]);
 
   const handleSortPress = useCallback(() => {
     setShowSortModal(true);
@@ -339,6 +511,7 @@ const BrowseContent = () => {
 
   const handleSortSelect = useCallback((sortKey) => {
     sortRequests(sortKey);
+    setShowSortModal(false);
   }, [sortRequests]);
 
   const renderRequestCard = useCallback(({ item }) => (
@@ -349,23 +522,73 @@ const BrowseContent = () => {
     />
   ), [handleFundPress, handleDetailsPress]);
 
+  if (loading) {
+    return (
+      <LoadingView 
+        HeaderComponent={<BrowseHeaderBar onSortPress={handleSortPress} />}
+      />
+    );
+  }
+
+  const renderBrowseEmptyState = () => {
+    if (error) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="Failed to load loan requests"
+            icon="alert-circle"
+            iconColor={colors.red}
+            showBrowseButton={false}
+          />
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.retryButton]}
+            onPress={loadApprovedLoans}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (filteredRequests.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="No loan requests available at the moment"
+            icon="time-outline"
+            iconColor={colors.blueGreen}
+            showBrowseButton={false}
+          />
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.refreshButton]}
+            onPress={loadApprovedLoans}
+          >
+            <Text style={styles.actionButtonText}>Check Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+  };
+
+  if (error || filteredRequests.length === 0) {
+    return (
+      <View style={styles.browseContent}>
+        <BrowseHeaderBar onSortPress={handleSortPress} />
+        {renderBrowseEmptyState()}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.browseContent}>
       <BrowseHeaderBar onSortPress={handleSortPress} />
       
-      <FlatList
+      <InvestmentList
         data={filteredRequests}
         renderItem={renderRequestCard}
-        keyExtractor={(item) => item.id.toString()}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.requestsList}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        onEndReached={() => {
-          console.log('Load more requests');
-        }}
-        onEndReachedThreshold={0.1}
       />
       
       <SortModal
@@ -375,7 +598,7 @@ const BrowseContent = () => {
         currentSort={currentSort}
       />
       
-      <FundingSheet
+      <LoanFundModal
         request={selectedRequest}
         visible={showFundingSheet}
         onClose={() => setShowFundingSheet(false)}
@@ -385,63 +608,83 @@ const BrowseContent = () => {
   );
 };
 
-// Finished Summary Row Component
-const FinishedSummaryRow = ({ summary }) => {
-  const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
-
-  return (
-    <View style={styles.finishedSummaryRow}>
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryIconContainer}>
-          <Ionicons name="wallet-outline" size={24} color={colors.midnightBlue} />
-        </View>
-        <View style={styles.summaryContent}>
-          <Text style={styles.summaryLabel}>Total Principal</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.totalPrincipal)}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryIconContainer}>
-          <Ionicons name="trending-up-outline" size={24} color={colors.blueGreen} />
-        </View>
-        <View style={styles.summaryContent}>
-          <Text style={styles.summaryLabel}>Total Interest</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.totalInterest)}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryIconContainer}>
-          <Ionicons name="analytics-outline" size={24} color={colors.forestGreen} />
-        </View>
-        <View style={styles.summaryContent}>
-          <Text style={styles.summaryLabel}>Average APR</Text>
-          <Text style={styles.summaryValue}>{summary.avgAPR}%</Text>
-        </View>
-      </View>
-    </View>
-  );
-};
 
 
 // Finished Content Component
-const FinishedContent = () => {
+const FinishedContent = ({ onBrowsePress }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState(null);
-  
-  const summary = useFinishedInvestmentsSummary(mockFinishedInvestments);
+  const [finishedLoans, setFinishedLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [summary, setSummary] = useState({ totalPrincipal: 0, totalInterest: 0, avgAPR: 0 });
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+  const loadFinishedLoans = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // TODO: Replace 'L001' with actual authenticated user ID
+      const loans = await fetchCompletedLoans('L001');
+      setFinishedLoans(loans);
+      
+      // Calculate summary
+      const newSummary = loans.reduce((acc, loan) => {
+        acc.totalPrincipal += loan.amountFunded;
+        acc.totalInterest += loan.totalInterestEarned;
+        acc.aprSum = (acc.aprSum || 0) + loan.apr;
+        acc.count = (acc.count || 0) + 1;
+        return acc;
+      }, { totalPrincipal: 0, totalInterest: 0, aprSum: 0, count: 0 });
+
+      setSummary({
+        totalPrincipal: newSummary.totalPrincipal,
+        totalInterest: newSummary.totalInterest,
+        avgAPR: newSummary.count > 0 ? Math.round((newSummary.aprSum / newSummary.count) * 10) / 10 : 0
+      });
+    } catch (err) {
+      console.error("Failed to load completed investments. Please try again later.");
+      setError("Failed to load completed investments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFinishedLoans();
   }, []);
 
-  const handleDownloadPDF = useCallback((investment) => {
-    console.log('Download PDF for:', investment.borrowerName);
-    // Handle PDF download logic here
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadFinishedLoans();
+    setRefreshing(false);
+  }, []);
+
+  const handleDownloadPDF = useCallback(async (investment) => {
+    if (!investment.repaymentId) {
+      Alert.alert(
+        'No Data Available',
+        'Repayment schedule is not available for this loan.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      // Fetch repayment data
+      const repaymentData = await getRepaymentSchedule(investment.repaymentId);
+      
+      // Generate and share PDF (native share dialog provides user feedback)
+      await exportAndShareLoanPDF(investment, repaymentData);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      Alert.alert(
+        'Export Failed',
+        'Failed to generate loan report. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   }, []);
 
   const handleDetailsPress = useCallback((investment) => {
@@ -461,23 +704,67 @@ const FinishedContent = () => {
     />
   ), [handleDownloadPDF, handleDetailsPress]);
 
+  if (loading) {
+    return (
+      <LoadingView 
+        HeaderComponent={<FinishedHeaderBar onStatsPress={handleStatsPress} />}
+      />
+    );
+  }
+
+  const renderFinishedEmptyState = () => {
+    if (error) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState 
+            message="Failed to load completed investments"
+            icon="alert-circle"
+            iconColor={colors.red}
+            showBrowseButton={false}
+          />
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.retryButton]}
+            onPress={loadFinishedLoans}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyStateContainer}>
+        <EmptyState 
+          message="Your completed investments will appear here"
+          subMessage="Start investing to track your returns"
+          icon="trophy-outline"
+          iconColor={colors.gold}
+          showBrowseButton={true}
+          onBrowsePress={onBrowsePress}
+        />
+      </View>
+    );
+  };
+
+  if (error || finishedLoans.length === 0) {
+    return (
+      <View style={styles.finishedContent}>
+        <FinishedHeaderBar onStatsPress={handleStatsPress} />
+        {renderFinishedEmptyState()}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.finishedContent}>
       <FinishedHeaderBar onStatsPress={handleStatsPress} />
       
-      <FlatList
-        data={mockFinishedInvestments}
+      <InvestmentList
+        data={finishedLoans}
         renderItem={renderFinishedCard}
-        keyExtractor={(item) => item.id.toString()}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.finishedList}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        onEndReached={() => {
-          console.log('Load more finished investments');
-        }}
-        onEndReachedThreshold={0.1}
       />
       
       <StatsModal
@@ -498,11 +785,51 @@ const FinishedContent = () => {
   );
 };
 
+const calculateMetrics = (loans) => {
+  if (!loans || loans.length === 0) {
+    return { active: 0, pending: 0, repaid: 0, avgAPR: 0 };
+  }
+
+  const metrics = loans.reduce((acc, loan) => {
+    // Count by status
+    if (loan.status === 'Awaiting admin escrow approval') {
+      acc.pending++;
+    } else if (loan.status === 'Money cleared for disbursement' || loan.status === 'Repayment in progress') {
+      acc.active++;
+    }
+
+    // Add to total APR for average calculation
+    if (loan.apr) {
+      acc.totalAPR += loan.apr;
+      acc.aprCount++;
+    }
+
+    return acc;
+  }, {
+    active: 0,
+    pending: 0,
+    repaid: 0,
+    totalAPR: 0,
+    aprCount: 0
+  });
+
+  // Calculate average APR
+  metrics.avgAPR = metrics.aprCount > 0 
+    ? Math.round((metrics.totalAPR / metrics.aprCount) * 10) / 10 
+    : 0;
+
+  // Remove helper properties
+  delete metrics.totalAPR;
+  delete metrics.aprCount;
+
+  return metrics;
+};
+
 const Investments = ({ route }) => {
   const [activeTab, setActiveTab] = useState(TABS[0]);
-  const metrics = useInvestmentMetrics(mockInvestments);
+  const [ongoingRefreshTrigger, setOngoingRefreshTrigger] = useState(0);
+  const [metrics, setMetrics] = useState({ active: 0, pending: 0, repaid: 0, avgAPR: 0 });
 
-  // Handle route parameters to set initial tab
   useEffect(() => {
     if (route?.params?.initialTab && TABS.includes(route.params.initialTab)) {
       setActiveTab(route.params.initialTab);
@@ -513,16 +840,37 @@ const Investments = ({ route }) => {
     setActiveTab('Browse');
   }, []);
 
+  const handleLoanFunded = useCallback(() => {
+    // Trigger Ongoing tab refresh when a loan is funded from Browse tab
+    setOngoingRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  const handleMetricsUpdate = useCallback((newMetrics) => {
+    setMetrics(newMetrics);
+  }, []);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'Ongoing':
-        return <OngoingContent onBrowsePress={handleBrowsePress} />;
+        return (
+          <OngoingContent 
+            onBrowsePress={handleBrowsePress} 
+            refreshTrigger={ongoingRefreshTrigger}
+            onMetricsUpdate={handleMetricsUpdate}
+          />
+        );
       case 'Browse':
-        return <BrowseContent />;
+        return <BrowseContent onLoanFunded={handleLoanFunded} />;
       case 'Finished':
-        return <FinishedContent />;
+        return <FinishedContent onBrowsePress={handleBrowsePress} />;
       default:
-        return <OngoingContent onBrowsePress={handleBrowsePress} />;
+        return (
+          <OngoingContent 
+            onBrowsePress={handleBrowsePress} 
+            refreshTrigger={ongoingRefreshTrigger}
+            onMetricsUpdate={handleMetricsUpdate}
+          />
+        );
     }
   };
 
@@ -552,6 +900,48 @@ const textStyle = {
 };
 
 const styles = StyleSheet.create({
+  actionButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  retryButton: {
+    backgroundColor: colors.red,
+  },
+  refreshButton: {
+    backgroundColor: colors.blueGreen,
+  },
+  clearFilterButton: {
+    backgroundColor: colors.midnightBlue,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  clearFilterButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.blueGreen,
+  },
+  clearFilterText: {
+    color: colors.blueGreen,
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.babyBlue,
@@ -764,52 +1154,6 @@ const styles = StyleSheet.create({
   finishedContent: {
     flex: 1,
     backgroundColor: colors.babyBlue,
-  },
-  finishedSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: colors.babyBlue,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    elevation: 1,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  summaryIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  summaryContent: {
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: fontSize.sm,
-    color: colors.gray,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  summaryValue: {
-    fontSize: fontSize.base,
-    color: colors.midnightBlue,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
   finishedList: {
     padding: spacing.lg,

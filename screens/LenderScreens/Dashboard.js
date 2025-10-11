@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -7,9 +7,15 @@ import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import ROIGrowthChart from '../../components/lender/ROIGrowthChart';
 import MonthlyReturnsChart from '../../components/lender/MonthlyReturnsChart';
 import AddFundsModal from '../../components/lender/AddFundsModal';
+import ExportModal from '../../components/lender/ExportModal';
+import TaxSummaryModal from '../../components/lender/TaxSummaryModal';
+import PortfolioReportModal from '../../components/lender/PortfolioReportModal';
+import { subscribeToUserTransactions } from '../../services/transactions';
+import { formatTransactionForDisplay } from '../../services/transactions/transactionUtils';
+import { subscribeToWallet } from '../../services/wallet';
+import { fetchOngoingLoans, fetchCompletedLoans, calculateROIGrowth, calculateMonthlyReturns } from '../../services/lender/lenderLoanService';
 
 // Constants
-const SCREEN_WIDTH = Dimensions.get('window').width;
 const BACKGROUND_HEIGHT = 380;
 const PROFILE_IMAGE_SIZE = 50;
 const ACTION_BUTTON_SIZE = 44;
@@ -26,40 +32,6 @@ const mockData = {
     returns: 'LKR 45,680',
     returnsTrend: '+8.5%',
   },
-  upcomingRepayments: [
-    {
-      id: 1,
-      borrower: 'John Silva',
-      amount: 'LKR 15,000',
-      dueDate: 'Dec 15, 2024',
-      status: 'due',
-    },
-    {
-      id: 2,
-      borrower: 'Maria Perera',
-      amount: 'LKR 8,500',
-      dueDate: 'Dec 12, 2024',
-      status: 'overdue',
-    },
-  ],
-  recentTransactions: [
-    {
-      id: 1,
-      icon: 'trending-up',
-      title: 'Investment Return',
-      amount: 'LKR 2,450',
-      date: 'Today, 2:30 PM',
-      type: 'credit',
-    },
-    {
-      id: 2,
-      icon: 'card',
-      title: 'Loan Disbursed',
-      amount: 'LKR 15,000',
-      date: 'Yesterday, 4:15 PM',
-      type: 'debit',
-    },
-  ],
   roiGrowthData: [
     { month: 'Jul', roi: 12.5 },
     { month: 'Aug', roi: 14.2 },
@@ -102,11 +74,7 @@ const mockData = {
 const handleNotificationPress = (navigation) => () => navigation.navigate('Notifications');
 const handleMessagePress = (navigation) => () => navigation.navigate('Messages');
 const handleInvest = (navigation) => () => navigation.navigate('Investments', { initialTab: 'Browse' });
-const handleSeeAllRepayments = () => console.log('See all repayments');
-const handleSeeAllTransactions = () => console.log('See all transactions');
-const handlePortfolioReport = () => console.log('Portfolio report');
-const handleTaxSummary = () => console.log('Tax summary');
-const handleExportData = () => console.log('Export data');
+const handleSeeAllTransactions = (navigation) => () => navigation.navigate('Transactions');
 
 // Reusable Components
 const ProfileImage = () => (
@@ -145,36 +113,32 @@ const SectionHeader = ({ title, onSeeMore }) => (
   </View>
 );
 
-const TransactionItem = ({ icon, title, amount, date, type }) => (
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const diff = now - date;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  
+  if (hours < 24) return 'Today, ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (hours < 48) return 'Yesterday, ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const TransactionItem = ({ transaction }) => (
   <View style={styles.transactionItem}>
-    <View style={styles.transactionIcon}>
-      <Ionicons name={icon} size={20} color={colors.white} />
+    <View style={[styles.transactionIcon, { backgroundColor: transaction.isPositive ? colors.blueGreen : colors.red }]}>
+      <Ionicons name={transaction.icon} size={20} color={colors.white} />
     </View>
     <View style={styles.transactionContent}>
-      <Text style={styles.transactionTitle}>{title}</Text>
-      <Text style={styles.transactionDate}>{date}</Text>
+      <Text style={styles.transactionTitle}>{transaction.displayDescription}</Text>
+      <Text style={styles.transactionDate}>{formatTimestamp(transaction.timestamp)}</Text>
     </View>
-    <Text style={[styles.transactionAmount, { color: type === 'credit' ? colors.blueGreen : colors.midnightBlue }]}>
-      {type === 'credit' ? '+' : '-'}{amount}
+    <Text style={[styles.transactionAmount, { color: transaction.isPositive ? colors.blueGreen : colors.red }]}>
+      {transaction.formattedAmount}
     </Text>
   </View>
 );
-
-const RepaymentItem = ({ borrower, amount, dueDate, status }) => (
-  <View style={styles.repaymentItem}>
-    <View style={styles.repaymentContent}>
-      <Text style={styles.repaymentBorrower}>{borrower}</Text>
-      <Text style={styles.repaymentDate}>Due: {dueDate}</Text>
-    </View>
-    <View style={styles.repaymentRight}>
-      <Text style={styles.repaymentAmount}>{amount}</Text>
-      <View style={[styles.statusBadge, { backgroundColor: status === 'overdue' ? colors.red : colors.blueGreen }]}>
-        <Text style={styles.statusText}>{status}</Text>
-      </View>
-    </View>
-  </View>
-);
-
 
 const ReportButton = ({ title, icon, onPress, description }) => (
   <TouchableOpacity style={styles.reportButton} onPress={onPress}>
@@ -190,20 +154,119 @@ const ReportButton = ({ title, icon, onPress, description }) => (
 );
 
 const Dashboard = () => {
-  const { user, portfolio, upcomingRepayments, recentTransactions, roiGrowthData, monthlyReturnsData, reportOptions } = mockData;
+  const { user, reportOptions } = mockData;
   const navigation = useNavigation();
   
-  // State for modals
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showTaxSummaryModal, setShowTaxSummaryModal] = useState(false);
+  const [showPortfolioReportModal, setShowPortfolioReportModal] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [activeInvestments, setActiveInvestments] = useState(0);
+  const [totalPortfolio, setTotalPortfolio] = useState(0);
+  const [activeLoansCount, setActiveLoansCount] = useState(0);
+  const [totalReturns, setTotalReturns] = useState(0);
+  const [previousActiveInvestments, setPreviousActiveInvestments] = useState(0);
+  const [previousReturns, setPreviousReturns] = useState(0);
+  const [roiGrowthData, setRoiGrowthData] = useState([]);
+  const [monthlyReturnsData, setMonthlyReturnsData] = useState([]);
 
-  // Handlers
+  useEffect(() => {
+    const userId = 'L001';
+    
+    // Subscribe to wallet balance
+    const unsubscribeWallet = subscribeToWallet(userId, (walletData) => {
+      setWalletBalance(walletData.balance || 0);
+    });
+    
+    // Subscribe to transactions
+    const unsubscribeTransactions = subscribeToUserTransactions(userId, (data) => {
+      const formatted = data.transactions.map(formatTransactionForDisplay);
+      setTransactions(formatted.slice(0, 2));
+    }, 2);
+    
+    // Fetch active investments and stats
+    const loadActiveInvestments = async () => {
+      try {
+        const loans = await fetchOngoingLoans(userId);
+        const totalInvested = loans.reduce((sum, loan) => sum + (loan.amountFunded || 0), 0);
+        setActiveInvestments(totalInvested);
+        setActiveLoansCount(loans.length);
+        setPreviousActiveInvestments(totalInvested * 0.88); // Mock 12% increase
+      } catch (error) {
+        console.error('Failed to load active investments:', error);
+        setActiveInvestments(0);
+        setActiveLoansCount(0);
+      }
+    };
+    
+    // Fetch completed loans for returns
+    const loadReturns = async () => {
+      try {
+        const completedLoans = await fetchCompletedLoans(userId);
+        const returns = completedLoans.reduce((sum, loan) => sum + (loan.interestEarned || 0), 0);
+        setTotalReturns(returns);
+        setPreviousReturns(returns * 0.915); // Mock 8.5% increase
+      } catch (error) {
+        console.error('Failed to load returns:', error);
+        setTotalReturns(0);
+      }
+    };
+    
+    // Fetch ROI growth data
+    const loadROIGrowth = async () => {
+      try {
+        const roiData = await calculateROIGrowth(userId);
+        setRoiGrowthData(roiData);
+      } catch (error) {
+        console.error('Failed to load ROI growth:', error);
+        setRoiGrowthData([]);
+      }
+    };
+    
+    // Fetch monthly returns data
+    const loadMonthlyReturns = async () => {
+      try {
+        const returnsData = await calculateMonthlyReturns(userId);
+        setMonthlyReturnsData(returnsData);
+      } catch (error) {
+        console.error('Failed to load monthly returns:', error);
+        setMonthlyReturnsData([]);
+      }
+    };
+    
+    loadActiveInvestments();
+    loadReturns();
+    loadROIGrowth();
+    loadMonthlyReturns();
+    
+    return () => {
+      unsubscribeWallet();
+      unsubscribeTransactions();
+    };
+  }, []);
+
+  // Calculate total portfolio value
+  useEffect(() => {
+    setTotalPortfolio(walletBalance + activeInvestments);
+  }, [walletBalance, activeInvestments]);
+
   const handleAddFunds = () => setShowAddFundsModal(true);
   const handleCloseAddFundsModal = () => setShowAddFundsModal(false);
   const handleConfirmAddFunds = (data) => {
     console.log('Add Funds confirmed:', data);
     setShowAddFundsModal(false);
-    // Here you would typically call an API to add funds
   };
+
+  const handleExportData = () => setShowExportModal(true);
+  const handleCloseExportModal = () => setShowExportModal(false);
+
+  const handleTaxSummary = () => setShowTaxSummaryModal(true);
+  const handleCloseTaxSummaryModal = () => setShowTaxSummaryModal(false);
+
+  const handlePortfolioReport = () => setShowPortfolioReportModal(true);
+  const handleClosePortfolioReportModal = () => setShowPortfolioReportModal(false);
 
   return (
     <AnimatedScreen style={styles.container}>
@@ -234,7 +297,25 @@ const Dashboard = () => {
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Portfolio Value</Text>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceAmount}>{portfolio.totalValue}</Text>
+            <Text style={styles.balanceAmount}>
+              LKR {totalPortfolio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={styles.portfolioBreakdown}>
+            <View style={styles.breakdownItem}>
+              <Ionicons name="wallet-outline" size={14} color={colors.deepForestGreen} style={styles.breakdownIcon} />
+              <View>
+                <Text style={styles.breakdownLabel}>Wallet</Text>
+                <Text style={styles.breakdownValue}>LKR {walletBalance.toLocaleString()}</Text>
+              </View>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Ionicons name="trending-up-outline" size={14} color={colors.deepForestGreen} style={styles.breakdownIcon} />
+              <View>
+                <Text style={styles.breakdownLabel}>Investments</Text>
+                <Text style={styles.breakdownValue}>LKR {activeInvestments.toLocaleString()}</Text>
+              </View>
+            </View>
           </View>
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.primaryButton} onPress={handleAddFunds}>
@@ -250,40 +331,31 @@ const Dashboard = () => {
 
         {/* Quick Stats */}
         <View style={styles.statsContainer}>
-          <StatCard value={portfolio.activeLoans} label="Active Loans" trend={portfolio.activeLoansTrend} />
-          <StatCard value={portfolio.returns} label="Returns" trend={portfolio.returnsTrend} />
-        </View>
-
-        {/* Upcoming Repayments */}
-        <View style={styles.section}>
-          <SectionHeader title="Upcoming Repayments" onSeeMore={handleSeeAllRepayments} />
-          <View style={styles.repaymentList}>
-            {upcomingRepayments.map((repayment) => (
-              <RepaymentItem 
-                key={repayment.id}
-                borrower={repayment.borrower} 
-                amount={repayment.amount} 
-                dueDate={repayment.dueDate} 
-                status={repayment.status} 
-              />
-            ))}
-          </View>
+          <StatCard 
+            value={`LKR ${activeInvestments.toLocaleString()}`} 
+            label={`Active Loans (${activeLoansCount})`}
+            trend={previousActiveInvestments > 0 ? `+${(((activeInvestments - previousActiveInvestments) / previousActiveInvestments) * 100).toFixed(1)}%` : '+0%'} 
+          />
+          <StatCard 
+            value={`LKR ${totalReturns.toLocaleString()}`} 
+            label="Returns" 
+            trend={previousReturns > 0 ? `+${(((totalReturns - previousReturns) / previousReturns) * 100).toFixed(1)}%` : '+0%'} 
+          />
         </View>
 
         {/* Recent Transactions */}
         <View style={styles.section}>
-          <SectionHeader title="Recent Transactions" onSeeMore={handleSeeAllTransactions} />
+          <SectionHeader title="Recent Transactions" onSeeMore={handleSeeAllTransactions(navigation)} />
           <View style={styles.transactionList}>
-            {recentTransactions.map((transaction) => (
-              <TransactionItem 
-                key={transaction.id}
-                icon={transaction.icon} 
-                title={transaction.title} 
-                amount={transaction.amount} 
-                date={transaction.date} 
-                type={transaction.type} 
-              />
-            ))}
+            {transactions.length > 0 ? (
+              transactions.map((transaction) => (
+                <TransactionItem key={transaction.transactionId} transaction={transaction} />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No transactions yet</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -291,8 +363,8 @@ const Dashboard = () => {
         <View style={styles.section}>
           <SectionHeader title="Performance Analytics" />
           <View style={styles.chartsContainer}>
-            <ROIGrowthChart data={roiGrowthData} />
-            <MonthlyReturnsChart data={monthlyReturnsData} />
+            {roiGrowthData.length > 0 && <ROIGrowthChart data={roiGrowthData} />}
+            {monthlyReturnsData.length > 0 && <MonthlyReturnsChart data={monthlyReturnsData} />}
           </View>
         </View>
 
@@ -323,7 +395,31 @@ const Dashboard = () => {
         visible={showAddFundsModal}
         onClose={handleCloseAddFundsModal}
         onConfirm={handleConfirmAddFunds}
-        walletBalance={portfolio.totalValue}
+        userId="L001"
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        visible={showExportModal}
+        onClose={handleCloseExportModal}
+        transactions={transactions}
+        filterType="all"
+        userId="L001"
+        showOnlyAll={true}
+      />
+
+      {/* Tax Summary Modal */}
+      <TaxSummaryModal
+        visible={showTaxSummaryModal}
+        onClose={handleCloseTaxSummaryModal}
+        userId="L001"
+      />
+
+      {/* Portfolio Report Modal */}
+      <PortfolioReportModal
+        visible={showPortfolioReportModal}
+        onClose={handleClosePortfolioReportModal}
+        userId="L001"
       />
     </AnimatedScreen>
   );
@@ -418,23 +514,50 @@ const styles = StyleSheet.create({
     ...cardStyle,
     marginHorizontal: spacing.lg,
     marginTop: 40,
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   balanceLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.gray,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   balanceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   balanceAmount: {
-    fontSize: fontSize['3xl'],
+    fontSize: fontSize['2xl'],
     textAlign: 'center',
     fontWeight: 'bold',
+    color: colors.midnightBlue,
+  },
+  portfolioBreakdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.lightGray,
+  },
+  breakdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  breakdownIcon: {
+    marginTop: 2,
+  },
+  breakdownLabel: {
+    fontSize: fontSize.xs,
+    color: colors.gray,
+    marginBottom: 2,
+  },
+  breakdownValue: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
     color: colors.midnightBlue,
   },
   actionButtons: {
@@ -531,50 +654,6 @@ const styles = StyleSheet.create({
     color: colors.blueGreen,
     fontWeight: '600',
   },
-  // Repayment Styles
-  repaymentList: {
-    ...cardStyle,
-  },
-  repaymentItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
-  },
-  repaymentContent: {
-    flex: 1,
-  },
-  repaymentBorrower: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.midnightBlue,
-    marginBottom: spacing.xs,
-  },
-  repaymentDate: {
-    fontSize: fontSize.sm,
-    color: colors.gray,
-  },
-  repaymentRight: {
-    alignItems: 'flex-end',
-  },
-  repaymentAmount: {
-    fontSize: fontSize.base,
-    fontWeight: 'bold',
-    color: colors.midnightBlue,
-    marginBottom: spacing.xs,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  statusText: {
-    fontSize: fontSize.xs,
-    color: colors.white,
-    fontWeight: '600',
-  },
   // Transaction Styles
   transactionList: {
     ...cardStyle,
@@ -590,7 +669,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -611,6 +689,14 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: fontSize.base,
     fontWeight: 'bold',
+  },
+  emptyState: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: fontSize.base,
+    color: colors.gray,
   },
   // Charts Styles
   chartsContainer: {

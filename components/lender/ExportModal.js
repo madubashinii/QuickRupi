@@ -30,9 +30,9 @@ const getUserFriendlyError = (error) => {
   return errorMessage || 'Failed to export transactions';
 };
 
-const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userId }) => {
+const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userId, showOnlyAll = false }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [exportScope, setExportScope] = useState('current'); // 'current' or 'all'
+  const [exportScope, setExportScope] = useState(showOnlyAll ? 'all' : 'current'); // 'current' or 'all'
   const [exportFormat, setExportFormat] = useState('csv'); // 'csv' or 'pdf'
   const [isLoadingCount, setIsLoadingCount] = useState(false);
   const [allTransactionsSummary, setAllTransactionsSummary] = useState({ count: 0, totalCredits: 0, totalDebits: 0 });
@@ -42,14 +42,14 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
     () => getExportSummary(transactions || []),
     [transactions]
   );
-  const summary = exportScope === 'current' ? currentViewSummary : allTransactionsSummary;
+  const summary = (exportScope === 'current' && !showOnlyAll) ? currentViewSummary : allTransactionsSummary;
 
-  // Fetch all transactions summary when "All Transactions" is selected
+  // Fetch all transactions summary when "All Transactions" is selected or showOnlyAll is true
   useEffect(() => {
     let isMounted = true;
 
     const fetchAllTransactionsSummary = async () => {
-      if (visible && userId && exportScope === 'all') {
+      if (visible && userId && (exportScope === 'all' || showOnlyAll)) {
         setIsLoadingCount(true);
         try {
           // Fetch all transactions
@@ -81,7 +81,7 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
     return () => {
       isMounted = false;
     };
-  }, [visible, userId, exportScope]);
+  }, [visible, userId, exportScope, showOnlyAll]);
 
   // Format filter display name
   const getFilterDisplayName = () => {
@@ -172,46 +172,50 @@ const ExportModal = ({ visible, onClose, transactions, filterType = 'all', userI
           {/* Body */}
           <View style={styles.modalBody}>
             {/* Export Scope Section */}
-            <Text style={styles.sectionTitle}>Scope</Text>
-            <TouchableOpacity 
-              style={[styles.scopeOption, exportScope === 'current' && styles.activeScopeOption]}
-              onPress={() => setExportScope('current')}
-              disabled={isExporting}
-            >
-              <View style={styles.radioButton}>
-                {exportScope === 'current' && <View style={styles.radioButtonSelected} />}
-              </View>
-              <View style={styles.scopeContent}>
-                <Text style={[styles.scopeText, exportScope === 'current' && styles.activeScopeText]}>
-                  Current View
-                </Text>
-                <Text style={styles.scopeSubtext}>
-                  {currentViewSummary.count} transactions
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {!showOnlyAll && (
+              <>
+                <Text style={styles.sectionTitle}>Scope</Text>
+                <TouchableOpacity 
+                  style={[styles.scopeOption, exportScope === 'current' && styles.activeScopeOption]}
+                  onPress={() => setExportScope('current')}
+                  disabled={isExporting}
+                >
+                  <View style={styles.radioButton}>
+                    {exportScope === 'current' && <View style={styles.radioButtonSelected} />}
+                  </View>
+                  <View style={styles.scopeContent}>
+                    <Text style={[styles.scopeText, exportScope === 'current' && styles.activeScopeText]}>
+                      Current View
+                    </Text>
+                    <Text style={styles.scopeSubtext}>
+                      {currentViewSummary.count} transactions
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.scopeOption, exportScope === 'all' && styles.activeScopeOption]}
-              onPress={() => setExportScope('all')}
-              disabled={isExporting}
-            >
-              <View style={styles.radioButton}>
-                {exportScope === 'all' && <View style={styles.radioButtonSelected} />}
-              </View>
-              <View style={styles.scopeContent}>
-                <Text style={[styles.scopeText, exportScope === 'all' && styles.activeScopeText]}>
-                  All Transactions
-                </Text>
-                {isLoadingCount ? (
-                  <ActivityIndicator size="small" color={colors.blueGreen} />
-                ) : (
-                  <Text style={styles.scopeSubtext}>
-                    All {allTransactionsSummary.count} transactions
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.scopeOption, exportScope === 'all' && styles.activeScopeOption]}
+                  onPress={() => setExportScope('all')}
+                  disabled={isExporting}
+                >
+                  <View style={styles.radioButton}>
+                    {exportScope === 'all' && <View style={styles.radioButtonSelected} />}
+                  </View>
+                  <View style={styles.scopeContent}>
+                    <Text style={[styles.scopeText, exportScope === 'all' && styles.activeScopeText]}>
+                      All Transactions
+                    </Text>
+                    {isLoadingCount ? (
+                      <ActivityIndicator size="small" color={colors.blueGreen} />
+                    ) : (
+                      <Text style={styles.scopeSubtext}>
+                        All {allTransactionsSummary.count} transactions
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
 
             {/* Format Section */}
             <Text style={[styles.sectionTitle, { marginTop: spacing.sm }]}>Format</Text>

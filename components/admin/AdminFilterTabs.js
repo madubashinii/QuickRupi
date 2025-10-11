@@ -1,7 +1,7 @@
 import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from "react-native";
 
-const filters = ["all", "pending", "funding", "funded", "disbursed", "repaying", "completed", "defaulted"];
+const filters = ["all", "pending", "approved", "funded", "disbursed", "repaying", "completed", "defaulted"];
 
 export default function AdminFilterTabs({ filter, setFilter }) {
     return (

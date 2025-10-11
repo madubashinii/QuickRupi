@@ -1,64 +1,92 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, ScrollView, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getWalletByUserId } from '../../services/wallet/walletService';
+import { fundLoan } from '../../services/lender/loanFundingService';
 
-// Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
-
-// Mock wallet data
-const MOCK_WALLET = {
-  balance: 120000,
-  paymentMethod: 'wallet'
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
 };
 
-// Risk configuration
-const RISK_CONFIG = {
-  'Low': { color: colors.forestGreen, bgColor: '#E8F5E8', icon: 'shield-checkmark' },
-  'Medium': { color: '#FFB347', bgColor: '#FFF3E0', icon: 'shield-half' },
-  'High': { color: colors.red, bgColor: '#FFEBEE', icon: 'shield' },
-  default: { color: colors.gray, bgColor: '#F5F5F5', icon: 'help-circle' }
-};
-
-// Loan Fund Modal Component
 const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+  const [funding, setFunding] = useState(false);
 
-  const handleConfirm = () => {
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      if (!visible) return;
+      
+      setLoadingWallet(true);
+      try {
+        // TODO: Replace 'L001' with actual authenticated user ID
+        const wallet = await getWalletByUserId('L001');
+        setWalletBalance(wallet?.balance || 0);
+      } catch (error) {
+        console.error('Failed to fetch wallet:', error);
+        setWalletBalance(0);
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+
+    fetchWalletBalance();
+  }, [visible]);
+
+  // Calculate financial details
+  const fundAmount = request?.amountRequested || 0;
+  const balanceAfter = walletBalance - fundAmount;
+  const estimatedReturn = fundAmount * (1 + (parseFloat(request?.interestRate) || 0) / 100);
+  const estimatedInterest = estimatedReturn - fundAmount;
+  const hasInsufficientBalance = walletBalance < fundAmount;
+
+  const handleConfirm = async () => {
     if (!agreedToTerms) {
       Alert.alert('Agreement Required', 'Please agree to the platform terms before proceeding.');
       return;
     }
 
-    const fundingData = {
-      requestId: request.id,
-      borrowerName: request.borrowerName,
-      amountRequested: request.amountRequested,
-      fundAmount: request.amountRequested, // Always fund the full amount
-      timestamp: new Date().toISOString(),
-      agreedToTerms: true
-    };
+    if (hasInsufficientBalance) {
+      Alert.alert('Insufficient Balance', 'You do not have enough balance in your wallet to fund this loan.');
+      return;
+    }
 
-    onConfirm(fundingData);
-    handleClose();
-  };
+    setFunding(true);
+    
+    try {
+      // TODO: Replace 'L001' with actual authenticated user ID
+      const result = await fundLoan({
+        loanId: request.id,
+        lenderId: 'L001',
+        borrowerId: request.borrowerId,
+        amount: request.amountRequested
+      });
 
-  // Calculate financial details
-  const fundAmount = request?.amountRequested || 0;
-  const walletBalance = MOCK_WALLET.balance;
-  const balanceAfter = walletBalance - fundAmount;
-  const estimatedReturn = fundAmount * (1 + (request?.estAPR || 0) / 100);
-  const estimatedInterest = estimatedReturn - fundAmount;
-
-  // Risk chip component
-  const RiskChip = ({ riskLevel }) => {
-    const config = RISK_CONFIG[riskLevel] || RISK_CONFIG.default;
-    return (
-      <View style={[styles.riskChip, { backgroundColor: config.bgColor, borderColor: config.color }]}>
-        <Ionicons name={config.icon} size={12} color={config.color} style={styles.riskIcon} />
-        <Text style={[styles.riskChipText, { color: config.color }]}>{riskLevel}</Text>
-      </View>
-    );
+      if (result.success) {
+        Alert.alert(
+          'Success!', 
+          `${result.message}\n\nAmount: LKR ${result.data.fundedAmount.toLocaleString()}\nNew Balance: LKR ${result.data.newWalletBalance.toLocaleString()}`,
+          [{ text: 'OK', onPress: () => {
+            handleClose();
+            if (onConfirm) onConfirm(result.data);
+          }}]
+        );
+      }
+    } catch (error) {
+      console.error('Funding failed:', error);
+      Alert.alert(
+        'Funding Failed', 
+        error.message || 'An error occurred while funding the loan. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setFunding(false);
+    }
   };
 
   const handleClose = () => {
@@ -99,25 +127,48 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Wallet & Payment</Text>
                 <View style={styles.infoCard}>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Wallet Balance:</Text>
-                    <Text style={styles.paymentValue}>{formatCurrency(walletBalance)}</Text>
-                  </View>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Amount to fund:</Text>
-                    <Text style={[styles.paymentValue, styles.highlightValue]}>{formatCurrency(fundAmount)}</Text>
-                  </View>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Balance after:</Text>
-                    <Text style={styles.paymentValue}>{formatCurrency(balanceAfter)}</Text>
-                  </View>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Payment method:</Text>
-                    <View style={styles.paymentMethod}>
-                      <Ionicons name="wallet" size={16} color={colors.blueGreen} />
-                      <Text style={styles.paymentMethodText}>Use Wallet</Text>
+                  {loadingWallet ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={colors.midnightBlue} />
+                      <Text style={styles.loadingText}>Loading wallet balance...</Text>
                     </View>
-                  </View>
+                  ) : (
+                    <>
+                      <View style={styles.paymentRow}>
+                        <Text style={styles.paymentLabel}>Wallet Balance:</Text>
+                        <Text style={[styles.paymentValue, hasInsufficientBalance && styles.errorValue]}>
+                          {formatCurrency(walletBalance)}
+                        </Text>
+                      </View>
+                      <View style={styles.paymentRow}>
+                        <Text style={styles.paymentLabel}>Amount to fund:</Text>
+                        <Text style={[styles.paymentValue, styles.highlightValue]}>{formatCurrency(fundAmount)}</Text>
+                      </View>
+                      <View style={styles.paymentRow}>
+                        <Text style={styles.paymentLabel}>Balance after:</Text>
+                        <Text style={[styles.paymentValue, hasInsufficientBalance && styles.errorValue]}>
+                          {formatCurrency(balanceAfter)}
+                        </Text>
+                      </View>
+                      
+                      {hasInsufficientBalance && (
+                        <View style={styles.errorMessageContainer}>
+                          <Ionicons name="warning" size={20} color={colors.red} />
+                          <Text style={styles.errorMessage}>
+                            Insufficient balance! You cannot fund this loan. Please add funds to your wallet.
+                          </Text>
+                        </View>
+                      )}
+                      
+                      <View style={styles.paymentRow}>
+                        <Text style={styles.paymentLabel}>Payment method:</Text>
+                        <View style={styles.paymentMethod}>
+                          <Ionicons name="wallet" size={16} color={colors.blueGreen} />
+                          <Text style={styles.paymentMethodText}>Use Wallet</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               </View>
 
@@ -135,7 +186,7 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
                   </View>
                   <View style={styles.paymentRow}>
                     <Text style={styles.paymentLabel}>Est. ROI / APR:</Text>
-                    <Text style={[styles.paymentValue, styles.highlightValue]}>{request?.estAPR || 0}% APR</Text>
+                    <Text style={[styles.paymentValue, styles.highlightValue]}>{request?.interestRate || 0}%</Text>
                   </View>
                 </View>
               </View>
@@ -144,10 +195,6 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Risk + Policy</Text>
                 <View style={styles.infoCard}>
-                  <View style={styles.riskRow}>
-                    <Text style={styles.riskLabel}>Risk:</Text>
-                    <RiskChip riskLevel={request?.riskLevel || 'Medium'} />
-                  </View>
                   <View style={styles.policyContainer}>
                     <Text style={styles.policyText}>
                       After you fund: amount is held in escrow. Admin review required: escrow approval before disbursement. 
@@ -186,12 +233,26 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
               <Text style={styles.cancelButtonText}> Back</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.fundButton, !agreedToTerms && styles.disabledButton]} 
+              style={[
+                styles.fundButton, 
+                (!agreedToTerms || hasInsufficientBalance || loadingWallet || funding) && styles.disabledButton
+              ]} 
               onPress={handleConfirm}
-              disabled={!agreedToTerms}
+              disabled={!agreedToTerms || hasInsufficientBalance || loadingWallet || funding}
             >
-              <Ionicons name="add-circle" size={16} color={colors.white} style={styles.buttonIcon} />
-              <Text style={styles.fundButtonText}>Fund →</Text>
+              {funding ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.fundButtonText}>Processing...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="add-circle" size={16} color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.fundButtonText}>
+                    {loadingWallet ? 'Loading...' : hasInsufficientBalance ? 'Insufficient Balance' : 'Fund →'}
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -200,9 +261,7 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
   );
 };
 
-// Styles - Interface Segregation: Grouped by component responsibility
 const styles = StyleSheet.create({
-  // Modal Layout
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -257,8 +316,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
-  
-  // Section Styles
   section: {
     marginBottom: spacing.lg,
   },
@@ -275,41 +332,6 @@ const styles = StyleSheet.create({
     borderColor: colors.babyBlue,
     backgroundColor: colors.white,
   },
-  headerCard: {
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.babyBlue,
-    backgroundColor: colors.tiffanyBlue,
-  },
-  
-  // Header Styles
-  requestId: {
-    fontSize: fontSize.sm,
-    color: colors.gray,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  borrowerName: {
-    fontSize: fontSize.lg,
-    fontWeight: 'bold',
-    color: colors.midnightBlue,
-    marginBottom: spacing.xs,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationIcon: {
-    marginRight: spacing.xs,
-  },
-  location: {
-    fontSize: fontSize.base,
-    color: colors.gray,
-    fontWeight: '500',
-  },
-  
-  // Recap Row
   recapRow: {
     backgroundColor: colors.tiffanyBlue,
     padding: spacing.md,
@@ -322,8 +344,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-
-  // Payment Row Styles
   paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -362,39 +382,41 @@ const styles = StyleSheet.create({
     color: colors.forestGreen,
     fontWeight: 'bold',
   },
-
-  // Risk Row Styles
-  riskRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.tiffanyBlue,
+  errorValue: {
+    color: colors.red,
+    fontWeight: 'bold',
   },
-  riskLabel: {
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  loadingText: {
     fontSize: fontSize.sm,
     color: colors.gray,
-    fontWeight: '500',
+    marginLeft: spacing.sm,
   },
-  riskChip: {
+  errorMessageContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
+    alignItems: 'flex-start',
+    backgroundColor: '#FFEBEE',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
     borderWidth: 1,
+    borderColor: colors.red,
   },
-  riskIcon: {
-    marginRight: spacing.xs,
-  },
-  riskChipText: {
+  errorMessage: {
+    flex: 1,
     fontSize: fontSize.sm,
+    color: colors.red,
     fontWeight: '600',
+    lineHeight: 18,
   },
-
-  // Policy Styles
   policyContainer: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
@@ -404,8 +426,6 @@ const styles = StyleSheet.create({
     color: colors.gray,
     lineHeight: 18,
   },
-
-  // Agreement Styles
   agreementRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -420,16 +440,6 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     lineHeight: 18,
   },
-  
-  // Form Styles
-  formSection: {
-    marginBottom: spacing.lg,
-  },
-  inputGroup: {
-    marginBottom: spacing.md,
-  },
-  
-  // Action Styles
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

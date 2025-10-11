@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,13 +7,21 @@ import {
   Modal, 
   StyleSheet, 
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { exportAndShareLoanPDF } from '../../services/lender/loanPdfService';
+import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
 
 // Utility functions
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString()}`;
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 'LKR 0';
+  }
+  return `LKR ${Number(amount).toLocaleString()}`;
+};
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { 
@@ -54,15 +63,62 @@ const RepaymentRow = ({ installment }) => (
 
 // Main Modal Component
 export const FinishedLoanDetailsModal = ({ visible, onClose, investment }) => {
-  if (!visible || !investment) return null;
+  // State management
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const [repaymentData, setRepaymentData] = useState(null);
+  const [loadingRepayment, setLoadingRepayment] = useState(false);
 
-  const handleDownloadReport = () => {
-    Alert.alert(
-      'Download Report',
-      'PDF report download functionality will be implemented here.',
-      [{ text: 'OK' }]
-    );
+  // Fetch repayment data when modal opens
+  useEffect(() => {
+    if (visible && investment?.repaymentId) {
+      fetchRepaymentData();
+    }
+  }, [visible, investment?.repaymentId]);
+
+  const fetchRepaymentData = async () => {
+    setLoadingRepayment(true);
+    try {
+      const data = await getRepaymentSchedule(investment.repaymentId);
+      setRepaymentData(data);
+    } catch (error) {
+      console.error('Error fetching repayment data:', error);
+      setRepaymentData(null);
+    } finally {
+      setLoadingRepayment(false);
+    }
   };
+
+  const handleDownloadReport = async () => {
+    if (!repaymentData) {
+      Alert.alert(
+        'No Data Available',
+        'Repayment schedule is not available for this loan.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      // Generate and share PDF (native share dialog provides user feedback)
+      await exportAndShareLoanPDF(investment, repaymentData);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      setExportError(error.message);
+      Alert.alert(
+        'Export Failed',
+        'Failed to generate loan report. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  if (!visible || !investment) return null;
 
   const returnPercentage = ((investment.interestEarned / investment.principalAmount) * 100).toFixed(1);
 
@@ -167,9 +223,22 @@ export const FinishedLoanDetailsModal = ({ visible, onClose, investment }) => {
 
           {/* Actions */}
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadReport}>
-              <Ionicons name="download-outline" size={20} color={colors.white} />
-              <Text style={styles.downloadButtonText}>Download Report (PDF)</Text>
+            <TouchableOpacity 
+              style={[styles.downloadButton, (isExporting || loadingRepayment) && styles.downloadButtonDisabled]} 
+              onPress={handleDownloadReport}
+              disabled={isExporting || loadingRepayment}
+            >
+              {isExporting ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.white} />
+                  <Text style={styles.downloadButtonText}>Generating...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={20} color={colors.white} />
+                  <Text style={styles.downloadButtonText}>Download Report (PDF)</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -370,6 +439,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.midnightBlue,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
+  },
+  downloadButtonDisabled: {
+    backgroundColor: colors.gray,
+    opacity: 0.6,
   },
   downloadButtonText: {
     fontSize: fontSize.base,

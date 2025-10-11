@@ -13,7 +13,7 @@ export const fetchAnalyticsData = async () => {
     try {
         const [usersSnap, loansSnap, repaymentsSnap, investmentsSnap] = await Promise.all([
             getDocs(collection(db, "users")),
-            getDocs(collection(db, "loans")),
+            getDocs(collection(db, "Loans")),
             getDocs(collection(db, "repayments")),
             getDocs(collection(db, "investments")),
         ]);
