@@ -24,6 +24,11 @@ export default function RoleSelectionScreen({ navigation }) {
     navigation.navigate('Lender');
   };
 
+  const handleBorrowerPress = () => {
+    // Navigate to Borrower Stack
+    navigation.navigate('Borrower');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -83,6 +88,28 @@ export default function RoleSelectionScreen({ navigation }) {
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </View>
           </TouchableOpacity>
+
+          {/* Borrower Card */}
+          <TouchableOpacity
+            style={[styles.card, styles.borrowerCard]}
+            onPress={handleBorrowerPress}
+            activeOpacity={0.8}
+          >
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons
+                name="hand-coin"
+                size={60}
+                color={colors.white}
+              />
+            </View>
+            <Text style={styles.cardTitle}>Borrower</Text>
+            <Text style={styles.cardDescription}>
+              Apply for loans, manage repayments, and track payments
+            </Text>
+            <View style={styles.arrowContainer}>
+              <Ionicons name="arrow-forward" size={24} color={colors.white} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Footer */}
@@ -126,7 +153,7 @@ const styles = StyleSheet.create({
   cardsContainer: {
     flex: 1,
     justifyContent: 'center',
-    gap: 24,
+    gap: 10,
   },
   card: {
     borderRadius: 20,
@@ -147,6 +174,9 @@ const styles = StyleSheet.create({
   },
   lenderCard: {
     backgroundColor: colors.blueGreen,
+  },
+  borrowerCard: {
+    backgroundColor: colors.forestGreen,
   },
   iconContainer: {
     alignItems: 'center',
