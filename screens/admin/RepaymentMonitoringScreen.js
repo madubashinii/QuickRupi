@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import Toast from 'react-native-toast-message';
+import Toast from "react-native-toast-message";
 
 import {
     fetchRepayments,
@@ -22,14 +22,19 @@ export default function RepaymentMonitorScreen({ navigation }) {
     const [activeTab, setActiveTab] = useState("overdue");
     const [overduePayments, setOverduePayments] = useState([]);
     const [dueSoonPayments, setDueSoonPayments] = useState([]);
+    const [upcomingPayments, setUpcomingPayments] = useState([]);
+    const [allPayments, setAllPayments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
-            // setLoading(true);
-            const { overduePayments, dueSoonPayments } = await fetchRepayments();
+            setLoading(true);
+            const { overduePayments, dueSoonPayments, upcomingPayments, allPayments } =
+                await fetchRepayments();
             setOverduePayments(overduePayments);
             setDueSoonPayments(dueSoonPayments);
+            setUpcomingPayments(upcomingPayments);
+            setAllPayments(allPayments);
             setLoading(false);
         };
         loadData();
@@ -37,59 +42,85 @@ export default function RepaymentMonitorScreen({ navigation }) {
 
     const handleReminder = async (loan) => {
         await sendReminder(loan);
-        Toast.show({ type: 'success', text1: 'Reminder Sent', text2: `Reminder sent to ${loan.borrowerName}`, position: 'bottom' });
     };
 
     const handleContact = async (loan) => {
         await sendContact(loan);
-        Toast.show({ type: 'success', text1: 'Notification Sent', text2: `Borrower ${loan.borrowerName} notified.`, position: 'bottom' });
     };
 
-    const renderTransaction = (item, type) => (
-        <View
-            key={item.repaymentId || item.id}
-            style={[styles.transactionItem, type === "overdue" ? styles.overdue : styles.dueSoon]}
-        >
-            <View style={styles.transactionInfoContainer}>
-                <View
-                    style={[
-                        styles.transactionIcon,
-                        type === "overdue"
-                            ? { backgroundColor: "#fee2e2" }
-                            : { backgroundColor: "#fef3c7" },
-                    ]}
-                >
-                    <FontAwesome5
-                        name={type === "overdue" ? "exclamation-triangle" : "clock"}
-                        size={16}
-                        color={type === "overdue" ? "#dc2626" : "#f59e0b"}
-                    />
+    const renderTransaction = (item) => {
+        const type = item.statusType;
+        const isOverdue = type === "overdue";
+        const isDueSoon = type === "dueSoon";
+        const isUpcoming = type === "upcoming";
+
+        return (
+            <View
+                key={item.id}
+                style={[
+                    styles.transactionItem,
+                    isOverdue
+                        ? styles.overdue
+                        : isDueSoon
+                            ? styles.dueSoon
+                            : styles.upcoming,
+                ]}
+            >
+                <View style={styles.transactionInfoContainer}>
+                    <View
+                        style={[
+                            styles.transactionIcon,
+                            isOverdue
+                                ? { backgroundColor: "#fee2e2" }
+                                : isDueSoon
+                                    ? { backgroundColor: "#fef3c7" }
+                                    : { backgroundColor: "#d1fae5" },
+                        ]}
+                    >
+                        <FontAwesome5
+                            name={isOverdue ? "exclamation-triangle" : isDueSoon ? "clock" : "calendar-alt"}
+                            size={16}
+                            color={isOverdue ? "#dc2626" : isDueSoon ? "#f59e0b" : "#059669"}
+                        />
+                    </View>
+                    <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionTitle}>
+                            Loan #{item.loanId} - {item.borrowerName}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                            Due: {item.dueDate}{" "}
+                            {isOverdue
+                                ? `• ${item.daysLate} days late`
+                                : `• ${item.daysLeft} days remaining`}
+                        </Text>
+                    </View>
                 </View>
-                <View style={styles.transactionInfo}>
-                    <Text style={styles.transactionTitle}>
-                        Loan #{item.loanId} - {item.borrowerName}
+                <View style={styles.transactionRight}>
+                    <Text
+                        style={[
+                            styles.transactionAmount,
+                            isOverdue ? styles.amountNegative : null,
+                        ]}
+                    >
+                        LKR {item.totalAmount?.toLocaleString()}
                     </Text>
-                    <Text style={styles.transactionDate}>
-                        Due: {item.dueDate}{" "}
-                        {type === "overdue"
-                            ? `• ${item.daysLate} days late`
-                            : `• ${item.daysLeft} days remaining`}
-                    </Text>
+                    <TouchableOpacity
+                        style={[
+                            styles.actionBtnSmall,
+                            isOverdue
+                                ? styles.btnContact
+                                : styles.btnRemind,
+                        ]}
+                        onPress={() => (isOverdue ? handleContact(item) : handleReminder(item))}
+                    >
+                        <Text style={styles.btnText}>
+                            {isOverdue ? "Contact" : "Remind"}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
-            <View style={styles.transactionRight}>
-                <Text style={[styles.transactionAmount, type === "overdue" ? styles.amountNegative : null]}>
-                    LKR {item.totalAmount?.toLocaleString()}
-                </Text>
-                <TouchableOpacity
-                    style={[styles.actionBtnSmall, type === "overdue" ? styles.btnContact : styles.btnRemind]}
-                    onPress={() => (type === "overdue" ? handleContact(item) : handleReminder(item))}
-                >
-                    <Text style={styles.btnText}>{type === "overdue" ? "Contact" : "Remind"}</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+        );
+    };
 
     // if (loading) {
     //     return (
@@ -99,6 +130,21 @@ export default function RepaymentMonitorScreen({ navigation }) {
     //         </View>
     //     );
     // }
+
+    const getTabData = () => {
+        switch (activeTab) {
+            case "overdue":
+                return overduePayments;
+            case "dueSoon":
+                return dueSoonPayments;
+            case "upcoming":
+                return upcomingPayments;
+            case "all":
+                return allPayments;
+            default:
+                return [];
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -116,16 +162,20 @@ export default function RepaymentMonitorScreen({ navigation }) {
                     <View style={styles.statCard}>
                         <Text style={styles.statNumber}>
                             {Math.round(
-                                (dueSoonPayments.length + overduePayments.length) === 0
+                                (dueSoonPayments.length + overduePayments.length + upcomingPayments.length) === 0
                                     ? 100
-                                    : (dueSoonPayments.length / (dueSoonPayments.length + overduePayments.length)) * 100
+                                    : ((dueSoonPayments.length + upcomingPayments.length) /
+                                        (dueSoonPayments.length + overduePayments.length + upcomingPayments.length)) *
+                                    100
                             )}
                             %
                         </Text>
                         <Text style={styles.statLabel}>On-Time Rate</Text>
                     </View>
                     <View style={[styles.statCard, styles.statOverdue]}>
-                        <Text style={[styles.statNumber, styles.numberOverdue]}>{overduePayments.length}</Text>
+                        <Text style={[styles.statNumber, styles.numberOverdue]}>
+                            {overduePayments.length}
+                        </Text>
                         <Text style={styles.statLabel}>Overdue</Text>
                     </View>
                     <View style={styles.statCard}>
@@ -135,35 +185,36 @@ export default function RepaymentMonitorScreen({ navigation }) {
                         <Text style={styles.statLabel}>Late Payments</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{dueSoonPayments.length}</Text>
-                        <Text style={styles.statLabel}>Due This Week</Text>
+                        <Text style={styles.statNumber}>
+                            {dueSoonPayments.length + upcomingPayments.length}
+                        </Text>
+                        <Text style={styles.statLabel}>Due Soon / Upcoming</Text>
                     </View>
                 </View>
 
                 {/* Filter Tabs */}
                 <View style={styles.filterTabs}>
-                    {["overdue", "dueSoon", "all"].map((tab) => (
+                    {["overdue", "dueSoon", "upcoming", "all"].map((tab) => (
                         <TouchableOpacity
                             key={tab}
                             style={[styles.filterTab, activeTab === tab ? styles.tabActive : null]}
                             onPress={() => setActiveTab(tab)}
                         >
                             <Text style={activeTab === tab ? styles.tabTextActive : styles.tabText}>
-                                {tab === "overdue" ? "Overdue" : tab === "dueSoon" ? "Due Soon" : "All Loans"}
+                                {tab === "overdue"
+                                    ? "Overdue"
+                                    : tab === "dueSoon"
+                                        ? "Due Soon"
+                                        : tab === "upcoming"
+                                            ? "Upcoming"
+                                            : "All Loans"}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
                 {/* Transactions */}
-                {activeTab === "overdue" && overduePayments.map((item) => renderTransaction(item, "overdue"))}
-                {activeTab === "dueSoon" && dueSoonPayments.map((item) => renderTransaction(item, "dueSoon"))}
-                {activeTab === "all" && (
-                    <>
-                        {overduePayments.map((item) => renderTransaction(item, "overdue"))}
-                        {dueSoonPayments.map((item) => renderTransaction(item, "dueSoon"))}
-                    </>
-                )}
+                {getTabData().map((item) => renderTransaction(item))}
 
                 {/* Action Buttons */}
                 <TouchableOpacity
@@ -228,4 +279,5 @@ const styles = StyleSheet.create({
     secondaryBtnText: { color: "#0c6170", fontWeight: "700", fontSize: 16, marginLeft: 8 },
     overdue: { borderLeftWidth: 4, borderLeftColor: "#dc2626" },
     dueSoon: { borderLeftWidth: 4, borderLeftColor: "#f59e0b" },
+    upcoming: { borderLeftWidth: 4, borderLeftColor: "#059669" },
 });

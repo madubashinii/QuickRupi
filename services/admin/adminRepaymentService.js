@@ -9,6 +9,7 @@ import Toast from 'react-native-toast-message';
 /**
  * Fetch repayments and enrich with borrower/loan info
  */
+
 export const fetchRepayments = async () => {
     try {
         const repaymentsSnap = await getDocs(collection(db, "repayments"));
@@ -40,9 +41,9 @@ export const fetchRepayments = async () => {
             const dueDate = dayjs(r.dueDate);
             const daysDiff = dueDate.diff(today, "day"); // positive if future, negative if past
 
-            let statusType = "dueSoon";
+            let statusType = "dueSoon"; // default for future repayments
             if (daysDiff < 0) statusType = "overdue";
-            else if (daysDiff > 7) statusType = "upcoming";
+            else if (daysDiff > 7) statusType = "upcoming"; // future > 7 days
 
             return {
                 ...r,
@@ -56,14 +57,16 @@ export const fetchRepayments = async () => {
 
         const overduePayments = enrichedRepayments.filter(r => r.statusType === "overdue");
         const dueSoonPayments = enrichedRepayments.filter(r => r.statusType === "dueSoon");
+        const upcomingPayments = enrichedRepayments.filter(r => r.statusType === "upcoming");
 
-        return { overduePayments, dueSoonPayments };
+        return { overduePayments, dueSoonPayments, upcomingPayments, allPayments: enrichedRepayments };
     } catch (error) {
         console.error("Error fetching repayments:", error);
         Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to fetch repayments', position: 'bottom' });
-        return { overduePayments: [], dueSoonPayments: [] };
+        return { overduePayments: [], dueSoonPayments: [], upcomingPayments: [], allPayments: [] };
     }
 };
+
 
 /**
  * Send single notification to a user
