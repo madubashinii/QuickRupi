@@ -1,0 +1,6 @@
+[
+  {"input_text": "Hello!", "response_text": "Hi there! Welcome to QuickRupi. How can I assist you today?"},
+  {"input_text": "I want to apply for a small business loan.", "response_text": "Sure! Please visit the Loan in menu and select Add New Loan Request button and fill the form."},
+  {"input_text": "What is the interest rate?", "response_text": "You can select rate if lender agree with it they'll fund your request."},
+  {"input_text": "How long will approval take?", "response_text": "Usually within 3 days."}
+]
