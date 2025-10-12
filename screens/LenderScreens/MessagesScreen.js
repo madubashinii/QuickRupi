@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { useAuth } from '../../context/AuthContext';
 import {
   getOrCreateConversation,
   sendMessage,
@@ -28,7 +29,6 @@ import {
 import MessageWithLinks from '../../components/admin/MessageWithLinks';
 
 // Constants
-const USER_ID = 'L001'; // TODO: Replace with actual authenticated user ID
 const USER_ROLE = 'lender';
 const SCROLL_DELAY = 100;
 const MAX_MESSAGE_LENGTH = 500;
@@ -228,6 +228,7 @@ const Composer = ({ newMessage, setNewMessage, isSending, onSend }) => {
 };
 
 const MessagesScreen = () => {
+  const { user } = useAuth();
   const navigation = useNavigation();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -239,11 +240,16 @@ const MessagesScreen = () => {
 
   // Initialize conversation and subscribe to messages
   useEffect(() => {
+    if (!user?.uid) {
+      setIsLoading(false);
+      return;
+    }
+
     let unsubscribe;
 
     const initConversation = async () => {
       try {
-        const conversation = await getOrCreateConversation(USER_ID);
+        const conversation = await getOrCreateConversation(user.uid);
         setConversationId(conversation.conversationId);
 
         // Subscribe to messages
@@ -254,7 +260,7 @@ const MessagesScreen = () => {
         });
 
         // Mark messages as read
-        await markMessagesAsRead(conversation.conversationId, USER_ID);
+        await markMessagesAsRead(conversation.conversationId, user.uid);
       } catch (error) {
         console.error('Failed to initialize conversation:', error);
         Alert.alert('Error', 'Failed to load messages');
@@ -268,15 +274,15 @@ const MessagesScreen = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [user?.uid]);
 
   // Mark messages as read when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (conversationId) {
-        markMessagesAsRead(conversationId, USER_ID).catch(console.error);
+      if (conversationId && user?.uid) {
+        markMessagesAsRead(conversationId, user.uid).catch(console.error);
       }
-    }, [conversationId])
+    }, [conversationId, user?.uid])
   );
 
   // Auto-scroll to bottom
@@ -289,14 +295,14 @@ const MessagesScreen = () => {
   }, [messages, scrollToBottom]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || isSending || !conversationId) return;
+    if (!newMessage.trim() || isSending || !conversationId || !user?.uid) return;
 
     setIsSending(true);
     const messageText = newMessage.trim();
     setNewMessage('');
 
     try {
-      await sendMessage(conversationId, USER_ID, USER_ROLE, messageText);
+      await sendMessage(conversationId, user.uid, USER_ROLE, messageText);
     } catch (error) {
       console.error('Failed to send message:', error);
       Alert.alert('Error', 'Failed to send message');
@@ -304,7 +310,7 @@ const MessagesScreen = () => {
     } finally {
       setIsSending(false);
     }
-  }, [newMessage, isSending, conversationId]);
+  }, [newMessage, isSending, conversationId, user?.uid]);
 
   const handleInfo = useCallback(() => {
     Alert.alert(
@@ -479,10 +485,10 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flex: 1,
-    maxWidth: '75%',
+    maxWidth: '80%',
   },
   lenderMessageContent: {
-    maxWidth: '200%',
+    width: '100%',
     alignItems: 'flex-end',
   },
   adminMessageAvatar: {
@@ -495,8 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   messageBubble: {
-    maxWidth: '75%',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.lg,
   },
@@ -508,6 +513,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+    minWidth: 120,
+    maxWidth: '100%',
   },
   adminBubble: {
     backgroundColor: colors.white,
@@ -517,6 +524,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
+    minWidth: 100,
+    maxWidth: '100%',
   },
   messageText: {
     fontSize: fontSize.base,

@@ -7,12 +7,17 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Alert,
-  ActivityIndicator 
+  ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform 
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../services/firebaseConfig";
 import BiometricService from "../../services/BiometricService";
+import { colors } from "../../theme/colors";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -117,27 +122,27 @@ const LoginScreen = ({ navigation }) => {
   };
 
   // Development: Manually enable biometric for testing
-  const enableBiometricForTesting = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password first");
-      return;
-    }
-    
-    const stored = await BiometricService.storeCredentials(email, password);
-    if (stored) {
-      setBiometricEnabled(true);
-      Alert.alert("Development Mode", "Biometric enabled for testing!");
-      checkBiometricSupport(); // Refresh the state
-    }
-  };
+  // const enableBiometricForTesting = async () => {
+  //   if (!email || !password) {
+  //     Alert.alert("Error", "Please enter email and password first");
+  //     return;
+  //   }
+  //   
+  //   const stored = await BiometricService.storeCredentials(email, password);
+  //   if (stored) {
+  //     setBiometricEnabled(true);
+  //     Alert.alert("Development Mode", "Biometric enabled for testing!");
+  //     checkBiometricSupport(); // Refresh the state
+  //   }
+  // };
 
   // Development: Clear biometric data
-  const clearBiometricForTesting = async () => {
-    await BiometricService.clearCredentials();
-    setBiometricEnabled(false);
-    Alert.alert("Development Mode", "Biometric data cleared!");
-    checkBiometricSupport(); // Refresh the state
-  };
+  // const clearBiometricForTesting = async () => {
+  //   await BiometricService.clearCredentials();
+  //   setBiometricEnabled(false);
+  //   Alert.alert("Development Mode", "Biometric data cleared!");
+  //   checkBiometricSupport(); // Refresh the state
+  // };
 
   const handleBorrowerSignUp = () => {
     navigation.navigate("KycBorrowerStack");
@@ -148,293 +153,374 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.logo}>QuickRupi</Text>
-      <Text style={styles.title}>Welcome back to your{"\n"}QuickRupi account</Text>
-
-      {/* Development Controls - Remove in production */}
-      <View style={styles.devControls}>
-        <Text style={styles.devTitle}>Development Controls</Text>
-        <View style={styles.devButtons}>
-          <TouchableOpacity style={styles.devButton} onPress={enableBiometricForTesting}>
-            <Text style={styles.devButtonText}>Enable Biometric</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.devButton} onPress={clearBiometricForTesting}>
-            <Text style={styles.devButtonText}>Clear Biometric</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.devStatus}>
-          Status: {biometricSupported ? 'Supported' : 'Not Supported'} | 
-          {biometricEnabled ? ' Enabled' : ' Disabled'}
-        </Text>
-      </View>
-
-      <Text style={styles.label}>Email Address</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Enter Your Email Address"
-          placeholderTextColor="#eafaf8"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <Ionicons name="mail-outline" size={20} color="#fff" style={styles.icon} />
-      </View>
-
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Enter Your Password"
-          placeholderTextColor="#eafaf8"
-          secureTextEntry={!showPassword}
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          autoCapitalize="none"
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Ionicons
-            name={showPassword ? "eye-off-outline" : "eye-outline"}
-            size={20}
-            color="#fff"
-            style={styles.icon}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPasswordScreen")}>
-        <Text style={styles.forgotText}>Forgot Password?</Text>
-      </TouchableOpacity>
-
-      {/* Biometric Login Button */}
-      {biometricSupported && biometricEnabled && (
-        <TouchableOpacity
-          style={[styles.biometricBtn, biometricLoading && styles.disabledBtn]}
-          onPress={handleBiometricLogin}
-          disabled={biometricLoading}
-        >
-          {biometricLoading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <Ionicons name="finger-print" size={20} color="#fff" style={styles.biometricIcon} />
-              <Text style={styles.biometricText}>Login with Biometrics</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Regular Login Button */}
-      <TouchableOpacity
-        style={[styles.loginBtn, loading && styles.disabledBtn]}
-        onPress={() => handleLogin()}
-        disabled={loading}
+    <LinearGradient
+      colors={[colors.babyBlue, colors.white, colors.tiffanyBlue]}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <Text style={styles.loginText}>Log In</Text>
-        )}
-      </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.headerContainer}>
+            <Text style={styles.logo}>QuickRupi</Text>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Login to your account</Text>
+          </View>
 
-      {/* Biometric Promo */}
-      {biometricSupported && !biometricEnabled && (
-        <View style={styles.biometricPromo}>
-          <Ionicons name="finger-print" size={16} color="#007f70" />
-          <Text style={styles.biometricPromoText}>
-            Enable fingerprint/face ID for faster login
-          </Text>
-        </View>
-      )}
+          {/* Development Controls - Commented out for production */}
+          {/* <View style={styles.devControls}>
+            <Text style={styles.devTitle}>Development Controls</Text>
+            <View style={styles.devButtons}>
+              <TouchableOpacity style={styles.devButton} onPress={enableBiometricForTesting}>
+                <Text style={styles.devButtonText}>Enable Biometric</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.devButton} onPress={clearBiometricForTesting}>
+                <Text style={styles.devButtonText}>Clear Biometric</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.devStatus}>
+              Status: {biometricSupported ? 'Supported' : 'Not Supported'} | 
+              {biometricEnabled ? ' Enabled' : ' Disabled'}
+            </Text>
+          </View> */}
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Not a Member Yet?</Text>
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.signUpBtn} onPress={handleBorrowerSignUp}>
-            <Text style={styles.signUpText}>Sign Up | Borrower</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.signUpBtn} onPress={handleLenderSignUp}>
-            <Text style={styles.signUpText}>Sign Up | Investor</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+          <View style={styles.formContainer}>
+            <Text style={styles.label}>Email Address</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color={colors.midnightBlue} style={styles.iconLeft} />
+              <TextInput
+                placeholder="Enter your email"
+                placeholderTextColor={colors.gray}
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.midnightBlue} style={styles.iconLeft} />
+              <TextInput
+                placeholder="Enter your password"
+                placeholderTextColor={colors.gray}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                style={styles.input}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={colors.midnightBlue}
+                  style={styles.iconRight}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={() => navigation.navigate("ForgotPasswordScreen")}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Biometric Login Button */}
+            {biometricSupported && biometricEnabled && (
+              <TouchableOpacity
+                style={[styles.biometricBtn, biometricLoading && styles.disabledBtn]}
+                onPress={handleBiometricLogin}
+                disabled={biometricLoading}
+              >
+                {biometricLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="finger-print" size={22} color="#fff" style={styles.biometricIcon} />
+                    <Text style={styles.biometricText}>Login with Biometrics</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Regular Login Button */}
+            <TouchableOpacity
+              style={[styles.loginBtn, loading && styles.disabledBtn]}
+              onPress={() => handleLogin()}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.loginText}>Log In</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Biometric Promo */}
+            {biometricSupported && !biometricEnabled && (
+              <View style={styles.biometricPromo}>
+                <Ionicons name="finger-print" size={18} color={colors.tealGreen} />
+                <Text style={styles.biometricPromoText}>
+                  Enable biometric for faster login after signing in
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Not a Member Yet?</Text>
+            <View style={styles.row}>
+              <TouchableOpacity style={styles.signUpBtn} onPress={handleBorrowerSignUp}>
+                <Ionicons name="person-outline" size={16} color={colors.midnightBlue} style={styles.signUpIcon} />
+                <Text style={styles.signUpText}>Borrower</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.signUpBtn} onPress={handleLenderSignUp}>
+                <Ionicons name="business-outline" size={16} color={colors.midnightBlue} style={styles.signUpIcon} />
+                <Text style={styles.signUpText}>Investor</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#d8f4ee",
-    alignItems: "center",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 25,
+    paddingVertical: 40,
+  },
+  headerContainer: {
+    alignItems: "center",
+    marginBottom: 40,
   },
   logo: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#002f2f",
-    marginBottom: 20,
+    fontSize: 42,
+    fontWeight: "900",
+    color: colors.midnightBlue,
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 20,
+    fontSize: 28,
+    fontWeight: "700",
     textAlign: "center",
-    color: "#004c4c",
-    marginBottom: 20,
+    color: colors.midnightBlue,
+    marginBottom: 5,
   },
-  // Development Controls
-  devControls: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+  subtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    color: colors.tealGreen,
+    fontWeight: "400",
+  },
+  formContainer: {
     width: "100%",
-    borderWidth: 2,
-    borderColor: "#ffa726",
-  },
-  devTitle: {
-    color: "#ff6b6b",
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  devButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  devButton: {
-    backgroundColor: "#007f70",
-    padding: 8,
-    borderRadius: 6,
-    flex: 1,
-    marginHorizontal: 5,
-    alignItems: "center",
-  },
-  devButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  devStatus: {
-    color: "#004c4c",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 8,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 25,
+    shadowColor: colors.midnightBlue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 20,
   },
   label: {
-    alignSelf: "flex-start",
-    color: "#003f3f",
-    marginTop: 10,
-    marginBottom: 5,
-    fontWeight: "500",
+    color: colors.midnightBlue,
+    marginBottom: 8,
+    marginTop: 5,
+    fontWeight: "600",
+    fontSize: 14,
   },
   inputContainer: {
     flexDirection: "row",
-    backgroundColor: "#7ad7c1",
-    borderRadius: 8,
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
     alignItems: "center",
-    width: "100%",
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: colors.tiffanyBlue,
   },
   input: {
     flex: 1,
-    color: "#fff",
-    height: 45,
+    color: colors.black,
+    height: 50,
     fontSize: 16,
+    paddingHorizontal: 10,
   },
-  icon: {
-    marginLeft: 10,
+  iconLeft: {
+    marginRight: 5,
+  },
+  iconRight: {
+    marginLeft: 5,
   },
   forgotText: {
-    color: "#003f3f",
-    alignSelf: "flex-start",
-    marginVertical: 10,
-    fontWeight: "500",
+    color: colors.tealGreen,
+    alignSelf: "flex-end",
+    marginBottom: 20,
+    fontWeight: "600",
+    fontSize: 14,
   },
   biometricBtn: {
-    backgroundColor: "#00a896",
-    borderRadius: 20,
+    backgroundColor: colors.tealGreen,
+    borderRadius: 12,
     width: "100%",
-    paddingVertical: 12,
+    paddingVertical: 15,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 5,
+    marginBottom: 10,
     flexDirection: "row",
     justifyContent: "center",
+    shadowColor: colors.tealGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   biometricIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   biometricText: {
-    color: "#fff",
+    color: colors.white,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   loginBtn: {
-    backgroundColor: "#004c4c",
-    borderRadius: 20,
+    backgroundColor: colors.midnightBlue,
+    borderRadius: 12,
     width: "100%",
-    paddingVertical: 12,
+    paddingVertical: 15,
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 5,
+    shadowColor: colors.midnightBlue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   disabledBtn: {
-    backgroundColor: "#7a9c9c",
-    opacity: 0.7,
+    opacity: 0.6,
   },
   loginText: {
-    color: "#fff",
+    color: colors.white,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   biometricPromo: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#b8f2e6",
+    backgroundColor: colors.babyBlue,
     padding: 12,
     borderRadius: 10,
-    marginBottom: 15,
+    marginTop: 15,
     width: "100%",
-    justifyContent: "center",
   },
   biometricPromoText: {
-    color: "#007f70",
-    fontSize: 14,
+    color: colors.tealGreen,
+    fontSize: 13,
     fontWeight: "500",
     marginLeft: 8,
+    flex: 1,
   },
   footer: {
-    marginTop: 25,
+    marginTop: 20,
     alignItems: "center",
     width: "100%",
   },
   footerText: {
-    color: "#003f3f",
-    marginBottom: 10,
-    fontWeight: "500",
+    color: colors.deepForestGreen,
+    marginBottom: 15,
+    fontWeight: "600",
+    fontSize: 15,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+    gap: 12,
   },
   signUpBtn: {
-    borderWidth: 1,
-    borderColor: "#00a896",
-    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.blueGreen,
+    borderRadius: 12,
     paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 12,
     flex: 1,
-    marginHorizontal: 5,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    shadowColor: colors.blueGreen,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signUpIcon: {
+    marginRight: 6,
   },
   signUpText: {
-    color: "#007f70",
-    fontWeight: "500",
+    color: colors.midnightBlue,
+    fontWeight: "700",
+    fontSize: 14,
   },
+  // Development Controls - Commented out
+  // devControls: {
+  //   backgroundColor: "#fff",
+  //   padding: 15,
+  //   borderRadius: 10,
+  //   marginBottom: 20,
+  //   width: "100%",
+  //   borderWidth: 2,
+  //   borderColor: "#ffa726",
+  // },
+  // devTitle: {
+  //   color: "#ff6b6b",
+  //   fontWeight: "bold",
+  //   textAlign: "center",
+  //   marginBottom: 10,
+  // },
+  // devButtons: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  // },
+  // devButton: {
+  //   backgroundColor: "#007f70",
+  //   padding: 8,
+  //   borderRadius: 6,
+  //   flex: 1,
+  //   marginHorizontal: 5,
+  //   alignItems: "center",
+  // },
+  // devButtonText: {
+  //   color: "#fff",
+  //   fontSize: 12,
+  //   fontWeight: "600",
+  // },
+  // devStatus: {
+  //   color: "#004c4c",
+  //   fontSize: 12,
+  //   textAlign: "center",
+  //   marginTop: 8,
+  // },
 });
 
 export default LoginScreen;

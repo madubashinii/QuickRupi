@@ -5,7 +5,7 @@ import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { NOTIFICATION_TYPES } from '../../services/notifications/notificationService';
 import { getUserPreferences, saveUserPreferences } from '../../services/notifications/userPreferencesService';
 
-const NotificationSettingsModal = ({ visible, onClose, userId = 'L001' }) => {
+const NotificationSettingsModal = ({ visible, onClose, userId }) => {
   const [preferences, setPreferences] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

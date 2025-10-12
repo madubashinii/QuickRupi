@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { useAuth } from '../../context/AuthContext';
 import { 
   TYPES, 
   createPaymentMethod, 
@@ -16,7 +17,6 @@ import {
 } from '../../services/paymentMethods/paymentMethodsService';
 
 // Constants
-const USER_ID = 'L001'; // Development user ID
 const DEFAULT_BANKS = [
   'Bank of Ceylon (BOC)',
   'Commercial Bank (COMB)',
@@ -66,6 +66,7 @@ const AddPaymentMethod = ({
   initialData = null, // payment method data when editing
   banks = DEFAULT_BANKS 
 }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('bank');
   const [bankData, setBankData] = useState(INITIAL_BANK_DATA);
   const [cardData, setCardData] = useState(INITIAL_CARD_DATA);
@@ -177,6 +178,13 @@ const AddPaymentMethod = ({
         );
       } else {
         // Add mode: Full validation required
+        
+        // Check if user is authenticated
+        if (!user?.uid) {
+          Alert.alert('Error', 'User not authenticated. Please log in again.');
+          return;
+        }
+        
         const validation = isBank ? validateBankFormData(data) : validateCardFormData(data);
         
         if (!validation.isValid) {
@@ -186,14 +194,14 @@ const AddPaymentMethod = ({
         // Add mode: Create new payment method
         
         // Check limits
-        const existing = await getUserPaymentMethods(USER_ID, type);
+        const existing = await getUserPaymentMethods(user.uid, type);
         if (existing.length >= limit) {
           Alert.alert('Limit Reached', `You can only have ${limit} ${isBank ? 'bank account' : 'cards'}. Please remove an existing one first.`);
           return;
         }
 
         // Check for duplicates
-        if (await checkForDuplicates(getUserPaymentMethods, USER_ID, type, data)) {
+        if (await checkForDuplicates(getUserPaymentMethods, user.uid, type, data)) {
           Alert.alert('Duplicate', `This ${isBank ? 'account' : 'card'} is already registered.`);
           return;
         }
@@ -204,7 +212,7 @@ const AddPaymentMethod = ({
           return;
         }
 
-        const formData = prepareData(data, USER_ID);
+        const formData = prepareData(data, user.uid);
         const paymentMethodId = await createPaymentMethod(formData);
         
         isBank ? setBankData(INITIAL_BANK_DATA) : setCardData(INITIAL_CARD_DATA);

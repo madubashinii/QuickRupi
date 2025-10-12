@@ -12,7 +12,7 @@ const formatCurrency = (amount) => {
   return `LKR ${Number(amount).toLocaleString()}`;
 };
 
-const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
+const LoanFundModal = ({ visible, onClose, request, onConfirm, userId }) => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(true);
@@ -20,12 +20,11 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
 
   useEffect(() => {
     const fetchWalletBalance = async () => {
-      if (!visible) return;
+      if (!visible || !userId) return;
       
       setLoadingWallet(true);
       try {
-        // TODO: Replace 'L001' with actual authenticated user ID
-        const wallet = await getWalletByUserId('L001');
+        const wallet = await getWalletByUserId(userId);
         setWalletBalance(wallet?.balance || 0);
       } catch (error) {
         console.error('Failed to fetch wallet:', error);
@@ -36,7 +35,7 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
     };
 
     fetchWalletBalance();
-  }, [visible]);
+  }, [visible, userId]);
 
   // Calculate financial details
   const fundAmount = request?.amountRequested || 0;
@@ -56,13 +55,17 @@ const LoanFundModal = ({ visible, onClose, request, onConfirm }) => {
       return;
     }
 
+    if (!userId) {
+      Alert.alert('Error', 'User not authenticated. Please log in again.');
+      return;
+    }
+
     setFunding(true);
     
     try {
-      // TODO: Replace 'L001' with actual authenticated user ID
       const result = await fundLoan({
         loanId: request.id,
-        lenderId: 'L001',
+        lenderId: userId,
         borrowerId: request.borrowerId,
         amount: request.amountRequested
       });

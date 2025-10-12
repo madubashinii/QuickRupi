@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, StatusBar } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { CheckBox } from "react-native-elements";
 import { Ionicons } from "@expo/vector-icons";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
@@ -37,51 +38,90 @@ export default function AccountInformation({ navigation }) {
     }
 
     setLoading(true);
+    
+    // Timeout to ensure loading stops even if something hangs
+    const timeoutId = setTimeout(() => {
+      console.error("Request timeout - stopping loading");
+      setLoading(false);
+      Alert.alert("Timeout", "Request is taking too long. Please check your internet connection and try again.");
+    }, 30000); // 30 second timeout
+
     try {
+      console.log("Creating user account with email:", email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, form.password);
+      console.log("User created successfully:", userCredential.user.uid);
+      
+      console.log("Saving user data to Firestore...");
       await setDoc(doc(db, "users", userCredential.user.uid), {
-        email, role: "lender", createdAt: new Date().toISOString(),
-        kycCompleted: true, kycStatus: "pending", kycStep: 3,
-        personalDetails: kycData.personalDetails,
-        contactDetails: kycData.contactDetails,
-        employmentDetails: kycData.employmentDetails,
+        email, 
+        role: "lender", 
+        createdAt: new Date().toISOString(),
+        kycCompleted: true, 
+        kycStatus: "approved", // Auto-approve lender accounts
+        kycStep: 4,
+        personalDetails: kycData.personalDetails || {},
+        contactDetails: kycData.contactDetails || {},
+        employmentDetails: kycData.employmentDetails || {},
         accountInformation: { termsAccepted: true }
       });
+      console.log("User data saved to Firestore successfully with approved status");
       
-      // Sign out the user so they need to login after admin approval
+      // Sign out the user immediately after account creation
+      console.log("Signing out user...");
       await signOut(auth);
+      console.log("User signed out successfully");
+      
+      clearTimeout(timeoutId); // Clear timeout on success
       clearKycData();
+      setLoading(false);
       
       Alert.alert(
         "Success", 
-        "Registration completed! Please log in once your account is approved by admin.",
+        "Registration completed successfully! You can now log in to your investor account.",
         [{ 
-          text: "OK", 
+          text: "Go to Login", 
           onPress: () => {
-            // Navigate to login screen
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'LoginScreen' }],
-            });
+            console.log("User clicked Go to Login - will be redirected by onAuthStateChanged");
           }
-        }]
+        }],
+        { cancelable: false }
       );
     } catch (err) {
-      let errorMessage = "Failed to create account.";
-      if (err.code === 'auth/email-already-in-use') errorMessage = "This email is already registered.";
-      else if (err.code === 'auth/invalid-email') errorMessage = "Invalid email address.";
-      else if (err.code === 'auth/weak-password') errorMessage = "Password is too weak.";
-      Alert.alert("Registration Failed", errorMessage);
-    } finally {
+      console.error("Registration error:", err);
+      console.error("Error code:", err.code);
+      console.error("Error message:", err.message);
+      
+      clearTimeout(timeoutId); // Clear timeout on error
       setLoading(false);
+      
+      let errorMessage = "Failed to create account. Please try again.";
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = "This email is already registered. Please use a different email or try logging in.";
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address format.";
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak. Please use at least 6 characters.";
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (err.message) {
+        errorMessage = `Registration failed: ${err.message}`;
+      }
+      
+      Alert.alert("Registration Failed", errorMessage);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[colors.babyBlue, colors.lightGray, colors.white]}
+      style={styles.container}
+    >
       <StatusBar backgroundColor={colors.tealGreen} barStyle="light-content" />
       
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[colors.tealGreen, colors.midnightBlue]}
+        style={styles.header}
+      >
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -96,7 +136,7 @@ export default function AccountInformation({ navigation }) {
           </View>
           <Text style={styles.progressText}>Step 4 of 4 - Final Step!</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.titleRow}>
@@ -197,16 +237,15 @@ export default function AccountInformation({ navigation }) {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.footer}>🔒 All information is encrypted and secure</Text>
+        <Text style={styles.footer}> All information is encrypted and secure</Text>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.lightGray },
+  container: { flex: 1 },
   header: {
-    backgroundColor: colors.tealGreen,
     paddingHorizontal: 16,
     paddingTop: 80,
     paddingBottom: 12,

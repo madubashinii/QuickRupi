@@ -1,7 +1,33 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { db } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 import { fetchOngoingLoans, fetchCompletedLoans } from './lenderLoanService';
 import { getWalletBalance } from '../wallet/walletService';
+
+/**
+ * Get lender name from Firestore
+ * @param {string} userId - Lender user ID
+ * @returns {Promise<string>} Lender name
+ */
+const getLenderName = async (userId) => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      // Try different name fields
+      return userData.fullName || 
+             userData.name || 
+             `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
+             userData.personalDetails?.nameWithInitials ||
+             'Lender';
+    }
+    return 'Lender';
+  } catch (error) {
+    console.error('Error fetching lender name:', error);
+    return 'Lender';
+  }
+};
 
 /**
  * Calculate portfolio metrics for a lender
@@ -11,7 +37,8 @@ import { getWalletBalance } from '../wallet/walletService';
 export const calculatePortfolioMetrics = async (userId) => {
   try {
     // Fetch all data in parallel
-    const [ongoingLoans, completedLoans, walletBalance] = await Promise.all([
+    const [lenderName, ongoingLoans, completedLoans, walletBalance] = await Promise.all([
+      getLenderName(userId),
       fetchOngoingLoans(userId),
       fetchCompletedLoans(userId),
       getWalletBalance(userId)
@@ -47,7 +74,7 @@ export const calculatePortfolioMetrics = async (userId) => {
 
     return {
       userId,
-      lenderName: 'Brian Gunasekara', // TODO: Replace with actual user name
+      lenderName,
       generatedDate: new Date().toISOString(),
       // Portfolio overview
       portfolioValue,

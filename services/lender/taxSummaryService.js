@@ -1,9 +1,35 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { db } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 import { fetchCompletedLoans } from './lenderLoanService';
 
 // Sri Lankan tax rates for investment income (example - adjust as needed)
 const TAX_RATE = 0.08; // 8% tax on investment income (adjust based on actual rates)
+
+/**
+ * Get lender name from Firestore
+ * @param {string} userId - Lender user ID
+ * @returns {Promise<string>} Lender name
+ */
+const getLenderName = async (userId) => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      // Try different name fields
+      return userData.fullName || 
+             userData.name || 
+             `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
+             userData.personalDetails?.nameWithInitials ||
+             'Lender';
+    }
+    return 'Lender';
+  } catch (error) {
+    console.error('Error fetching lender name:', error);
+    return 'Lender';
+  }
+};
 
 /**
  * Calculate tax summary for a lender
@@ -13,8 +39,11 @@ const TAX_RATE = 0.08; // 8% tax on investment income (adjust based on actual ra
  */
 export const calculateTaxSummary = async (userId, year) => {
   try {
-    // Fetch all completed loans
-    const completedLoans = await fetchCompletedLoans(userId);
+    // Fetch lender name and completed loans in parallel
+    const [lenderName, completedLoans] = await Promise.all([
+      getLenderName(userId),
+      fetchCompletedLoans(userId)
+    ]);
     
     // Filter loans completed in the specified year
     const loansInYear = completedLoans.filter(loan => {
@@ -43,7 +72,7 @@ export const calculateTaxSummary = async (userId, year) => {
     return {
       year,
       userId,
-      lenderName: 'Brian Gunasekara', // TODO: Replace with actual user name
+      lenderName,
       generatedDate: new Date().toISOString(),
       totalInterestIncome,
       totalPrincipalInvested,

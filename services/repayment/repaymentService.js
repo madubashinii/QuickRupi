@@ -311,12 +311,35 @@ const handleLoanCompletion = async (repaymentId, repaymentData) => {
 };
 
 /**
+ * Get all admin user IDs from Firestore
+ * @returns {Promise<string[]>} Array of admin user IDs
+ */
+const getAdminUserIds = async () => {
+  try {
+    const usersSnapshot = await getDocs(
+      query(collection(db, "users"), where("role", "==", "admin"))
+    );
+    return usersSnapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+};
+
+/**
  * Check for overdue payments and send admin notifications
  * Can be triggered daily or when admin views RepaymentMonitoringScreen
  * @returns {Promise<number>} Number of overdue notifications sent
  */
 export const checkOverduePayments = async () => {
   try {
+    // Get all admin user IDs
+    const adminIds = await getAdminUserIds();
+    if (adminIds.length === 0) {
+      console.warn('No admin users found for overdue notifications');
+      return 0;
+    }
+
     const repaymentsSnapshot = await getDocs(collection(db, "repayments"));
     const today = new Date();
     let notificationsSent = 0;
@@ -335,17 +358,24 @@ export const checkOverduePayments = async () => {
         if (isPending && isOverdue) {
           const daysLate = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
 
-          await createNotification({
-            userId: 'ADMIN001',
-            type: NOTIFICATION_TYPES.PAYMENT_OVERDUE,
-            title: 'Payment Overdue',
-            body: `Loan #${loanId} payment overdue by ${daysLate} days`,
-            priority: NOTIFICATION_PRIORITY.MEDIUM,
-            loanId,
-            amount: installment.totalPayment
-          });
-
-          notificationsSent++;
+          // Send notification to all admin users
+          for (const adminId of adminIds) {
+            try {
+              await createNotification({
+                userId: adminId,
+                type: NOTIFICATION_TYPES.PAYMENT_OVERDUE,
+                title: 'Payment Overdue',
+                body: `Loan #${loanId} payment overdue by ${daysLate} days`,
+                priority: NOTIFICATION_PRIORITY.MEDIUM,
+                loanId,
+                amount: installment.totalPayment
+              });
+              notificationsSent++;
+            } catch (error) {
+              console.error(`Failed to send notification to admin ${adminId}:`, error);
+              // Continue with other admins
+            }
+          }
         }
       }
     }

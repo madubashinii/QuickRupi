@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, Act
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AddPaymentMethod from './AddPaymentMethod';
+import { useAuth } from '../../context/AuthContext';
 import { 
   getUserPaymentMethods, 
   createPaymentMethod, 
@@ -18,6 +19,7 @@ const MAX_BANK_ACCOUNTS = 1;
 
 // Payment Methods Modal
 const PaymentMethodsModal = ({ visible, onClose }) => {
+  const { user } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,13 +31,17 @@ const PaymentMethodsModal = ({ visible, onClose }) => {
 
   // Load payment methods from Firestore
   const loadPaymentMethods = async () => {
+    if (!user?.uid) {
+      console.error('No user logged in');
+      setError('User not authenticated');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
       
-      // Using hardcoded user ID for development
-      const userId = 'L001';
-      const methods = await getUserPaymentMethods(userId);
+      const methods = await getUserPaymentMethods(user.uid);
       setPaymentMethods(methods);
     } catch (err) {
       setError('Failed to load payment methods');
@@ -101,12 +107,15 @@ const PaymentMethodsModal = ({ visible, onClose }) => {
   };
 
   const handleSetDefault = async (paymentMethodId) => {
+    if (!user?.uid) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+    
     try {
       setLoading(true);
       
-      // Using hardcoded user ID for development
-      const userId = 'L001';
-      await setDefaultPaymentMethod(paymentMethodId, userId);
+      await setDefaultPaymentMethod(paymentMethodId, user.uid);
       await loadPaymentMethods(); // Refresh data
       Alert.alert('Success', 'Default payment method updated');
     } catch (err) {

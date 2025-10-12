@@ -17,6 +17,22 @@ import {
 import { db } from '../firebaseConfig';
 import { conversationCache } from './chatCache';
 
+/**
+ * Get first admin user ID from Firestore
+ * @returns {Promise<string|null>} First admin user ID or null
+ */
+const getFirstAdminId = async () => {
+  try {
+    const usersSnapshot = await getDocs(
+      query(collection(db, "users"), where("role", "==", "admin"), queryLimit(1))
+    );
+    return usersSnapshot.docs.length > 0 ? usersSnapshot.docs[0].id : null;
+  } catch (error) {
+    console.error('Error fetching admin user:', error);
+    return null;
+  }
+};
+
 // Error handling constants
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
@@ -48,24 +64,30 @@ const retryWithBackoff = async (operation, maxAttempts = MAX_RETRY_ATTEMPTS) => 
 };
 
 // Generate conversation ID
-export const generateConversationId = (lenderId, adminId = 'ADMIN001') => 
+export const generateConversationId = (lenderId, adminId) => 
   `CONV_${lenderId}_${adminId}`;
 
 // Create new conversation
-export const createConversation = async (lenderId, adminId = 'ADMIN001') => {
+export const createConversation = async (lenderId, adminId = null) => {
   try {
-    const conversationId = generateConversationId(lenderId, adminId);
+    // Get admin ID if not provided
+    const actualAdminId = adminId || await getFirstAdminId();
+    if (!actualAdminId) {
+      throw new Error('No admin user found. Please contact support.');
+    }
+    
+    const conversationId = generateConversationId(lenderId, actualAdminId);
     const conversationRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
     
     const conversation = {
       conversationId,
-      participants: { lenderId, adminId },
-      participantIds: [lenderId, adminId],
+      participants: { lenderId, adminId: actualAdminId },
+      participantIds: [lenderId, actualAdminId],
       lastMessage: null,
-      unreadCount: { [lenderId]: 0, [adminId]: 0 },
+      unreadCount: { [lenderId]: 0, [actualAdminId]: 0 },
       typingStatus: {
         [lenderId]: { isTyping: false, lastUpdated: serverTimestamp() },
-        [adminId]: { isTyping: false, lastUpdated: serverTimestamp() }
+        [actualAdminId]: { isTyping: false, lastUpdated: serverTimestamp() }
       },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -80,8 +102,14 @@ export const createConversation = async (lenderId, adminId = 'ADMIN001') => {
 };
 
 // Get or create conversation
-export const getOrCreateConversation = async (lenderId, adminId = 'ADMIN001') => {
-  const conversationId = generateConversationId(lenderId, adminId);
+export const getOrCreateConversation = async (lenderId, adminId = null) => {
+  // Get admin ID if not provided
+  const actualAdminId = adminId || await getFirstAdminId();
+  if (!actualAdminId) {
+    throw new Error('No admin user found. Please contact support.');
+  }
+  
+  const conversationId = generateConversationId(lenderId, actualAdminId);
   const conversationRef = doc(db, COLLECTIONS.CONVERSATIONS, conversationId);
   
   const conversationSnap = await getDoc(conversationRef);
@@ -90,7 +118,7 @@ export const getOrCreateConversation = async (lenderId, adminId = 'ADMIN001') =>
     return { id: conversationSnap.id, ...conversationSnap.data() };
   }
   
-  return createConversation(lenderId, adminId);
+  return createConversation(lenderId, actualAdminId);
 };
 
 // Send message with retry logic
@@ -108,8 +136,9 @@ export const sendMessage = async (conversationId, senderId, senderRole, text, ty
     const conversationData = conversationSnap.data();
     
     // Determine the correct recipient (the other participant)
-    const recipientId = senderRole === 'lender' ? 'ADMIN001' : 
-                       conversationData?.participants?.lenderId || senderId;
+    const recipientId = senderRole === 'lender' 
+      ? conversationData?.participants?.adminId || await getFirstAdminId()
+      : conversationData?.participants?.lenderId || senderId;
     
     const message = {
       conversationId,
