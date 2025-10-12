@@ -5,6 +5,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../services/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import AdminNotificationSettingsModal from "../../components/admin/AdminNotificationSettingsModal";
+import { useAuth } from "../../context/AuthContext";
 
 export default function AdminProfileScreen() {
     const [name, setName] = useState("");
@@ -12,38 +13,57 @@ export default function AdminProfileScreen() {
     const [phone, setPhone] = useState("");
     const [loading, setLoading] = useState(true);
     const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const navigation = useNavigation();
-
-    const adminId = "Admin";
+    const { user, logout } = useAuth();
 
     useEffect(() => {
         const fetchAdminProfile = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+
             try {
-                const docRef = doc(db, "users", adminId);
+                const docRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    setName(data.name || "");
-                    setEmail(data.email || "");
+                    setName(data.fullName || data.name || "");
+                    setEmail(data.email || user.email || "");
                     setPhone(data.phone || "");
                 } else {
                     console.log("No admin profile found!");
+                    // Use email as fallback
+                    setEmail(user.email || "");
                 }
             } catch (error) {
                 console.log("Error fetching profile:", error);
+                setEmail(user.email || "");
             } finally {
                 setLoading(false);
             }
         };
 
         fetchAdminProfile();
-    }, []);
+    }, [user]);
 
     const handleSave = async () => {
+        if (!user) {
+            Alert.alert("Error", "No user logged in.");
+            return;
+        }
+
         try {
-            const docRef = doc(db, "users", adminId);
-            await updateDoc(docRef, { name, email, phone });
+            const docRef = doc(db, "users", user.uid);
+            await updateDoc(docRef, { 
+                fullName: name,
+                name: name,
+                email, 
+                phone,
+                updatedAt: new Date()
+            });
             Alert.alert("Profile Updated", "Your profile has been updated successfully.");
         } catch (error) {
             console.log("Error updating profile:", error);
@@ -52,11 +72,40 @@ export default function AdminProfileScreen() {
     };
 
     const handleLogout = () => {
-        // Navigate to LoginScreen
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'LoginScreen' }],
-        });
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to logout?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                },
+                {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: async () => {
+                        setIsLoggingOut(true);
+                        try {
+                            console.log('Starting admin logout process...');
+                            const result = await logout();
+                            
+                            if (result.success) {
+                                console.log('Admin logout successful - redirecting to LoginScreen');
+                                // Navigation to LoginScreen will be handled automatically by AppNavigator
+                                // when the auth state changes (user becomes null)
+                            } else {
+                                setIsLoggingOut(false);
+                                Alert.alert('Logout Failed', result.error || 'Unable to logout. Please try again.');
+                            }
+                        } catch (error) {
+                            setIsLoggingOut(false);
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     if (loading) {
@@ -153,8 +202,18 @@ export default function AdminProfileScreen() {
             <AdminNotificationSettingsModal
                 visible={showNotificationSettings}
                 onClose={() => setShowNotificationSettings(false)}
-                userId="ADMIN001"
+                userId={user?.uid}
             />
+
+            {/* Logout Overlay */}
+            {isLoggingOut && (
+                <View style={styles.logoutOverlay}>
+                    <View style={styles.logoutCard}>
+                        <ActivityIndicator size="large" color="#0c6170" />
+                        <Text style={styles.logoutOverlayText}>Logging out...</Text>
+                    </View>
+                </View>
+            )}
         </ScrollView>
     );
 }
@@ -190,6 +249,36 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 32,
         fontWeight: "700",
+    },
+    
+    // Logout Overlay
+    logoutOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    logoutCard: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 30,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    logoutOverlayText: {
+        marginTop: 16,
+        fontSize: 18,
+        color: '#08313a',
+        fontWeight: '600',
     },
 
 });

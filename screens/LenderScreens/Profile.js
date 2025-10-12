@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
@@ -7,15 +7,13 @@ import PaymentMethodsModal from '../../components/lender/PaymentMethodsModal';
 import AgreementsLegalModal from '../../components/lender/AgreementsLegalModal';
 import HelpModal from '../../components/lender/HelpModal';
 import NotificationSettingsModal from '../../components/lender/NotificationSettingsModal';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../services/firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 
 // Configuration
 const CONFIG = {
   BACKGROUND_HEIGHT: 400,
-  USER_DATA: {
-    name: 'Brian Gunasekara',
-    id: '115995',
-    role: 'LENDER'
-  },
   SETTINGS: [
     { id: 1, title: 'Personal Information', icon: 'person-outline' },
     { id: 2, title: 'Manage Payment Methods', icon: 'card-outline' },
@@ -33,6 +31,46 @@ const useProfileHandlers = () => {
   const [showAgreementsModal, setShowAgreementsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { logout } = useAuth();
+  
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            setIsLoggingOut(true);
+            try {
+              console.log('Starting logout process...');
+              const result = await logout();
+              
+              if (result.success) {
+                console.log('Logout successful - redirecting to LoginScreen');
+                // Navigation to LoginScreen will be handled automatically by AppNavigator
+                // when the auth state changes (user becomes null)
+                // The AppNavigator's onAuthStateChanged will detect this and show AuthStack
+              } else {
+                setIsLoggingOut(false);
+                Alert.alert('Logout Failed', result.error || 'Unable to logout. Please try again.');
+              }
+            } catch (error) {
+              setIsLoggingOut(false);
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
   
   return {
     handleSettingPress: (title) => {
@@ -48,7 +86,7 @@ const useProfileHandlers = () => {
         console.log(`Pressed: ${title}`);
       }
     },
-    handleLogout: () => console.log('Logout pressed'),
+    handleLogout,
     handleChatSupport: () => console.log('Chat support pressed'),
     showPaymentModal,
     setShowPaymentModal,
@@ -58,6 +96,7 @@ const useProfileHandlers = () => {
     setShowHelpModal,
     showNotificationModal,
     setShowNotificationModal,
+    isLoggingOut,
   };
 };
 
@@ -73,14 +112,100 @@ const Profile = () => {
     showHelpModal,
     setShowHelpModal,
     showNotificationModal,
-    setShowNotificationModal
+    setShowNotificationModal,
+    isLoggingOut
   } = useProfileHandlers();
+  const { user } = useAuth();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            
+            // Check multiple possible locations for firstName and lastName
+            let firstName = data.firstName || 
+                          data.personalDetails?.firstName || 
+                          data.contactDetails?.firstName || '';
+                          
+            let lastName = data.lastName || 
+                         data.personalDetails?.lastName || 
+                         data.contactDetails?.lastName || '';
+            
+            // Construct full name
+            let fullName = 'User';
+            if (firstName && lastName) {
+              fullName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              fullName = firstName;
+            } else if (lastName) {
+              fullName = lastName;
+            } else if (data.personalDetails?.nameWithInitials) {
+              fullName = data.personalDetails.nameWithInitials;
+            } else if (data.fullName) {
+              fullName = data.fullName;
+            } else if (data.name) {
+              fullName = data.name;
+            } else if (user.email) {
+              // Last resort: use email username
+              fullName = user.email.split('@')[0];
+            }
+            
+            setUserData({
+              name: fullName,
+              id: user.uid.slice(0, 6).toUpperCase(),
+              email: user.email,
+              role: (data.role || 'lender').toUpperCase(),
+              firstName: firstName,
+              lastName: lastName,
+              fullData: data
+            });
+          } else {
+            setUserData({
+              name: user.email?.split('@')[0] || 'User',
+              id: user.uid.slice(0, 6).toUpperCase(),
+              email: user.email,
+              role: 'LENDER'
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Fallback to basic user data
+          setUserData({
+            name: user.email?.split('@')[0] || 'User',
+            id: user.uid.slice(0, 6).toUpperCase(),
+            email: user.email,
+            role: 'LENDER'
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <AnimatedScreen style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.blueGreen} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </AnimatedScreen>
+    );
+  }
 
   return (
     <AnimatedScreen style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <HeaderSection />
-        <UserInfoCard userData={CONFIG.USER_DATA} />
+        <UserInfoCard userData={userData} />
         <SettingsList settings={CONFIG.SETTINGS} onPress={handleSettingPress} />
         <FooterSection onLogout={handleLogout} />
       </ScrollView>
@@ -100,8 +225,18 @@ const Profile = () => {
       <NotificationSettingsModal
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
-        userId={CONFIG.USER_DATA.id}
+        userId={userData?.id}
       />
+      
+      {/* Logout Overlay */}
+      {isLoggingOut && (
+        <View style={styles.logoutOverlay}>
+          <View style={styles.logoutCard}>
+            <ActivityIndicator size="large" color={colors.blueGreen} />
+            <Text style={styles.logoutOverlayText}>Logging out...</Text>
+          </View>
+        </View>
+      )}
     </AnimatedScreen>
   );
 };
@@ -374,6 +509,50 @@ const styles = StyleSheet.create({
   chatbotImage: {
     width: 40,
     height: 40,
+  },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: fontSize.base,
+    color: colors.midnightBlue,
+    fontWeight: '500',
+  },
+  
+  // Logout Overlay
+  logoutOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  logoutCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  logoutOverlayText: {
+    marginTop: spacing.md,
+    fontSize: fontSize.lg,
+    color: colors.midnightBlue,
+    fontWeight: '600',
   },
 });
 
