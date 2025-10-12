@@ -14,7 +14,7 @@ import BorrowerLoanForm from "../../screens/borrower/LoanRequestForm";
 
 const Stack = createNativeStackNavigator();
 
-export default function borrowerStack() {
+export default function BorrowerStack() {
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="BorrowerHome" component={BorrowerBottomNav} />
