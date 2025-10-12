@@ -33,7 +33,7 @@ const EmptyState = () => (
   </View>
 );
 
-const ConversationsList = ({ conversations, onSelectConversation, selectedId, isLoading, unreadCount = 0 }) => {
+const ConversationsList = ({ conversations, onSelectConversation, selectedId, isLoading, unreadCount = 0, adminId }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredConversations = conversations.filter((conv) =>
@@ -79,6 +79,7 @@ const ConversationsList = ({ conversations, onSelectConversation, selectedId, is
               conversation={item}
               onPress={() => onSelectConversation(item)}
               isActive={item.id === selectedId}
+              adminId={adminId}
             />
           )}
           showsVerticalScrollIndicator={false}

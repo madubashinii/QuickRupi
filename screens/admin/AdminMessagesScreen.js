@@ -26,8 +26,8 @@ import AdminMessageBubble from '../../components/admin/AdminMessageBubble';
 import AdminChatComposer from '../../components/admin/AdminChatComposer';
 import ChatEmptyState from '../../components/admin/ChatEmptyState';
 import ErrorMessage from '../../components/admin/ErrorMessage';
+import { useAuth } from '../../context/AuthContext';
 
-const ADMIN_ID = 'ADMIN001';
 const ADMIN_ROLE = 'admin';
 
 const DateSeparator = ({ date }) => (
@@ -41,6 +41,8 @@ const DateSeparator = ({ date }) => (
 const EmptyChatState = () => <ChatEmptyState type="messages" />;
 
 const AdminMessagesScreen = () => {
+  const { user } = useAuth();
+  const adminId = user?.uid;
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -58,7 +60,9 @@ const AdminMessagesScreen = () => {
 
   // Subscribe to all conversations
   useEffect(() => {
-    const unsubscribe = subscribeToConversationsForUser(ADMIN_ID, ADMIN_ROLE, (convs) => {
+    if (!adminId) return;
+
+    const unsubscribe = subscribeToConversationsForUser(adminId, ADMIN_ROLE, (convs) => {
       setConversations(convs);
       setIsLoading(false);
       setError(null); // Clear any previous errors
@@ -69,11 +73,11 @@ const AdminMessagesScreen = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [adminId]);
 
   // Subscribe to messages for selected conversation
   useEffect(() => {
-    if (!selectedConversation) {
+    if (!selectedConversation || !adminId) {
       setMessages([]);
       return;
     }
@@ -88,22 +92,22 @@ const AdminMessagesScreen = () => {
     );
 
     // Mark as read
-    markMessagesAsRead(selectedConversation.conversationId, ADMIN_ID).catch(console.error);
+    markMessagesAsRead(selectedConversation.conversationId, adminId).catch(console.error);
 
     return () => {
       if (unsubscribeMessagesRef.current) {
         unsubscribeMessagesRef.current();
       }
     };
-  }, [selectedConversation]);
+  }, [selectedConversation, adminId]);
 
   // Mark as read when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (selectedConversation) {
-        markMessagesAsRead(selectedConversation.conversationId, ADMIN_ID).catch(console.error);
+      if (selectedConversation && adminId) {
+        markMessagesAsRead(selectedConversation.conversationId, adminId).catch(console.error);
       }
-    }, [selectedConversation])
+    }, [selectedConversation, adminId])
   );
 
   const handleSelectConversation = (conversation) => {
@@ -115,7 +119,7 @@ const AdminMessagesScreen = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || isSending || !selectedConversation) return;
+    if (!messageText.trim() || isSending || !selectedConversation || !adminId) return;
 
     setIsSending(true);
     const text = messageText.trim();
@@ -123,7 +127,7 @@ const AdminMessagesScreen = () => {
     setError(null);
 
     try {
-      await sendMessage(selectedConversation.conversationId, ADMIN_ID, ADMIN_ROLE, text);
+      await sendMessage(selectedConversation.conversationId, adminId, ADMIN_ROLE, text);
       setRetryCount(0); // Reset retry count on success
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -140,10 +144,12 @@ const AdminMessagesScreen = () => {
   };
 
   const handleRetry = () => {
+    if (!adminId) return;
+    
     setError(null);
     setRetryCount(prev => prev + 1);
     // Trigger a refresh of conversations
-    const unsubscribe = subscribeToConversationsForUser(ADMIN_ID, ADMIN_ROLE, (convs) => {
+    const unsubscribe = subscribeToConversationsForUser(adminId, ADMIN_ROLE, (convs) => {
       setConversations(convs);
       setError(null);
     }, (error) => {
@@ -203,9 +209,10 @@ const AdminMessagesScreen = () => {
           onSelectConversation={handleSelectConversation}
           selectedId={selectedConversation?.id}
           isLoading={isLoading}
+          adminId={adminId}
           unreadCount={conversations.reduce((sum, conv) => {
-            const adminUnreadCount = conv.unreadCount?.ADMIN001 || 0;
-            const hasAdmin = conv.participantIds?.includes('ADMIN001');
+            const adminUnreadCount = conv.unreadCount?.[adminId] || 0;
+            const hasAdmin = conv.participantIds?.includes(adminId);
             return hasAdmin ? sum + adminUnreadCount : sum;
           }, 0)}
         />

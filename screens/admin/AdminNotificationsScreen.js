@@ -5,9 +5,9 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { subscribeToUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../services/notifications/notificationService';
 import { formatTimestamp, getNotificationTypeConfig } from '../../services/notifications/notificationUtils';
+import { useAuth } from '../../context/AuthContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const USER_ID = 'ADMIN001';
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All Notifications' },
@@ -100,19 +100,26 @@ const EmptyState = () => (
 
 const AdminNotificationsScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const adminId = user?.uid;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeToUserNotifications(USER_ID, (notifs) => {
+    if (!adminId) {
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = subscribeToUserNotifications(adminId, (notifs) => {
       setNotifications(notifs);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [adminId]);
 
   const filteredNotifications = useMemo(() => {
     if (selectedFilter === 'all') return notifications;
@@ -145,6 +152,11 @@ const AdminNotificationsScreen = () => {
       return;
     }
 
+    if (!adminId) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
+
     Alert.alert(
       'Mark All as Read',
       `Mark all ${unreadCount} notifications as read?`,
@@ -154,7 +166,7 @@ const AdminNotificationsScreen = () => {
           text: 'Mark All',
           onPress: async () => {
             try {
-              await markAllNotificationsAsRead(USER_ID);
+              await markAllNotificationsAsRead(adminId);
               Alert.alert('Success', 'All notifications marked as read');
             } catch (error) {
               Alert.alert('Error', 'Failed to mark all as read');
