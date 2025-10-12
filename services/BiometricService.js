@@ -85,7 +85,76 @@ class BiometricService {
     }
   }
 
-  // ... rest of your existing methods (storeCredentials, getStoredCredentials, etc.)
+  // Store user credentials securely
+  async storeCredentials(email, password) {
+    try {
+      console.log("💾 Storing credentials securely...");
+      
+      await SecureStore.setItemAsync('biometric_email', email);
+      await SecureStore.setItemAsync('biometric_password', password);
+      await SecureStore.setItemAsync('biometric_enabled', 'true');
+      
+      console.log("✅ Credentials stored successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Failed to store credentials:", error);
+      return false;
+    }
+  }
+
+  // Retrieve stored credentials
+  async getStoredCredentials() {
+    try {
+      console.log("🔍 Retrieving stored credentials...");
+      
+      const email = await SecureStore.getItemAsync('biometric_email');
+      const password = await SecureStore.getItemAsync('biometric_password');
+      
+      if (email && password) {
+        console.log("✅ Credentials retrieved successfully");
+        return { email, password };
+      }
+      
+      console.log("⚠️ No credentials found");
+      return null;
+    } catch (error) {
+      console.error("❌ Failed to retrieve credentials:", error);
+      return null;
+    }
+  }
+
+  // Check if biometric login is enabled
+  async isBiometricEnabled() {
+    try {
+      const enabled = await SecureStore.getItemAsync('biometric_enabled');
+      return enabled === 'true';
+    } catch (error) {
+      console.error("❌ Failed to check biometric status:", error);
+      return false;
+    }
+  }
+
+  // Clear stored credentials
+  async clearCredentials() {
+    try {
+      console.log("🗑️ Clearing stored credentials...");
+      
+      await SecureStore.deleteItemAsync('biometric_email');
+      await SecureStore.deleteItemAsync('biometric_password');
+      await SecureStore.deleteItemAsync('biometric_enabled');
+      
+      console.log("✅ Credentials cleared successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Failed to clear credentials:", error);
+      return false;
+    }
+  }
+
+  // Disable biometric login
+  async disableBiometric() {
+    return await this.clearCredentials();
+  }
 }
 
 export default new BiometricService();

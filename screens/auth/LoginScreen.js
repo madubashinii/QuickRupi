@@ -43,7 +43,6 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log("Attempting login for:", userEmail);
       await signInWithEmailAndPassword(auth, userEmail, userPassword);
       
       // Show biometric prompt after successful login
@@ -52,15 +51,20 @@ const LoginScreen = ({ navigation }) => {
       }
       
     } catch (error) {
-      console.error("Login error:", error);
-      let errorMessage = "Login failed. Please check your credentials.";
+      let errorMessage = "Wrong credentials. Please check your email and password.";
+      
       if (error.code === 'auth/invalid-email') {
-        errorMessage = "Invalid email address.";
+        errorMessage = "Please enter a valid email address.";
       } else if (error.code === 'auth/user-not-found') {
         errorMessage = "No account found with this email.";
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = "Incorrect password.";
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = "Wrong credentials. Please check your email and password.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection.";
       }
+      
       Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);
@@ -77,14 +81,13 @@ const LoginScreen = ({ navigation }) => {
         if (credentials) {
           await handleLogin(credentials.email, credentials.password);
         } else {
-          Alert.alert("Error", "No stored credentials found");
+          Alert.alert("Error", "No stored credentials found. Please login with email and password.");
         }
       } else {
-        Alert.alert("Authentication Failed", "Please try fingerprint again or use password");
+        Alert.alert("Authentication Failed", "Please try again or use password to login.");
       }
     } catch (error) {
-      console.error("Biometric login failed:", error);
-      Alert.alert("Error", "Biometric authentication failed");
+      Alert.alert("Error", "Biometric authentication failed. Please use password to login.");
     } finally {
       setBiometricLoading(false);
     }
