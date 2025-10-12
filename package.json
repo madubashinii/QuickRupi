@@ -42,7 +42,8 @@
     "react-native-svg": "^15.13.0",
     "react-native-toast-message": "^2.3.3",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.0",
+    "expo-crypto": "~15.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

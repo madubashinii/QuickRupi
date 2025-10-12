@@ -1,7 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import PersonalDetailsScreen from '../screens/kycBorrower/PersonalDetailsScreen';
-import LoanDetailsScreen from '../screens/kycBorrower/LoanDetailsScreen';
 import AccountDetailsScreen from '../screens/kycBorrower/AccountDetailsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -29,14 +28,7 @@ export default function KycBorrowerStack() {
           headerShown: false, // We're using custom header in the component
         }}
       />
-      <Stack.Screen
-        name="LoanDetailsScreen"
-        component={LoanDetailsScreen}
-        options={{
-          title: 'Loan Details',
-          headerShown: false, // We're using custom header in the component
-        }}
-      />
+
       <Stack.Screen
         name="AccountDetailsScreen"
         component={AccountDetailsScreen}
