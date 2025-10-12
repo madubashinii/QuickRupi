@@ -67,7 +67,7 @@ const BorrowerDashboard = () => {
         console.error("Error fetching loans:", error);
       }
     };
-
+    //user@gmail.com is printed
     const fetchUserData = async () => {
       try {
         const userRef = doc(db, "Users", borrowerId);
