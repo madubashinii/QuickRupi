@@ -1,221 +1,215 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, StatusBar } from "react-native";
 import { CheckBox } from "react-native-elements";
-import { auth } from "../../services/firebaseConfig";
-import { updateLenderDoc } from "../../services/firestoreService";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from '../../theme/colors';
-
+import { useKyc } from '../../context/KycContext';
 
 export default function ContactDetails({ navigation }) {
-  const [permanentAddress, setPermanentAddress] = useState("");
-  const [isDifferentAddress, setIsDifferentAddress] = useState(false);
-  const [mobileNumber, setMobileNumber] = useState("");
-  const [telephoneNumber, setTelephoneNumber] = useState("");
-  const [email, setEmail] = useState("");
+  const { updateKycData } = useKyc();
+  const [form, setForm] = useState({
+    permanentAddress: "", isDifferentAddress: false, mobileNumber: "",
+    telephoneNumber: "", email: ""
+  });
 
-  const handleNext = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Error", "Not logged in");
-      navigation.replace("Login");
-      return;
+  const updateField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const handleNext = () => {
+    if (!form.permanentAddress || !form.mobileNumber || !form.email) {
+      return Alert.alert("Error", "Please complete all required fields (*).");
     }
-
-    if (!permanentAddress || !mobileNumber) {
-      Alert.alert("Error", "Please complete required contact details.");
-      return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      return Alert.alert("Error", "Please enter a valid email address.");
     }
-
-    try {
-      await updateLenderDoc(user.uid, {
-        contactDetails: {
-          permanentAddress,
-          isDifferentAddress,
-          mobileNumber,
-          telephoneNumber,
-          email
-        },
-        kycStep: 2
-      });
-
-      navigation.navigate("EmploymentDetails");
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save contact details.");
-    }
+    updateKycData('contactDetails', form);
+    navigation.navigate("EmploymentDetails");
   };
+
+  const renderInput = (label, field, placeholder, icon, keyboardType = "default", multiline = false) => (
+    <>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputContainer, multiline && styles.textAreaContainer]}>
+        {icon && <Ionicons name={icon} size={20} color={colors.forestGreen} style={styles.icon} />}
+        <TextInput
+          placeholder={placeholder}
+          value={form[field]}
+          onChangeText={(val) => updateField(field, val)}
+          style={[styles.input, icon && styles.inputWithIcon, multiline && styles.textArea]}
+          placeholderTextColor={colors.gray}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+          autoCapitalize={field === 'email' ? 'none' : 'sentences'}
+          autoCorrect={field === 'email' ? false : true}
+        />
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <StatusBar backgroundColor={colors.tealGreen} barStyle="light-content" />
+      
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>QuickRupi</Text>
-        <Text style={styles.headerSubtitle}>New here? Sign up!</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>QuickRupi</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <Text style={styles.headerSubtitle}>Investor Registration</Text>
+        <View style={styles.progress}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '50%' }]} />
+          </View>
+          <Text style={styles.progressText}>Step 2 of 4</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.screenTitle}>Contact Details</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={styles.titleRow}>
+          <Ionicons name="location-outline" size={28} color={colors.tealGreen} />
+          <Text style={styles.title}>Contact Details</Text>
+        </View>
+        <Text style={styles.subtitle}>How can we reach you?</Text>
 
-        <Text style={styles.label}>Permanent Address</Text>
-        <TextInput
-          placeholder="Permanent Address"
-          value={permanentAddress}
-          onChangeText={setPermanentAddress}
-          style={[styles.input, styles.textArea]}
-          multiline
-          numberOfLines={3}
-          placeholderTextColor={colors.textLight}
-        />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Address Information</Text>
+          {renderInput("Permanent Address *", "permanentAddress", "No. 123, Galle Road, Colombo 03", "home-outline", "default", true)}
+          
+          <CheckBox
+            title="Residential address differs from permanent address"
+            checked={form.isDifferentAddress}
+            onPress={() => updateField('isDifferentAddress', !form.isDifferentAddress)}
+            containerStyle={styles.checkbox}
+            textStyle={styles.checkboxText}
+            checkedColor={colors.tealGreen}
+            size={20}
+          />
+        </View>
 
-        <CheckBox
-          title="Select if Residential Address differs from Permanent Address"
-          checked={isDifferentAddress}
-          onPress={() => setIsDifferentAddress(!isDifferentAddress)}
-          containerStyle={styles.checkboxContainer}
-          textStyle={styles.checkboxText}
-          checkedColor={colors.primary}
-        />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Phone Numbers</Text>
+          <View style={styles.row}>
+            <View style={styles.half}>
+              {renderInput("Mobile *", "mobileNumber", "077 123 4567", "call-outline", "phone-pad")}
+            </View>
+            <View style={styles.half}>
+              {renderInput("Telephone", "telephoneNumber", "011 234 5678", "phone-portrait-outline", "phone-pad")}
+            </View>
+          </View>
+        </View>
 
-        <Text style={styles.label}>Mobile Number</Text>
-        <TextInput
-          placeholder="Mobile Number"
-          value={mobileNumber}
-          onChangeText={setMobileNumber}
-          style={styles.input}
-          keyboardType="phone-pad"
-          placeholderTextColor={colors.textLight}
-        />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Email Address</Text>
+          {renderInput("Email *", "email", "nimal.perera@gmail.com", "mail-outline", "email-address")}
+        </View>
 
-        <Text style={styles.label}>Telephone Number</Text>
-        <TextInput
-          placeholder="Telephone Number"
-          value={telephoneNumber}
-          onChangeText={setTelephoneNumber}
-          style={styles.input}
-          keyboardType="phone-pad"
-          placeholderTextColor={colors.textLight}
-        />
-
-        <Text style={styles.label}>Email Address</Text>
-        <TextInput
-          placeholder="Email Address"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor={colors.textLight}
-        />
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>Back</Text>
+        <View style={styles.btnRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.tealGreen} />
+            <Text style={styles.backTxt}>Back</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>Next</Text>
+          <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+            <Text style={styles.nextTxt}>Continue</Text>
+            <Ionicons name="arrow-forward" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
+        
+        <Text style={styles.footer}>🔒 All information is encrypted and secure</Text>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background
-  },
+  container: { flex: 1, backgroundColor: colors.lightGray },
   header: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    backgroundColor: colors.tealGreen,
+    paddingHorizontal: 16,
+    paddingTop: 80,
+    paddingBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.white,
-    textAlign: "center",
-    marginBottom: 4,
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: colors.white, textAlign: "center" },
+  headerSubtitle: { fontSize: 11, color: colors.white, textAlign: "center", opacity: 0.95, marginBottom: 10 },
+  progress: { marginTop: 6 },
+  progressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 1.5, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.white, borderRadius: 1.5 },
+  progressText: { fontSize: 10, color: colors.white, textAlign: 'center', marginTop: 4, opacity: 0.9 },
+  content: { flex: 1 },
+  scroll: { padding: 14, paddingBottom: 24 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 8 },
+  title: { fontSize: 20, fontWeight: "700", color: colors.deepForestGreen },
+  subtitle: { fontSize: 12, color: colors.gray, marginBottom: 14, fontStyle: 'italic' },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.white,
-    textAlign: "center",
-    opacity: 0.8,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: 24,
-    textAlign: "center",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
+  cardTitle: { fontSize: 14, fontWeight: '700', color: colors.tealGreen, marginBottom: 10 },
+  label: { fontSize: 12, fontWeight: "600", color: colors.forestGreen, marginBottom: 6, marginTop: 8 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    padding: 14,
+    borderColor: colors.tiffanyBlue,
+    backgroundColor: colors.white,
     borderRadius: 8,
-    fontSize: 16,
-    color: colors.text,
+    marginBottom: 6,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  checkboxContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-    marginLeft: 0,
-    marginVertical: 12,
-  },
-  checkboxText: {
-    fontSize: 14,
-    fontWeight: 'normal',
-    color: colors.text,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 24,
-  },
-  backButton: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    flex: 0.48,
+  textAreaContainer: { alignItems: 'flex-start', paddingTop: 10 },
+  input: { flex: 1, padding: 10, fontSize: 14, color: colors.deepForestGreen },
+  inputWithIcon: { paddingLeft: 0 },
+  textArea: { height: 65, textAlignVertical: 'top', paddingTop: 0 },
+  icon: { marginLeft: 10, marginRight: 6 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, gap: 8 },
+  half: { flex: 1 },
+  checkbox: { backgroundColor: 'transparent', borderWidth: 0, padding: 0, marginLeft: 0, marginVertical: 4 },
+  checkboxText: { fontSize: 11, fontWeight: '500', color: colors.forestGreen },
+  btnRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 16, gap: 10 },
+  backBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.tealGreen,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    padding: 11,
+    borderRadius: 10,
+    flex: 0.4,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
-  backButtonText: {
-    color: colors.primary,
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  nextButton: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    flex: 0.48,
+  backTxt: { color: colors.tealGreen, fontWeight: "600", fontSize: 14 },
+  nextBtn: {
+    backgroundColor: colors.tealGreen,
+    flexDirection: 'row',
+    padding: 11,
+    borderRadius: 10,
+    flex: 0.6,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    shadowColor: colors.tealGreen,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  nextButtonText: {
-    color: colors.white,
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  nextTxt: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  footer: { fontSize: 11, color: colors.gray, textAlign: 'center', marginTop: 8, marginBottom: 16, fontStyle: 'italic' },
 });

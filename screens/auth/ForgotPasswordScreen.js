@@ -7,7 +7,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>⚪ QuickRupi</Text>
+      <Text style={styles.logo}> QuickRupi</Text>
 
       <Text style={styles.title}>Forgot your{"\n"}password?</Text>
       <Text style={styles.subTitle}>No worries! We will send you an email.</Text>
