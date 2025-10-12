@@ -31,8 +31,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#E6F4F1", // soft mint/teal background
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 320,
+    height: 320,
     marginBottom: 20,
     resizeMode: "contain",
   },

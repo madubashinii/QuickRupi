@@ -1,27 +1,56 @@
 // screens/auth/LoginScreen.js
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert,
+  ActivityIndicator 
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../services/firebaseConfig";
+import BiometricService from "../../services/BiometricService";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  useEffect(() => {
+    checkBiometricSupport();
+  }, []);
+
+  const checkBiometricSupport = async () => {
+    const supported = await BiometricService.isBiometricSupported();
+    setBiometricSupported(supported.supported);
+    
+    const enabled = await BiometricService.isBiometricEnabled();
+    setBiometricEnabled(enabled);
+  };
+
+  const handleLogin = async (userEmail = email, userPassword = password) => {
+    if (!userEmail || !userPassword) {
       Alert.alert("Error", "Please enter both email and password");
       return;
     }
 
     setLoading(true);
     try {
-      console.log("Attempting login for:", email);
-      await signInWithEmailAndPassword(auth, email, password);
-      // Success - navigation will be handled by AppNavigator auth state change
+      console.log("Attempting login for:", userEmail);
+      await signInWithEmailAndPassword(auth, userEmail, userPassword);
+      
+      // Show biometric prompt after successful login
+      if (biometricSupported && !biometricEnabled) {
+        showBiometricPrompt(userEmail, userPassword);
+      }
+      
     } catch (error) {
       console.error("Login error:", error);
       let errorMessage = "Login failed. Please check your credentials.";
@@ -38,6 +67,75 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true);
+    try {
+      const authResult = await BiometricService.authenticate();
+      
+      if (authResult.success) {
+        const credentials = await BiometricService.getStoredCredentials();
+        if (credentials) {
+          await handleLogin(credentials.email, credentials.password);
+        } else {
+          Alert.alert("Error", "No stored credentials found");
+        }
+      } else {
+        Alert.alert("Authentication Failed", "Please try fingerprint again or use password");
+      }
+    } catch (error) {
+      console.error("Biometric login failed:", error);
+      Alert.alert("Error", "Biometric authentication failed");
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const showBiometricPrompt = (userEmail, userPassword) => {
+    Alert.alert(
+      "⚡ Faster Login",
+      "Do you want to enable fingerprint/face ID for faster, more secure login?",
+      [
+        {
+          text: "Not Now",
+          style: "cancel",
+        },
+        {
+          text: "Enable",
+          onPress: async () => {
+            const stored = await BiometricService.storeCredentials(userEmail, userPassword);
+            if (stored) {
+              setBiometricEnabled(true);
+              Alert.alert("Success", "Biometric login enabled!");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Development: Manually enable biometric for testing
+  const enableBiometricForTesting = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password first");
+      return;
+    }
+    
+    const stored = await BiometricService.storeCredentials(email, password);
+    if (stored) {
+      setBiometricEnabled(true);
+      Alert.alert("Development Mode", "Biometric enabled for testing!");
+      checkBiometricSupport(); // Refresh the state
+    }
+  };
+
+  // Development: Clear biometric data
+  const clearBiometricForTesting = async () => {
+    await BiometricService.clearCredentials();
+    setBiometricEnabled(false);
+    Alert.alert("Development Mode", "Biometric data cleared!");
+    checkBiometricSupport(); // Refresh the state
+  };
+
   const handleBorrowerSignUp = () => {
     navigation.navigate("KycBorrowerStack");
   };
@@ -46,11 +144,27 @@ const LoginScreen = ({ navigation }) => {
     navigation.navigate("KycLenderStack");
   };
 
-
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>QuickRupi</Text>
       <Text style={styles.title}>Welcome back to your{"\n"}QuickRupi account</Text>
+
+      {/* Development Controls - Remove in production */}
+      <View style={styles.devControls}>
+        <Text style={styles.devTitle}>Development Controls</Text>
+        <View style={styles.devButtons}>
+          <TouchableOpacity style={styles.devButton} onPress={enableBiometricForTesting}>
+            <Text style={styles.devButtonText}>Enable Biometric</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.devButton} onPress={clearBiometricForTesting}>
+            <Text style={styles.devButtonText}>Clear Biometric</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.devStatus}>
+          Status: {biometricSupported ? 'Supported' : 'Not Supported'} | 
+          {biometricEnabled ? ' Enabled' : ' Disabled'}
+        </Text>
+      </View>
 
       <Text style={styles.label}>Email Address</Text>
       <View style={styles.inputContainer}>
@@ -91,15 +205,46 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.forgotText}>Forgot Password?</Text>
       </TouchableOpacity>
 
+      {/* Biometric Login Button */}
+      {biometricSupported && biometricEnabled && (
+        <TouchableOpacity
+          style={[styles.biometricBtn, biometricLoading && styles.disabledBtn]}
+          onPress={handleBiometricLogin}
+          disabled={biometricLoading}
+        >
+          {biometricLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons name="finger-print" size={20} color="#fff" style={styles.biometricIcon} />
+              <Text style={styles.biometricText}>Login with Biometrics</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* Regular Login Button */}
       <TouchableOpacity
         style={[styles.loginBtn, loading && styles.disabledBtn]}
-        onPress={handleLogin}
+        onPress={() => handleLogin()}
         disabled={loading}
       >
-        <Text style={styles.loginText}>
-          {loading ? "Logging in..." : "Log In"}
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.loginText}>Log In</Text>
+        )}
       </TouchableOpacity>
+
+      {/* Biometric Promo */}
+      {biometricSupported && !biometricEnabled && (
+        <View style={styles.biometricPromo}>
+          <Ionicons name="finger-print" size={16} color="#007f70" />
+          <Text style={styles.biometricPromoText}>
+            Enable fingerprint/face ID for faster login
+          </Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Not a Member Yet?</Text>
@@ -134,7 +279,46 @@ const styles = StyleSheet.create({
     fontSize: 20,
     textAlign: "center",
     color: "#004c4c",
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  // Development Controls
+  devControls: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    width: "100%",
+    borderWidth: 2,
+    borderColor: "#ffa726",
+  },
+  devTitle: {
+    color: "#ff6b6b",
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  devButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  devButton: {
+    backgroundColor: "#007f70",
+    padding: 8,
+    borderRadius: 6,
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+  devButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  devStatus: {
+    color: "#004c4c",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
   },
   label: {
     alignSelf: "flex-start",
@@ -167,6 +351,24 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     fontWeight: "500",
   },
+  biometricBtn: {
+    backgroundColor: "#00a896",
+    borderRadius: 20,
+    width: "100%",
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  biometricIcon: {
+    marginRight: 8,
+  },
+  biometricText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   loginBtn: {
     backgroundColor: "#004c4c",
     borderRadius: 20,
@@ -178,11 +380,28 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     backgroundColor: "#7a9c9c",
+    opacity: 0.7,
   },
   loginText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  biometricPromo: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#b8f2e6",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    width: "100%",
+    justifyContent: "center",
+  },
+  biometricPromoText: {
+    color: "#007f70",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 8,
   },
   footer: {
     marginTop: 25,
