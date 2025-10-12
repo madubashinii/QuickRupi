@@ -117,8 +117,15 @@ const HelpModal = ({ visible, onClose }) => {
       id: 15,
       category: 'Support',
       icon: 'chatbubbles-outline',
-      question: 'How can I contact customer support?',
-      answer: 'You can contact us through: 1) In-app chat support (tap the chatbot icon on any screen), 2) Email at support@quickrupi.com, 3) Phone support during business hours. We typically respond within 24 hours. For urgent issues, use the chat feature for faster assistance.'
+      question: 'How do I use the chat feature to contact admin?',
+      answer: 'You can contact admin support in two ways: 1) Tap the message icon (top-right corner) on your Dashboard screen, or 2) Tap the floating chatbot icon (blue circle) on any screen. The chat feature provides real-time messaging and quick responses. Your conversation history is saved so you can continue from where you left off. Admins typically respond within minutes during business hours.'
+    },
+    {
+      id: 16,
+      category: 'Support',
+      icon: 'mail-outline',
+      question: 'What other ways can I contact customer support?',
+      answer: 'Besides the in-app chat, you can reach us via email at support@quickrupi.com or phone support during business hours (9 AM - 6 PM). For fastest response, we recommend using the chat feature. We typically respond to emails within 24 hours.'
     }
   ];
 
@@ -179,14 +186,30 @@ const HelpModal = ({ visible, onClose }) => {
               </View>
             ))}
 
+            {/* Chat Feature Highlight Card */}
+            <View style={styles.chatFeatureCard}>
+              <View style={styles.chatFeatureHeader}>
+                <View style={styles.chatIconContainer}>
+                  <Ionicons name="chatbubbles" size={28} color={colors.white} />
+                </View>
+                <View style={styles.chatFeatureTextContainer}>
+                  <Text style={styles.chatFeatureTitle}>Chat with Admin</Text>
+                  <Text style={styles.chatFeatureSubtitle}>Get instant help</Text>
+                </View>
+              </View>
+              <Text style={styles.chatFeatureDescription}>
+                Access admin chat in two ways: Tap the message icon (top-right) on your Dashboard, or use the floating chatbot icon (blue circle) on any screen. Get real-time messaging with instant support. Your conversation history is automatically saved.
+              </Text>
+            </View>
+
             {/* Contact Support Card */}
             <View style={styles.contactCard}>
               <View style={styles.contactHeader}>
                 <Ionicons name="headset-outline" size={24} color={colors.midnightBlue} />
-                <Text style={styles.contactTitle}>Still need help?</Text>
+                <Text style={styles.contactTitle}>Other Contact Methods</Text>
               </View>
               <Text style={styles.contactText}>
-                Our support team is here to assist you with any questions or concerns.
+                You can also reach us through these channels:
               </Text>
               <View style={styles.contactMethods}>
                 <View style={styles.contactMethod}>
@@ -194,8 +217,8 @@ const HelpModal = ({ visible, onClose }) => {
                   <Text style={styles.contactMethodText}>support@quickrupi.com</Text>
                 </View>
                 <View style={styles.contactMethod}>
-                  <Ionicons name="chatbubble-outline" size={16} color={colors.blueGreen} />
-                  <Text style={styles.contactMethodText}>Live Chat (tap chatbot icon)</Text>
+                  <Ionicons name="call-outline" size={16} color={colors.blueGreen} />
+                  <Text style={styles.contactMethodText}>Phone: Business hours (9 AM - 6 PM)</Text>
                 </View>
               </View>
             </View>
@@ -374,6 +397,53 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.gray,
     lineHeight: 22,
+  },
+  
+  // Chat Feature Card
+  chatFeatureCard: {
+    backgroundColor: colors.blueGreen,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    shadowColor: colors.blueGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  chatFeatureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  chatIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.midnightBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  chatFeatureTextContainer: {
+    flex: 1,
+  },
+  chatFeatureTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: 'bold',
+    color: colors.white,
+    marginBottom: spacing.xs,
+  },
+  chatFeatureSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.white,
+    opacity: 0.9,
+  },
+  chatFeatureDescription: {
+    fontSize: fontSize.sm,
+    color: colors.white,
+    lineHeight: 20,
+    opacity: 0.95,
   },
   
   // Contact Card

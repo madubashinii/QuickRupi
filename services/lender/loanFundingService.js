@@ -1,10 +1,26 @@
 import { db } from "../firebaseConfig";
-import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { withdrawFunds } from "../wallet/walletService";
 import { createEscrow } from "../admin/escrowService";
 import { createTransaction, TRANSACTION_TYPES, TRANSACTION_STATUS } from "../transactions";
 import { createRepaymentSchedule } from "../repayment/repaymentService";
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
+
+/**
+ * Get all admin user IDs from Firestore
+ * @returns {Promise<string[]>} Array of admin user IDs
+ */
+const getAdminUserIds = async () => {
+  try {
+    const usersSnapshot = await getDocs(
+      query(collection(db, "users"), where("role", "==", "admin"))
+    );
+    return usersSnapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+};
 
 /**
  * Fund a loan - orchestrates wallet deduction, escrow creation, and loan status update
@@ -32,16 +48,25 @@ export const fundLoan = async ({ loanId, lenderId, borrowerId, amount }) => {
             amount
         });
 
-        await createNotification({
-            userId: 'ADMIN001',
-            type: NOTIFICATION_TYPES.ESCROW_PENDING_APPROVAL,
-            title: 'Escrow Pending Approval',
-            body: `Lender ${lenderId} funded loan #${loanId} with LKR ${amount.toLocaleString()}`,
-            priority: NOTIFICATION_PRIORITY.HIGH,
-            loanId,
-            amount,
-            metadata: { relatedUserId: lenderId }
-        });
+        // Notify all admins about escrow pending approval
+        try {
+            const adminIds = await getAdminUserIds();
+            for (const adminId of adminIds) {
+                await createNotification({
+                    userId: adminId,
+                    type: NOTIFICATION_TYPES.ESCROW_PENDING_APPROVAL,
+                    title: 'Escrow Pending Approval',
+                    body: `Lender ${lenderId} funded loan #${loanId} with LKR ${amount.toLocaleString()}`,
+                    priority: NOTIFICATION_PRIORITY.HIGH,
+                    loanId,
+                    amount,
+                    metadata: { relatedUserId: lenderId }
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send admin notifications:', error);
+            // Don't throw - main operations succeeded
+        }
         
         // Step 3: Get loan details for repayment schedule
         const loanRef = doc(db, "Loans", loanId);

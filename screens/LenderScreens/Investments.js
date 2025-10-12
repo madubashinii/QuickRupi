@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { fetchApprovedLoans, fetchOngoingLoans, fetchCompletedLoans } from '../../services/lender/lenderLoanService';
 import { exportAndShareLoanPDF } from '../../services/lender/loanPdfService';
 import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
+import { useAuth } from '../../context/AuthContext';
 import { 
   View, 
   Text, 
@@ -199,7 +200,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => (
 );
 
 // Ongoing Investments Content
-const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate }) => {
+const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate, userId }) => {
   const [sortBy, setSortBy] = useState('nextDue');
   const [filterBy, setFilterBy] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -210,11 +211,15 @@ const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate }) => {
   const [error, setError] = useState(null);
 
   const loadOngoingInvestments = async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace 'L001' with actual authenticated user ID
-      const loans = await fetchOngoingLoans('L001');
+      const loans = await fetchOngoingLoans(userId);
       setInvestments(loans);
       
       // Calculate and update metrics
@@ -232,7 +237,7 @@ const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate }) => {
 
   useEffect(() => {
     loadOngoingInvestments();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, userId]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -446,7 +451,7 @@ const OngoingContent = ({ onBrowsePress, refreshTrigger, onMetricsUpdate }) => {
 };
 
 // Browse Content Component
-const BrowseContent = ({ onLoanFunded }) => {
+const BrowseContent = ({ onLoanFunded, userId }) => {
   const [loading, setLoading] = useState(true);
   const [loanRequests, setLoanRequests] = useState([]);
   const [error, setError] = useState(null);
@@ -519,8 +524,9 @@ const BrowseContent = ({ onLoanFunded }) => {
       request={item}
       onFundPress={handleFundPress}
       onDetailsPress={handleDetailsPress}
+      userId={userId}
     />
-  ), [handleFundPress, handleDetailsPress]);
+  ), [handleFundPress, handleDetailsPress, userId]);
 
   if (loading) {
     return (
@@ -603,6 +609,7 @@ const BrowseContent = ({ onLoanFunded }) => {
         visible={showFundingSheet}
         onClose={() => setShowFundingSheet(false)}
         onConfirm={handleFundingConfirm}
+        userId={userId}
       />
     </View>
   );
@@ -611,7 +618,7 @@ const BrowseContent = ({ onLoanFunded }) => {
 
 
 // Finished Content Component
-const FinishedContent = ({ onBrowsePress }) => {
+const FinishedContent = ({ onBrowsePress, userId }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -622,11 +629,15 @@ const FinishedContent = ({ onBrowsePress }) => {
   const [summary, setSummary] = useState({ totalPrincipal: 0, totalInterest: 0, avgAPR: 0 });
 
   const loadFinishedLoans = async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace 'L001' with actual authenticated user ID
-      const loans = await fetchCompletedLoans('L001');
+      const loans = await fetchCompletedLoans(userId);
       setFinishedLoans(loans);
       
       // Calculate summary
@@ -653,7 +664,7 @@ const FinishedContent = ({ onBrowsePress }) => {
 
   useEffect(() => {
     loadFinishedLoans();
-  }, []);
+  }, [userId]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -826,6 +837,7 @@ const calculateMetrics = (loans) => {
 };
 
 const Investments = ({ route }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [ongoingRefreshTrigger, setOngoingRefreshTrigger] = useState(0);
   const [metrics, setMetrics] = useState({ active: 0, pending: 0, repaid: 0, avgAPR: 0 });
@@ -839,10 +851,11 @@ const Investments = ({ route }) => {
 
   // Load finished loans count for metrics
   useEffect(() => {
+    if (!user?.uid) return;
+    
     const loadFinishedCount = async () => {
       try {
-        // TODO: Replace 'L001' with actual authenticated user ID
-        const loans = await fetchCompletedLoans('L001');
+        const loans = await fetchCompletedLoans(user.uid);
         const count = loans.length;
         setFinishedCount(count);
         // Update metrics immediately with the finished count
@@ -853,7 +866,7 @@ const Investments = ({ route }) => {
       }
     };
     loadFinishedCount();
-  }, [ongoingRefreshTrigger]); // Refresh when ongoing loans are updated
+  }, [ongoingRefreshTrigger, user?.uid]); // Refresh when ongoing loans are updated
 
   const handleBrowsePress = useCallback(() => {
     setActiveTab('Browse');
@@ -880,18 +893,20 @@ const Investments = ({ route }) => {
             onBrowsePress={handleBrowsePress} 
             refreshTrigger={ongoingRefreshTrigger}
             onMetricsUpdate={handleMetricsUpdate}
+            userId={user?.uid}
           />
         );
       case 'Browse':
-        return <BrowseContent onLoanFunded={handleLoanFunded} />;
+        return <BrowseContent onLoanFunded={handleLoanFunded} userId={user?.uid} />;
       case 'Finished':
-        return <FinishedContent onBrowsePress={handleBrowsePress} />;
+        return <FinishedContent onBrowsePress={handleBrowsePress} userId={user?.uid} />;
       default:
         return (
           <OngoingContent 
             onBrowsePress={handleBrowsePress} 
             refreshTrigger={ongoingRefreshTrigger}
             onMetricsUpdate={handleMetricsUpdate}
+            userId={user?.uid}
           />
         );
     }

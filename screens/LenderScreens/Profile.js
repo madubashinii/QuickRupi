@@ -7,6 +7,7 @@ import PaymentMethodsModal from '../../components/lender/PaymentMethodsModal';
 import AgreementsLegalModal from '../../components/lender/AgreementsLegalModal';
 import HelpModal from '../../components/lender/HelpModal';
 import NotificationSettingsModal from '../../components/lender/NotificationSettingsModal';
+import EditProfileModal from '../../components/lender/EditProfileModal';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../services/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
@@ -31,6 +32,7 @@ const useProfileHandlers = () => {
   const [showAgreementsModal, setShowAgreementsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { logout } = useAuth();
   
@@ -74,7 +76,9 @@ const useProfileHandlers = () => {
   
   return {
     handleSettingPress: (title) => {
-      if (title === 'Manage Payment Methods') {
+      if (title === 'Personal Information') {
+        setShowEditProfileModal(true);
+      } else if (title === 'Manage Payment Methods') {
         setShowPaymentModal(true);
       } else if (title === 'Agreements & Legal') {
         setShowAgreementsModal(true);
@@ -96,6 +100,8 @@ const useProfileHandlers = () => {
     setShowHelpModal,
     showNotificationModal,
     setShowNotificationModal,
+    showEditProfileModal,
+    setShowEditProfileModal,
     isLoggingOut,
   };
 };
@@ -113,11 +119,64 @@ const Profile = () => {
     setShowHelpModal,
     showNotificationModal,
     setShowNotificationModal,
+    showEditProfileModal,
+    setShowEditProfileModal,
     isLoggingOut
   } = useProfileHandlers();
   const { user } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshUserData = async () => {
+    if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          
+          // Check multiple possible locations for firstName and lastName
+          let firstName = data.firstName || 
+                        data.personalDetails?.firstName || 
+                        data.contactDetails?.firstName || '';
+                        
+          let lastName = data.lastName || 
+                       data.personalDetails?.lastName || 
+                       data.contactDetails?.lastName || '';
+          
+          // Construct full name
+          let fullName = 'User';
+          if (firstName && lastName) {
+            fullName = `${firstName} ${lastName}`;
+          } else if (firstName) {
+            fullName = firstName;
+          } else if (lastName) {
+            fullName = lastName;
+          } else if (data.personalDetails?.nameWithInitials) {
+            fullName = data.personalDetails.nameWithInitials;
+          } else if (data.fullName) {
+            fullName = data.fullName;
+          } else if (data.name) {
+            fullName = data.name;
+          } else if (user.email) {
+            fullName = user.email.split('@')[0];
+          }
+          
+          setUserData({
+            name: fullName,
+            id: user.uid.slice(0, 6).toUpperCase(),
+            email: user.email,
+            role: (data.role || 'lender').toUpperCase(),
+            firstName: firstName,
+            lastName: lastName,
+            phone: data.phone || data.contactDetails?.phone || data.personalDetails?.phone || '',
+            fullData: data
+          });
+        }
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -162,6 +221,7 @@ const Profile = () => {
               role: (data.role || 'lender').toUpperCase(),
               firstName: firstName,
               lastName: lastName,
+              phone: data.phone || data.contactDetails?.phone || data.personalDetails?.phone || '',
               fullData: data
             });
           } else {
@@ -225,7 +285,14 @@ const Profile = () => {
       <NotificationSettingsModal
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
-        userId={userData?.id}
+        userId={user?.uid}
+      />
+      <EditProfileModal
+        visible={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
+        userData={userData}
+        userId={user?.uid}
+        onSave={refreshUserData}
       />
       
       {/* Logout Overlay */}

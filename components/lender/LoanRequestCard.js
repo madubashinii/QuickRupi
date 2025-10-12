@@ -48,7 +48,7 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 );
 
 // Loan Request Card Component
-const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
+const LoanRequestCard = ({ request, onFundPress, onDetailsPress, userId }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showFundModal, setShowFundModal] = useState(false);
 
@@ -148,6 +148,7 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress }) => {
           onClose={handleCloseFundModal}
           request={request}
           onConfirm={handleConfirmFunding}
+          userId={userId}
         />
       </>
     </View>

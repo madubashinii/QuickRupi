@@ -6,6 +6,7 @@ import AnimatedScreen from '../../components/lender/AnimatedScreen';
 import AddFundsModal from '../../components/lender/AddFundsModal';
 import WithdrawModal from '../../components/lender/WithdrawModal';
 import ExportModal from '../../components/lender/ExportModal';
+import { useAuth } from '../../context/AuthContext';
 import { initializeUserWallet, subscribeToWallet } from '../../services/wallet';
 import { subscribeToUserTransactions, getMoreTransactions, formatTransactionForDisplay, applyTransactionFilter } from '../../services/transactions';
 
@@ -302,6 +303,8 @@ const TransactionsList = ({ transactions, loading, filterBy, hasMore, isLoadingM
 
 // Main Component
 const Transactions = () => {
+  const { user } = useAuth();
+  
   // Wallet State
   const [walletBalance, setWalletBalance] = useState('LKR 0.00');
   const [walletLoading, setWalletLoading] = useState(true);
@@ -330,9 +333,16 @@ const Transactions = () => {
 
   // Initialize wallet and subscribe to real-time updates
   useEffect(() => {
+    if (!user?.uid) {
+      setWalletLoading(false);
+      setTransactionsLoading(false);
+      setWalletError('User not authenticated');
+      return;
+    }
+
     const setupWallet = async () => {
       try {
-        await initializeUserWallet('L001');
+        await initializeUserWallet(user.uid);
         setWalletLoading(false);
       } catch (error) {
         console.error('Wallet initialization failed:', error);
@@ -344,17 +354,14 @@ const Transactions = () => {
     setupWallet();
 
     // Subscribe to real-time wallet updates
-    // DEV MODE: Currently hardcoded to "L001"
-    // TODO: Replace with role-based check once user collection is complete:
-    // if (currentUser.role === 'lender') { await initializeUserWallet(currentUser.id); }
-    const unsubscribeWallet = subscribeToWallet('L001', (walletData) => {
+    const unsubscribeWallet = subscribeToWallet(user.uid, (walletData) => {
       if (walletData.balance !== null) {
         setWalletBalance(`LKR ${walletData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       }
     });
 
     // Subscribe to real-time transaction updates with pagination (10 transactions)
-    const unsubscribeTransactions = subscribeToUserTransactions('L001', (data) => {
+    const unsubscribeTransactions = subscribeToUserTransactions(user.uid, (data) => {
       try {
         const { transactions: transactionsData, hasMore, lastVisible } = data;
         // Format transactions for display
@@ -378,16 +385,16 @@ const Transactions = () => {
       unsubscribeWallet();
       unsubscribeTransactions();
     };
-  }, []);
+  }, [user?.uid]);
 
   // Handle Load More
   const handleLoadMore = async () => {
-    if (isLoadingMore || !hasMoreTransactions || !lastVisibleTransaction) return;
+    if (isLoadingMore || !hasMoreTransactions || !lastVisibleTransaction || !user?.uid) return;
 
     setIsLoadingMore(true);
     try {
       const { transactions: newTransactions, hasMore, lastVisible } = await getMoreTransactions(
-        'L001',
+        user.uid,
         lastVisibleTransaction,
         10
       );
@@ -479,21 +486,21 @@ const Transactions = () => {
           visible={showAddFundsModal}
           onClose={() => setShowAddFundsModal(false)}
           onConfirm={handleAddFundsConfirm}
-          userId="L001"
+          userId={user?.uid}
         />
         <WithdrawModal
           visible={showWithdrawModal}
           onClose={() => setShowWithdrawModal(false)}
           onConfirm={handleWithdrawConfirm}
           walletBalance={walletBalance}
-          userId="L001"
+          userId={user?.uid}
         />
         <ExportModal
           visible={showExportModal}
           onClose={() => setShowExportModal(false)}
           transactions={filteredTransactions}
           filterType={filterBy}
-          userId="L001"
+          userId={user?.uid}
         />
         <TransactionsList 
           transactions={filteredTransactions} 

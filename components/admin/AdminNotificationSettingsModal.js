@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme';
 import { getUserPreferences, saveUserPreferences } from '../../services/notifications/userPreferencesService';
 
-const AdminNotificationSettingsModal = ({ visible, onClose, userId = 'ADMIN001' }) => {
+const AdminNotificationSettingsModal = ({ visible, onClose, userId }) => {
   const [preferences, setPreferences] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

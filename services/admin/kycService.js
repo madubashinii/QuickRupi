@@ -1,6 +1,22 @@
 import { db } from "../firebaseConfig";
-import { collection, onSnapshot, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp, limit as queryLimit } from "firebase/firestore";
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITY } from "../notifications/notificationService";
+
+/**
+ * Get all admin user IDs from Firestore
+ * @returns {Promise<string[]>} Array of admin user IDs
+ */
+const getAdminUserIds = async () => {
+  try {
+    const usersSnapshot = await getDocs(
+      query(collection(db, "users"), where("role", "==", "admin"))
+    );
+    return usersSnapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+};
 
 // Submit KYC documents (borrower submits)
 export const submitKYC = async (kycData) => {
@@ -11,14 +27,23 @@ export const submitKYC = async (kycData) => {
             submittedAt: serverTimestamp()
         });
 
-        await createNotification({
-            userId: 'ADMIN001',
-            type: NOTIFICATION_TYPES.NEW_KYC_SUBMISSION,
-            title: 'New KYC Submission',
-            body: `${kycData.fullName} submitted KYC documents for review`,
-            priority: NOTIFICATION_PRIORITY.HIGH,
-            metadata: { relatedUserId: kycData.userId }
-        });
+        // Send notification to all admins
+        try {
+            const adminIds = await getAdminUserIds();
+            for (const adminId of adminIds) {
+                await createNotification({
+                    userId: adminId,
+                    type: NOTIFICATION_TYPES.NEW_KYC_SUBMISSION,
+                    title: 'New KYC Submission',
+                    body: `${kycData.fullName} submitted KYC documents for review`,
+                    priority: NOTIFICATION_PRIORITY.HIGH,
+                    metadata: { relatedUserId: kycData.userId }
+                });
+            }
+        } catch (notifError) {
+            console.error('Failed to send admin notifications:', notifError);
+            // Don't throw - KYC submission succeeded
+        }
 
         return { success: true, kycId: kycDoc.id };
     } catch (error) {

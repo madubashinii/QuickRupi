@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, StatusBar } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from '../../theme/colors';
 import { useKyc } from '../../context/KycContext';
@@ -37,10 +38,16 @@ export default function EmploymentDetails({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[colors.babyBlue, colors.lightGray, colors.white]}
+      style={styles.container}
+    >
       <StatusBar backgroundColor={colors.tealGreen} barStyle="light-content" />
       
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[colors.tealGreen, colors.midnightBlue]}
+        style={styles.header}
+      >
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -55,7 +62,7 @@ export default function EmploymentDetails({ navigation }) {
           </View>
           <Text style={styles.progressText}>Step 3 of 4</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.titleRow}>
@@ -111,16 +118,15 @@ export default function EmploymentDetails({ navigation }) {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.footer}>🔒 All information is encrypted and secure</Text>
+        <Text style={styles.footer}> All information is encrypted and secure</Text>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.lightGray },
+  container: { flex: 1 },
   header: {
-    backgroundColor: colors.tealGreen,
     paddingHorizontal: 16,
     paddingTop: 80,
     paddingBottom: 12,

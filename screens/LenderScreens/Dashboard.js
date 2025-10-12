@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
+import { useAuth } from '../../context/AuthContext';
 import ROIGrowthChart from '../../components/lender/ROIGrowthChart';
 import MonthlyReturnsChart from '../../components/lender/MonthlyReturnsChart';
 import AddFundsModal from '../../components/lender/AddFundsModal';
@@ -161,6 +162,7 @@ const ReportButton = ({ title, icon, onPress, description }) => (
 );
 
 const Dashboard = () => {
+  const { user: authUser } = useAuth();
   const { user, reportOptions } = mockData;
   const navigation = useNavigation();
   
@@ -182,7 +184,9 @@ const Dashboard = () => {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   useEffect(() => {
-    const userId = 'L001';
+    if (!authUser?.uid) return;
+    
+    const userId = authUser.uid;
     
     // Subscribe to wallet balance
     const unsubscribeWallet = subscribeToWallet(userId, (walletData) => {
@@ -275,7 +279,7 @@ const Dashboard = () => {
       unsubscribeNotifications();
       unsubscribeMessages();
     };
-  }, []);
+  }, [authUser?.uid]);
 
   // Calculate total portfolio value
   useEffect(() => {
@@ -425,7 +429,7 @@ const Dashboard = () => {
         visible={showAddFundsModal}
         onClose={handleCloseAddFundsModal}
         onConfirm={handleConfirmAddFunds}
-        userId="L001"
+        userId={authUser?.uid}
       />
 
       {/* Export Modal */}
@@ -434,7 +438,7 @@ const Dashboard = () => {
         onClose={handleCloseExportModal}
         transactions={transactions}
         filterType="all"
-        userId="L001"
+        userId={authUser?.uid}
         showOnlyAll={true}
       />
 
@@ -442,14 +446,14 @@ const Dashboard = () => {
       <TaxSummaryModal
         visible={showTaxSummaryModal}
         onClose={handleCloseTaxSummaryModal}
-        userId="L001"
+        userId={authUser?.uid}
       />
 
       {/* Portfolio Report Modal */}
       <PortfolioReportModal
         visible={showPortfolioReportModal}
         onClose={handleClosePortfolioReportModal}
-        userId="L001"
+        userId={authUser?.uid}
       />
     </AnimatedScreen>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, StatusBar } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, StatusBar, ActivityIndicator } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { CheckBox } from "react-native-elements";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from '../../theme/colors';
@@ -160,20 +161,42 @@ export default function AccountDetailsScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor="#d8f4ee" barStyle="dark-content" />
+    <LinearGradient
+      colors={[colors.babyBlue, colors.lightGray, colors.white]}
+      style={styles.container}
+    >
+      <StatusBar backgroundColor={colors.tealGreen} barStyle="light-content" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>QuickRupi</Text>
-        <Text style={styles.headerSubtitle}>New here? Sign up!</Text>
-      </View>
+      <LinearGradient
+        colors={[colors.tealGreen, colors.midnightBlue]}
+        style={styles.header}
+      >
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>QuickRupi</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <Text style={styles.headerSubtitle}>Borrower Registration</Text>
+        <View style={styles.progress}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '100%' }]} />
+          </View>
+          <Text style={styles.progressText}>Step 2 of 2 - Final Step!</Text>
+        </View>
+      </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.screenTitle}>Account Information</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={styles.titleRow}>
+          <Ionicons name="shield-checkmark-outline" size={28} color={colors.tealGreen} />
+          <Text style={styles.screenTitle}>Account Setup</Text>
+        </View>
+        <Text style={styles.subtitle}>Create your secure account</Text>
 
-        {/* Email Verification Section */}
-        <View style={styles.emailSection}>
+        <View style={styles.card}>
+
+          <Text style={styles.cardTitle}>Email Verification</Text>
           <Text style={styles.label}>Email Address</Text>
           <View style={styles.emailContainer}>
             <Text style={styles.emailText}>{personalData.email}</Text>
@@ -200,7 +223,9 @@ export default function AccountDetailsScreen({ navigation, route }) {
           )}
         </View>
 
-        <Text style={styles.label}>Username</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account Credentials</Text>
+          <Text style={styles.label}>Username</Text>
         <TextInput
           placeholder="Enter your username"
           placeholderTextColor="#7a9c9c"
@@ -261,9 +286,10 @@ export default function AccountDetailsScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
         {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+        </View>
 
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsTitle}>BORROWER'S TERMS OF USE</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Terms & Conditions</Text>
           <ScrollView style={styles.termsScroll} nestedScrollEnabled={true}>
             <Text style={styles.termsText}>
               These Borrower terms and conditions apply to a user who wishes to register to obtain a loan through the app.
@@ -276,267 +302,176 @@ export default function AccountDetailsScreen({ navigation, route }) {
           </ScrollView>
 
           <CheckBox
-            title="I have read and agree to the above Borrower T&C (as well as the General T&C & Privacy Policy)"
+            title="I accept the Borrower Terms & Conditions, General T&C, and Privacy Policy"
             checked={account.accepted}
             onPress={() => handleChange("accepted", !account.accepted)}
             containerStyle={styles.checkboxContainer}
             textStyle={[styles.checkboxText, errors.accepted && styles.errorText]}
-            checkedColor="#004c4c"
+            checkedColor={colors.tealGreen}
             disabled={loading}
           />
-        </View>
-        {errors.accepted && <Text style={styles.errorText}>{errors.accepted}</Text>}
 
-        {/* Human Verification Checkbox */}
-        <View style={[styles.humanVerificationContainer, errors.humanVerified && styles.errorBorder]}>
           <CheckBox
             title="I confirm that I am human"
             checked={account.humanVerified}
             onPress={() => handleChange("humanVerified", !account.humanVerified)}
-            containerStyle={styles.humanCheckboxContainer}
-            textStyle={[styles.humanCheckboxText, errors.humanVerified && styles.errorText]}
-            checkedColor="#004c4c"
+            containerStyle={styles.checkboxContainer}
+            textStyle={[styles.checkboxText, errors.humanVerified && styles.errorText]}
+            checkedColor={colors.tealGreen}
             disabled={loading}
           />
         </View>
-        {errors.humanVerified && <Text style={styles.errorText}>{errors.humanVerified}</Text>}
 
-        <TouchableOpacity 
-          style={[
-            styles.submitButton, 
-            (loading || !emailVerified) && styles.disabledButton
-          ]} 
-          onPress={handleSubmit}
-          disabled={loading || !emailVerified}
-        >
-          <Text style={styles.submitButtonText}>
-            {loading ? "PROCESSING..." : "COMPLETE REGISTRATION"}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.btnRow}>
+          <TouchableOpacity 
+            style={[styles.backBtn, loading && styles.disabledBtn]} 
+            onPress={() => navigation.goBack()}
+            disabled={loading}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.tealGreen} />
+            <Text style={styles.backTxt}>Back</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.secondaryButton, loading && styles.disabledButton]} 
-          onPress={() => navigation.goBack()}
-          disabled={loading}
-        >
-          <Text style={styles.secondaryText}>PREVIOUS</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.submitBtn, 
+              (loading || !emailVerified) && styles.disabledBtn
+            ]} 
+            onPress={handleSubmit}
+            disabled={loading || !emailVerified}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <>
+                <Text style={styles.submitTxt}>Complete Registration</Text>
+                <Ionicons name="checkmark-circle" size={20} color={colors.white} />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.footer}> All information is encrypted and secure</Text>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#d8f4ee",
-  },
+  container: { flex: 1 },
   header: {
-    backgroundColor: "#d8f4ee",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#7ad7c1",
+    paddingHorizontal: 16,
+    paddingTop: 80,
+    paddingBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#002f2f",
-    textAlign: "center",
-    marginBottom: 8,
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: colors.white, textAlign: "center" },
+  headerSubtitle: { fontSize: 11, color: colors.white, textAlign: "center", opacity: 0.95, marginBottom: 10 },
+  progress: { marginTop: 6 },
+  progressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 1.5, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.white, borderRadius: 1.5 },
+  progressText: { fontSize: 10, color: colors.white, textAlign: 'center', marginTop: 4, opacity: 0.9 },
+  content: { flex: 1 },
+  scroll: { padding: 14, paddingBottom: 24 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 8 },
+  screenTitle: { fontSize: 20, fontWeight: "700", color: colors.deepForestGreen },
+  subtitle: { fontSize: 12, color: colors.gray, marginBottom: 14, fontStyle: 'italic' },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#004c4c",
-    textAlign: "center",
-    opacity: 0.8,
-  },
-  content: {
-    flex: 1,
-    padding: 25,
-  },
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#004c4c",
-    marginBottom: 24,
-    textAlign: "center",
-  },
-  emailSection: {
-    marginBottom: 20,
-  },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: colors.tealGreen, marginBottom: 10 },
   emailContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 14,
+    backgroundColor: colors.babyBlue,
+    padding: 10,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#7ad7c1",
+    gap: 10,
   },
-  emailText: {
-    fontSize: 16,
-    color: "#002f2f",
-    flex: 1,
-  },
+  emailText: { fontSize: 14, color: colors.deepForestGreen, fontWeight: '600', flex: 1 },
   verifyEmailButton: {
-    backgroundColor: "#004c4c",
+    backgroundColor: colors.tealGreen,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
-    marginLeft: 12,
   },
-  verifiedButton: {
-    backgroundColor: "#7ad7c1",
-  },
-  verifyEmailText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  verifiedText: {
-    color: "#002f2f",
-  },
-  verificationNote: {
-    fontSize: 12,
-    color: "#7a9c9c",
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#003f3f",
-    marginBottom: 8,
-    marginTop: 12,
-    alignSelf: "flex-start",
-  },
+  verifiedButton: { backgroundColor: colors.blueGreen },
+  verifyEmailText: { color: colors.white, fontSize: 12, fontWeight: "600" },
+  verifiedText: { color: colors.white },
+  verificationNote: { fontSize: 11, color: colors.gray, marginTop: 4, fontStyle: 'italic' },
+  label: { fontSize: 12, fontWeight: "600", color: colors.forestGreen, marginBottom: 6, marginTop: 8 },
   input: {
+    flex: 1,
     borderWidth: 1,
-    borderColor: "#7ad7c1",
-    backgroundColor: "#ffffff",
-    padding: 14,
+    borderColor: colors.tiffanyBlue,
+    backgroundColor: colors.white,
+    padding: 10,
     borderRadius: 8,
-    fontSize: 16,
-    color: "#002f2f",
-    marginBottom: 12,
-    width: "100%",
+    fontSize: 14,
+    color: colors.deepForestGreen,
+    marginBottom: 6,
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#7ad7c1",
-    backgroundColor: "#ffffff",
+    borderColor: colors.tiffanyBlue,
+    backgroundColor: colors.white,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 6,
   },
-  passwordInput: {
-    flex: 1,
-    padding: 14,
-    fontSize: 16,
-    color: "#002f2f",
-  },
-  eyeIcon: {
-    padding: 14,
-  },
-  termsContainer: {
-    borderWidth: 1,
-    borderColor: "#7ad7c1",
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 16,
-    backgroundColor: "#ffffff",
-  },
-  termsTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 12,
-    color: "#002f2f",
-    textAlign: "center",
-  },
-  termsScroll: {
-    maxHeight: 120,
-    marginBottom: 12,
-  },
-  termsText: {
-    fontSize: 14,
-    color: "#7a9c9c",
-    lineHeight: 20,
-  },
-  checkboxContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-    marginLeft: 0,
-    marginTop: 8,
-  },
-  checkboxText: {
-    fontSize: 14,
-    fontWeight: 'normal',
-    color: "#002f2f",
-  },
-  humanVerificationContainer: {
-    borderWidth: 1,
-    borderColor: "#7ad7c1",
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 16,
-    backgroundColor: "#ffffff",
-  },
-  humanCheckboxContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-    marginLeft: 0,
-  },
-  humanCheckboxText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: "#002f2f",
-  },
-  submitButton: {
-    backgroundColor: "#004c4c",
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  disabledButton: {
-    backgroundColor: "#7a9c9c",
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: "#ffffff",
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#004c4c",
-  },
-  secondaryText: {
-    color: "#004c4c",
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  errorBorder: {
-    borderColor: '#ff6b6b',
+  passwordInput: { flex: 1, padding: 10, fontSize: 14, color: colors.deepForestGreen },
+  eyeIcon: { padding: 10 },
+  termsScroll: { maxHeight: 100, marginBottom: 8 },
+  termsText: { fontSize: 11, color: colors.gray, lineHeight: 16 },
+  checkboxContainer: { backgroundColor: 'transparent', borderWidth: 0, padding: 0, marginLeft: 0, marginTop: 6 },
+  checkboxText: { fontSize: 11, fontWeight: '500', color: colors.forestGreen },
+  btnRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 16, gap: 10 },
+  backBtn: {
     borderWidth: 1.5,
+    borderColor: colors.tealGreen,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    padding: 11,
+    borderRadius: 10,
+    flex: 0.35,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
-  errorText: {
-    color: '#ff6b6b',
-    fontSize: 12,
-    marginTop: -8,
-    marginBottom: 12,
-    alignSelf: 'flex-start',
+  backTxt: { color: colors.tealGreen, fontWeight: "600", fontSize: 14 },
+  submitBtn: {
+    backgroundColor: colors.tealGreen,
+    flexDirection: 'row',
+    padding: 11,
+    borderRadius: 10,
+    flex: 0.65,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    shadowColor: colors.tealGreen,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
   },
+  submitTxt: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  disabledBtn: { opacity: 0.5 },
+  footer: { fontSize: 11, color: colors.gray, textAlign: 'center', marginTop: 8, marginBottom: 16, fontStyle: 'italic' },
+  errorBorder: { borderColor: colors.red, borderWidth: 1.5 },
+  errorText: { color: colors.red, fontSize: 10, marginTop: -2, marginBottom: 6, fontStyle: 'italic' },
 });

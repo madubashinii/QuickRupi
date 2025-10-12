@@ -4,11 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import AnimatedScreen from '../../components/lender/AnimatedScreen';
+import { useAuth } from '../../context/AuthContext';
 import { subscribeToUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../services/notifications/notificationService';
 import { formatTimestamp, getNotificationTypeConfig } from '../../services/notifications/notificationUtils';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const USER_ID = 'L001'; // TODO: Replace with actual user ID from auth context
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All Notifications' },
@@ -112,6 +112,7 @@ const EmptyState = () => (
 );
 
 const NotificationsScreen = () => {
+  const { user } = useAuth();
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,14 +120,19 @@ const NotificationsScreen = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+
     // Subscribe to real-time notifications
-    const unsubscribe = subscribeToUserNotifications(USER_ID, (notifs) => {
+    const unsubscribe = subscribeToUserNotifications(user.uid, (notifs) => {
       setNotifications(notifs);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.uid]);
 
   // Filter notifications based on selected filter
   const filteredNotifications = useMemo(() => {
@@ -165,7 +171,7 @@ const NotificationsScreen = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    if (unreadCount === 0) return;
+    if (unreadCount === 0 || !user?.uid) return;
     
     Alert.alert(
       'Mark All as Read',
@@ -176,7 +182,7 @@ const NotificationsScreen = () => {
           text: 'Mark All',
           onPress: async () => {
             try {
-              await markAllNotificationsAsRead(USER_ID);
+              await markAllNotificationsAsRead(user.uid);
             } catch (error) {
               console.error('Failed to mark all as read:', error);
               Alert.alert('Error', 'Failed to mark notifications as read');
