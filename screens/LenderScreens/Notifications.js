@@ -155,8 +155,8 @@ const NotificationsScreen = () => {
       const target = getNavigationTarget(notification);
       
       if (target) {
-        // Navigate to MainTabs and specify which tab to open
-        navigation.navigate('MainTabs', { 
+        // Navigate to LenderHome and specify which tab to open
+        navigation.navigate('LenderHome', { 
           screen: target.screen 
         });
       } else {

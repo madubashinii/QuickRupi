@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { formatTime } from '../../services/chat';
 
-const ConversationCard = ({ conversation, onPress, isActive }) => {
+const ConversationCard = ({ conversation, onPress, isActive, adminId }) => {
   const lenderId = conversation.participants?.lenderId || 'Unknown';
   const lastMessage = conversation.lastMessage;
-  const unreadCount = conversation.unreadCount?.ADMIN001 || 0;
+  const unreadCount = conversation.unreadCount?.[adminId] || 0;
 
   return (
     <TouchableOpacity

@@ -5,16 +5,19 @@ import { useNavigation } from "@react-navigation/native";
 import { fetchDashboardData } from "../../services/admin/adminDashboardService";
 import { subscribeToUnreadCount } from "../../services/notifications/notificationService";
 import { subscribeToConversationsForUser } from "../../services/chat";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * Admin Dashboard Screen
  * 
- * Admin User ID: ADMIN001
- * - Used for notification subscription (line 28)
- * - All admin notifications are sent to this user ID
+ * Uses actual admin userId from AuthContext
+ * - Used for notification subscription
+ * - All admin notifications are sent to the logged-in admin user ID
  */
 export default function AdminDashboardScreen() {
     const navigation = useNavigation();
+    const { user } = useAuth();
+    const adminId = user?.uid;
     const [loading, setLoading] = useState(true);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
@@ -27,6 +30,11 @@ export default function AdminDashboardScreen() {
     });
 
     useEffect(() => {
+        if (!adminId) {
+            setLoading(false);
+            return;
+        }
+
         const loadData = async () => {
             const data = await fetchDashboardData();
             if (data) setStats(data);
@@ -35,17 +43,17 @@ export default function AdminDashboardScreen() {
         loadData();
 
         // Subscribe to notifications
-        const unsubscribeNotifications = subscribeToUnreadCount('ADMIN001', setUnreadNotifications);
+        const unsubscribeNotifications = subscribeToUnreadCount(adminId, setUnreadNotifications);
         
         // Subscribe to messages
-        const unsubscribeMessages = subscribeToConversationsForUser('ADMIN001', 'admin', (conversations) => {
+        const unsubscribeMessages = subscribeToConversationsForUser(adminId, 'admin', (conversations) => {
             const totalUnread = conversations.reduce((sum, conv) => {
-                // Only count unread messages for the admin (ADMIN001)
+                // Only count unread messages for the admin
                 // Ensure we only count messages that are actually unread for the admin
-                const adminUnreadCount = conv.unreadCount?.ADMIN001 || 0;
+                const adminUnreadCount = conv.unreadCount?.[adminId] || 0;
                 
                 // Additional check: ensure the conversation has the admin as a participant
-                const hasAdmin = conv.participantIds?.includes('ADMIN001');
+                const hasAdmin = conv.participantIds?.includes(adminId);
                 
                 // Debug logging
                 if (adminUnreadCount > 0) {
@@ -68,7 +76,7 @@ export default function AdminDashboardScreen() {
             unsubscribeNotifications();
             unsubscribeMessages();
         };
-    }, []);
+    }, [adminId]);
 
     if (loading) {
         return (

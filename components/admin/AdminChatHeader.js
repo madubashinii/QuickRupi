@@ -1,29 +1,67 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize } from '../../theme';
+import { getUserDoc } from '../../services/firestoreService';
 
-const AdminChatHeader = ({ lenderId, onBack, onInfo }) => (
-  <View style={styles.header}>
-    <TouchableOpacity style={styles.backButton} onPress={onBack}>
-      <Ionicons name="arrow-back" size={24} color={colors.midnightBlue} />
-    </TouchableOpacity>
+const AdminChatHeader = ({ lenderId, onBack, onInfo }) => {
+  const [lenderName, setLenderName] = useState(lenderId);
+  const [loading, setLoading] = useState(true);
 
-    <View style={styles.center}>
-      <View style={styles.avatar}>
-        <Ionicons name="person" size={20} color={colors.white} />
+  useEffect(() => {
+    const fetchLenderName = async () => {
+      if (!lenderId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(lenderId);
+        if (userData) {
+          // Use fullName, or name, or email, or fallback to lenderId
+          setLenderName(userData.fullName || userData.name || userData.email?.split('@')[0] || lenderId);
+        } else {
+          setLenderName(lenderId);
+        }
+      } catch (error) {
+        console.error(`Error fetching lender ${lenderId}:`, error);
+        setLenderName(lenderId);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLenderName();
+  }, [lenderId]);
+
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <Ionicons name="arrow-back" size={24} color={colors.midnightBlue} />
+      </TouchableOpacity>
+
+      <View style={styles.center}>
+        <View style={styles.avatar}>
+          <Ionicons name="person" size={20} color={colors.white} />
+        </View>
+        <View style={styles.textContainer}>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.midnightBlue} />
+          ) : (
+            <>
+              <Text style={styles.lenderName} numberOfLines={1}>{lenderName}</Text>
+              <Text style={styles.lenderRole}>Lender</Text>
+            </>
+          )}
+        </View>
       </View>
-      <View>
-        <Text style={styles.lenderName}>{lenderId}</Text>
-        <Text style={styles.lenderRole}>Lender</Text>
-      </View>
+
+      <TouchableOpacity style={styles.infoButton} onPress={onInfo}>
+        <Ionicons name="information-circle-outline" size={24} color={colors.midnightBlue} />
+      </TouchableOpacity>
     </View>
-
-    <TouchableOpacity style={styles.infoButton} onPress={onInfo}>
-      <Ionicons name="information-circle-outline" size={24} color={colors.midnightBlue} />
-    </TouchableOpacity>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   header: {
@@ -53,6 +91,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blueGreen,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  textContainer: {
+    flex: 1,
   },
   lenderName: {
     fontSize: fontSize.base,
