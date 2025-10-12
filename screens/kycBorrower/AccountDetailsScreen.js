@@ -5,12 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from '../../theme/colors';
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../services/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { validateForm, VALIDATION_TYPES, validateField } from '../../utils/validation';
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { validateEmail } from '../../utils/validation';
 import OTPVerification from '../../components/OTPVerification';
 
 export default function AccountDetailsScreen({ navigation, route }) {
-  const { personalData, loanData } = route.params;
+  const { personalData, loanData = {} } = route.params || {};
   
   const [account, setAccount] = useState({
     username: "",
@@ -28,33 +28,16 @@ export default function AccountDetailsScreen({ navigation, route }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (key, value) => {
-    const updatedAccount = { ...account, [key]: value };
-    setAccount(updatedAccount);
-    
-    // Real-time validation
-    if (key === 'password' || key === 'confirmPassword') {
-      // Validate both password fields when either changes
-      const passwordError = validateField('password', updatedAccount.password, VALIDATION_TYPES.ACCOUNT_INFORMATION, updatedAccount);
-      const confirmError = validateField('confirmPassword', updatedAccount.confirmPassword, VALIDATION_TYPES.ACCOUNT_INFORMATION, updatedAccount);
-      
-      setErrors(prev => ({
-        ...prev,
-        password: passwordError,
-        confirmPassword: confirmError
-      }));
-    } else {
-      const error = validateField(key, value, VALIDATION_TYPES.ACCOUNT_INFORMATION, updatedAccount);
-      setErrors(prev => ({
-        ...prev,
-        [key]: error
-      }));
+    setAccount({ ...account, [key]: value });
+    // Clear error when user types
+    if (errors[key]) {
+      setErrors({ ...errors, [key]: null });
     }
   };
 
   const handleVerifyEmail = () => {
     // Validate email first
-    const emailError = validateField('email', personalData.email, VALIDATION_TYPES.CONTACT_DETAILS);
-    if (emailError) {
+    if (!personalData.email || !validateEmail(personalData.email)) {
       Alert.alert("Error", "Please check your email address before verification.");
       return;
     }
@@ -69,13 +52,30 @@ export default function AccountDetailsScreen({ navigation, route }) {
   };
 
   const handleSubmit = async () => {
+    // Check if personal data exists
+    if (!personalData || !personalData.email) {
+      Alert.alert("Error", "Personal information is missing. Please go back and complete the form.");
+      return;
+    }
+
     // Validate all fields
-    const { isValid, errors: validationErrors } = validateForm(account, VALIDATION_TYPES.ACCOUNT_INFORMATION);
-    
-    if (!isValid) {
-      setErrors(validationErrors);
-      const firstError = Object.values(validationErrors)[0];
-      Alert.alert("Validation Error", firstError);
+    if (!account.username || !account.password || !account.confirmPassword) {
+      Alert.alert("Error", "Please complete all account fields.");
+      return;
+    }
+
+    if (account.password !== account.confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+
+    if (account.password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters.");
+      return;
+    }
+
+    if (!account.accepted) {
+      Alert.alert("Error", "You must accept the terms and conditions.");
       return;
     }
 
@@ -92,38 +92,40 @@ export default function AccountDetailsScreen({ navigation, route }) {
       const uid = userCredential.user.uid;
 
       // Create Firestore document with all collected data
-      await setDoc(doc(db, "users", uid), {
+      const userData = {
+        email: personalData.email,
+        role: "borrower", // Changed from userType to match AppNavigator
         personalDetails: personalData,
-        loanDetails: loanData,
         accountDetails: {
           username: account.username,
           createdAt: new Date()
         },
         kycCompleted: true,
-        step: 3,
-        userType: "borrower",
+        kycStatus: "approved", // Borrowers are auto-approved (no admin approval needed)
+        kycStep: 3,
         emailVerified: true,
         emailVerifiedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Only add loanDetails if it exists and has data
+      if (loanData && Object.keys(loanData).length > 0) {
+        userData.loanDetails = loanData;
+      }
+
+      await setDoc(doc(db, "users", uid), userData);
+
+      // Sign out user so they can login fresh
+      await signOut(auth);
 
       Alert.alert(
         "Success", 
-        "Registration completed successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Navigate to borrower dashboard
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "BorrowerDashboard" }],
-              });
-            }
-          }
-        ]
+        "Registration completed successfully! Please log in to continue.",
+        [{ text: "OK" }]
       );
+      
+      // AppNavigator will automatically show LoginScreen after signOut
       
     } catch (err) {
       console.error(err);

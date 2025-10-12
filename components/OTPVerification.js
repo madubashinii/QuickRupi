@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { sendOTP, verifyOTP, resendOTP } from '../services/otpService';
 
-const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification' }) => {
+const OTPVerification = ({ email, onVerificationSuccess, onBack, purpose = 'verification' }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [devOTP, setDevOTP] = useState(null);
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -37,6 +38,10 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
     
     if (result.success) {
       setCountdown(60); // 60 seconds countdown
+      // Store OTP for development mode display
+      if (result.otp) {
+        setDevOTP(result.otp);
+      }
       Alert.alert('Success', 'OTP sent to your email address');
     } else {
       Alert.alert('Error', result.message);
@@ -57,7 +62,8 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
 
     // Auto-submit when all fields are filled
     if (newOtp.every(digit => digit !== '') && index === 5) {
-      handleVerify();
+      // Use the newOtp array directly instead of waiting for state update
+      setTimeout(() => handleVerifyWithOtp(newOtp), 100);
     }
   };
 
@@ -67,12 +73,11 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
     }
   };
 
-  const handleVerify = async () => {
-    const otpString = otp.join('');
+  const handleVerifyWithOtp = async (otpArray) => {
+    const otpString = otpArray.join('');
     
     if (otpString.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit OTP');
-      return;
+      return; // Silently fail if not complete
     }
 
     setLoading(true);
@@ -90,6 +95,10 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
     }
   };
 
+  const handleVerify = async () => {
+    await handleVerifyWithOtp(otp);
+  };
+
   const handleResendOTP = async () => {
     if (countdown > 0) return;
 
@@ -99,6 +108,10 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
 
     if (result.success) {
       setCountdown(60);
+      // Update dev OTP if available
+      if (result.otp) {
+        setDevOTP(result.otp);
+      }
       Alert.alert('Success', 'New OTP sent to your email');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0].focus();
@@ -112,11 +125,25 @@ const OTPVerification = ({ email, onVerificationSuccess, purpose = 'verification
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {onBack && (
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Text style={styles.backButtonText}>← Cancel</Text>
+        </TouchableOpacity>
+      )}
+      
       <Text style={styles.title}>Verify Your Email</Text>
       <Text style={styles.subtitle}>
         We've sent a 6-digit verification code to{'\n'}
         <Text style={styles.email}>{email}</Text>
       </Text>
+
+      {/* Development Mode: Show OTP */}
+      {devOTP && (
+        <View style={styles.devOTPContainer}>
+          <Text style={styles.devOTPLabel}> Development Mode - Your OTP:</Text>
+          <Text style={styles.devOTPCode}>{devOTP}</Text>
+        </View>
+      )}
 
       <View style={styles.otpContainer}>
         {otp.map((digit, index) => (
@@ -169,6 +196,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#f8f9fa',
   },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -179,13 +217,34 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     color: '#666',
     lineHeight: 22,
   },
   email: {
     fontWeight: 'bold',
     color: '#333',
+  },
+  devOTPContainer: {
+    backgroundColor: '#fff3cd',
+    borderWidth: 2,
+    borderColor: '#ffc107',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  devOTPLabel: {
+    fontSize: 12,
+    color: '#856404',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  devOTPCode: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#856404',
+    letterSpacing: 8,
   },
   otpContainer: {
     flexDirection: 'row',

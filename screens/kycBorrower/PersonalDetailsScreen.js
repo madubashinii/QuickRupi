@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, StatusBar, Alert } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from '../../theme/colors';
 import { validatePersonalDetails, validateField } from '../../utils/validation';
 
@@ -18,6 +18,9 @@ export default function PersonalDetailsScreen({ navigation }) {
     gender: "",
   });
   const [fieldErrors, setFieldErrors] = useState({});
+
+  const titles = ["Mr.", "Mrs.", "Ms.", "Dr."];
+  const genders = ["Male", "Female", "Other"];
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value });
@@ -51,27 +54,35 @@ export default function PersonalDetailsScreen({ navigation }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>QuickRupi</Text>
-        <Text style={styles.headerSubtitle}>New here? Sign up!</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.getParent()?.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#002f2f" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>QuickRupi</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <Text style={styles.headerSubtitle}>Borrower Registration</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Personal Details</Text>
 
-        <Text style={styles.label}>Title</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={form.title}
-            onValueChange={(v) => handleChange("title", v)}
-            style={styles.picker}
-            dropdownIconColor="#007f70"
-          >
-            <Picker.Item label="Please select your title" value="" color="#007f70" />
-            <Picker.Item label="Mr." value="Mr." color="#002f2f" />
-            <Picker.Item label="Ms." value="Ms." color="#002f2f" />
-            <Picker.Item label="Mrs." value="Mrs." color="#002f2f" />
-            <Picker.Item label="Dr." value="Dr." color="#002f2f" />
-          </Picker>
+        <Text style={styles.label}>Title *</Text>
+        <View style={styles.buttonRow}>
+          {titles.map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.optionButton, form.title === item && styles.optionButtonActive]}
+              onPress={() => handleChange("title", item)}
+            >
+              <Text style={[styles.optionText, form.title === item && styles.optionTextActive]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <Text style={styles.label}>First Name *</Text>
@@ -158,18 +169,18 @@ export default function PersonalDetailsScreen({ navigation }) {
         />
 
         <Text style={styles.label}>Gender *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={form.gender}
-            onValueChange={(v) => handleChange("gender", v)}
-            style={styles.picker}
-            dropdownIconColor="#007f70"
-          >
-            <Picker.Item label="Select Gender" value="" color="#007f70" />
-            <Picker.Item label="Male" value="male" color="#002f2f" />
-            <Picker.Item label="Female" value="female" color="#002f2f" />
-            <Picker.Item label="Other" value="other" color="#002f2f" />
-          </Picker>
+        <View style={styles.buttonRow}>
+          {genders.map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.optionButton, form.gender === item.toLowerCase() && styles.optionButtonActive]}
+              onPress={() => handleChange("gender", item.toLowerCase())}
+            >
+              <Text style={[styles.optionText, form.gender === item.toLowerCase() && styles.optionTextActive]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleNext}>
@@ -187,83 +198,108 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#d8f4ee",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 80,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#7ad7c1",
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  backButton: {
+    padding: 4,
+  },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "700",
     color: "#002f2f",
     textAlign: "center",
-    marginBottom: 8,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#004c4c",
     textAlign: "center",
     opacity: 0.8,
   },
   content: {
     flex: 1,
-    padding: 25,
+    padding: 14,
   },
   screenTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#004c4c",
-    marginBottom: 24,
+    marginBottom: 16,
     textAlign: "center",
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "600",
     color: "#003f3f",
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 8,
     alignSelf: "flex-start",
   },
   input: {
     borderWidth: 1,
     borderColor: "#7ad7c1",
     backgroundColor: "#ffffff",
-    padding: 14,
+    padding: 10,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: 14,
     color: "#002f2f",
-    marginBottom: 12,
+    marginBottom: 6,
     width: "100%",
   },
   textArea: {
-    height: 80,
+    height: 65,
     textAlignVertical: 'top',
   },
-  pickerContainer: {
+  buttonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+    gap: 6,
+  },
+  optionButton: {
     borderWidth: 1,
     borderColor: "#7ad7c1",
-    borderRadius: 8,
-    marginBottom: 12,
     backgroundColor: "#ffffff",
-    overflow: "hidden",
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    minWidth: 65,
+    alignItems: 'center',
   },
-  picker: {
-    height: 50,
-    color: "#002f2f",
+  optionButtonActive: {
+    backgroundColor: "#004c4c",
+    borderColor: "#004c4c",
+  },
+  optionText: {
+    fontSize: 13,
+    color: "#003f3f",
+    fontWeight: '500',
+  },
+  optionTextActive: {
+    color: "#ffffff",
+    fontWeight: '600',
   },
   button: {
     backgroundColor: "#004c4c",
-    padding: 16,
-    borderRadius: 20,
-    marginTop: 20,
-    marginBottom: 10,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 16,
+    marginBottom: 8,
   },
   buttonText: {
     color: "#ffffff",
     textAlign: "center",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 15,
   },
   inputError: {
     borderColor: '#e74c3c',
@@ -271,9 +307,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#e74c3c',
-    fontSize: 12,
-    marginTop: -8,
-    marginBottom: 12,
+    fontSize: 11,
+    marginTop: -4,
+    marginBottom: 6,
     alignSelf: 'flex-start',
   },
 });

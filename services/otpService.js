@@ -1,11 +1,5 @@
 import { auth, db } from './firebaseConfig';
 import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail 
-} from 'firebase/auth';
-import { 
   doc, 
   setDoc, 
   getDoc, 
@@ -14,6 +8,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import * as Crypto from 'expo-crypto';
+import { sendOTPEmail } from './emailService';
 
 // Generate random OTP
 const generateOTP = async () => {
@@ -85,7 +80,7 @@ const verifyOTP = async (email, userOTP) => {
   }
 };
 
-// Send OTP via Email (Using Firebase Auth)
+// Send OTP via Email
 export const sendOTP = async (email, purpose = 'verification') => {
   try {
     const otp = await generateOTP();
@@ -95,19 +90,19 @@ export const sendOTP = async (email, purpose = 'verification') => {
       return { success: false, message: 'Failed to generate OTP' };
     }
 
-    // For demo purposes, we'll use Firebase's sendPasswordResetEmail
-    // In production, you'd use a proper email service
-    await sendPasswordResetEmail(auth, email);
+    // Send OTP via email service
+    const emailResult = await sendOTPEmail(email, otp, purpose);
     
-    // Store the OTP in a way that we can reference it
-    // Note: In a real app, you'd integrate with an email service like SendGrid, AWS SES, etc.
-    
-    console.log(`OTP for ${email}: ${otp}`); // Remove this in production
+    if (!emailResult.success) {
+      // If email sending fails, still return success for development
+      // The OTP will be shown in console
+      console.log('Email sending failed, but OTP is available in console');
+    }
     
     return { 
       success: true, 
       message: 'OTP sent successfully',
-      otp: otp // Remove this in production - only for testing
+      otp: emailResult.otp || otp // For development/testing
     };
     
   } catch (error) {

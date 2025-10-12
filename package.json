@@ -20,6 +20,7 @@
     "dayjs": "^1.11.18",
     "expo": "~54.0.0",
     "expo-clipboard": "^8.0.7",
+    "expo-crypto": "~15.0.7",
     "expo-document-picker": "^14.0.7",
     "expo-file-system": "~19.0.16",
     "expo-image-picker": "~17.0.8",
@@ -42,8 +43,7 @@
     "react-native-svg": "^15.13.0",
     "react-native-toast-message": "^2.3.3",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-web": "^0.21.0",
-    "expo-crypto": "~15.0.7"
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
