@@ -6,7 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-root-toast";
 import { db } from "../../services/firebaseConfig";
 import { 
-  collection, addDoc, getDocs, doc, setDoc, updateDoc, increment, query 
+  collection, addDoc, getDocs, doc, setDoc, updateDoc, increment, query, where 
 } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -23,7 +23,7 @@ const PaymentForm = () => {
   const [selectedLoan, setSelectedLoan] = useState(null);
 
   const navigation = useNavigation();
-  const fixedUserId = "B001"; // example userId
+  const fixedUserId = "UtffzX636Jb1wiqNyimTaux88pZ2"; // example userId
 
   // Fetch payment methods
   useEffect(() => {
@@ -46,7 +46,7 @@ const PaymentForm = () => {
   useEffect(() => {
     const fetchLoans = async () => {
       try {
-        const q = query(collection(db, "loans"), query.where("userId", "==", fixedUserId));
+        const q = query(collection(db, "Loans"), where("borrowerId", "==", fixedUserId));
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setLoans(data);

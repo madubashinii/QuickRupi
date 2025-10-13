@@ -15,7 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 const BorrowingsScreen = () => {
   const [loans, setLoans] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("Active");
-  const userId = "B001"; 
+  const userId = "UtffzX636Jb1wiqNyimTaux88pZ2"; 
   const navigation = useNavigation();
 
   // Load loans from Firebase
@@ -27,7 +27,7 @@ const BorrowingsScreen = () => {
         ...doc.data(),
       }));
       // filter by userId 
-      const userLoans = loanList.filter((loan) => loan.userId === userId);
+      const userLoans = loanList.filter((loan) => loan.borrowerId === userId);
       setLoans(userLoans);
     };
     fetchLoans();
@@ -144,7 +144,7 @@ const BorrowingsScreen = () => {
               </TouchableOpacity>
             )}
 
-            {selectedStatus === "Pending" && (
+            {selectedStatus === "Pending" ||  selectedStatus === "pending" && (
               <>
                 <TouchableOpacity
                   style={styles.editBtn}

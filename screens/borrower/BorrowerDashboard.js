@@ -30,7 +30,7 @@ const BorrowerDashboard = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    const borrowerId = 'B001'; // replace with auth.currentUser.uid if needed
+    const borrowerId = 'UtffzX636Jb1wiqNyimTaux88pZ2'; // replace with auth.currentUser.uid if needed
 
     const fetchLoans = async () => {
       try {
@@ -38,7 +38,7 @@ const BorrowerDashboard = () => {
         // if (!user) return;
 
         const loansRef = collection(db, "Loans"); 
-        const q = query(loansRef, where("userId", "==", borrowerId));
+        const q = query(loansRef, where("borrowerId", "==", borrowerId));
         const querySnapshot = await getDocs(q);
 
         let completed = 0;
@@ -47,7 +47,7 @@ const BorrowerDashboard = () => {
         querySnapshot.forEach((doc) => {
           const loan = doc.data();
           if (loan.status === "Completed") completed++;
-          else if (loan.status === "Pending") pending++;
+          else if (loan.status === "Pending"|| loan.status==="pending") pending++;
         });
 
         const total = querySnapshot.size;

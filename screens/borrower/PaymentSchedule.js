@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  FlatList,
+} from "react-native";
 import { Calendar } from "react-native-calendars";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../../services/firebaseConfig";
-import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
-// EMI calculation
+// EMI Calculation
 const calc_EMI = (rate, loanAmount, tenure) => {
   return (
     (loanAmount * rate * Math.pow(1 + rate, tenure)) /
@@ -14,31 +21,7 @@ const calc_EMI = (rate, loanAmount, tenure) => {
   );
 };
 
-/* Generate loan calculations for one record
-const Payments= (loanAmount, rate, tenure, startDate) => {
-  const payment = [];
-  let remaining = loanAmount;
-  let currentDate = new Date(startDate);
-  const interest = remaining * rate;
-  const emi = calc_EMI(rate, loanAmount, tenure);
-  const principal = emi - interest;
-  remaining -= principal;
-
-   payment.push({
-      date: currentDate.toISOString().split("T")[0],
-      emi: emi.toFixed(2),
-      principal: principal.toFixed(2),
-      interest: interest.toFixed(2),
-      remaining: remaining.toFixed(2),
-    });
-
-    // Move to next month
-    currentDate.setMonth(currentDate.getMonth() + 1);
-  
-
-  return payment;
-};*/
-
+// Generate EMI Schedule
 const generateSchedule = (loanAmount, rate, tenure, startDate) => {
   const schedule = [];
   let remaining = loanAmount;
@@ -58,7 +41,6 @@ const generateSchedule = (loanAmount, rate, tenure, startDate) => {
       remaining: remaining > 0 ? remaining.toFixed(2) : "0.00",
     });
 
-    // Move to next month
     currentDate.setMonth(currentDate.getMonth() + 1);
   }
 
@@ -69,6 +51,7 @@ export default function PaymentSchedule() {
   const [loans, setLoans] = useState([]);
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
+  const [modalVisible, setModalVisible] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -78,7 +61,7 @@ export default function PaymentSchedule() {
         if (!user) return;
 
         const loansRef = collection(db, "Loans");
-        const q = query(loansRef, where("userId", "==", "B001"));
+        const q = query(loansRef, where("borrowerId", "==", "UtffzX636Jb1wiqNyimTaux88pZ2"));
         const querySnapshot = await getDocs(q);
 
         const schedules = [];
@@ -86,8 +69,7 @@ export default function PaymentSchedule() {
 
         querySnapshot.forEach((docSnap) => {
           const loan = docSnap.data();
-
-          if (loan.userId === user.uid && loan.Remaining > 0) {
+          if (loan.Remaining > 0) {
             const tenure = loan.tenure || 12;
             const startDate = loan.StartDate?.toDate?.() || new Date();
             const schedule = generateSchedule(
@@ -137,21 +119,14 @@ export default function PaymentSchedule() {
     }
   };
 
-  const today = new Date();
   const selectedLoan = loans.find((l) => l.loanId === selectedLoanId);
-
-  let paidEMIs = [];
-  let remainingEMIs = [];
-  if (selectedLoan) {
-    paidEMIs = selectedLoan.schedule.slice(0, 1);
-    remainingEMIs = selectedLoan.schedule.slice(1);
-  }
-
+  const paidEMIs = selectedLoan ? selectedLoan.schedule.slice(0, 1) : [];
+  const remainingEMIs = selectedLoan ? selectedLoan.schedule.slice(1) : [];
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Back & Pay Buttons */}
+        {/* Navigation Buttons */}
         <TouchableOpacity
           onPress={() => navigation.navigate("BorrowerRepayment")}
           style={styles.btn}
@@ -169,49 +144,56 @@ export default function PaymentSchedule() {
         </TouchableOpacity>
 
         {/* Loan Selection */}
-        <Text style={styles.sectionTitle}>Select Loan</Text>
-        {loans.map((loan) => (
-          <TouchableOpacity
-            key={loan.loanId}
-            style={[
-              styles.optionBtn,
-              selectedLoanId === loan.loanId && { backgroundColor: "#d6f3f4" },
-            ]}
-            onPress={() => handleSelectLoan(loan.loanId)}
-          >
-            <Text style={styles.optionText}>{loan.loanName}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={styles.selectBtn}
+        >
+          <Text style={styles.selectText}>
+            {selectedLoan ? selectedLoan.loanName : "Select Loan"}
+          </Text>
+        </TouchableOpacity>
 
-        {/* Loan Details */}
-         <View>
-      <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.selectBtn}>
-        <Text style={styles.selectText}>Select Loan</Text>
-      </TouchableOpacity>
-
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
-          <FlatList
-            data={loans}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
+        {/* Modal for Loan List */}
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {loans.length > 0 ? (
+                <FlatList
+                  data={loans}
+                  keyExtractor={(item) => item.loanId}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.loanItem}
+                      onPress={() => {
+                        handleSelectLoan(item.loanId);
+                        setModalVisible(false);
+                      }}
+                    >
+                      <Text style={styles.loanText}>
+                        {item.loanName || `Loan ${item.loanId.slice(0, 6)}`}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              ) : (
+                <Text style={styles.emptyText}>No loans available</Text>
+              )}
               <TouchableOpacity
-                style={styles.loanItem}
-                onPress={() => {
-                  onSelect(item);
-                  setModalVisible(false);
-                }}
+                onPress={() => setModalVisible(false)}
+                style={styles.closeBtn}
               >
-                <Text>{item.LoanName || `Loan ${item.id.slice(0,6)}`}</Text>
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>Close</Text>
               </TouchableOpacity>
-            )}
-          />
-          <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
-            <Text style={{ color: "#fff" }}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Loan Summary */}
         <View style={styles.whiteCard}>
           {selectedLoan ? (
             <>
@@ -232,7 +214,8 @@ export default function PaymentSchedule() {
 
               {remainingEMIs.length > 0 ? (
                 <Text>
-                  Next Payment: {remainingEMIs[0].date} - EMI {remainingEMIs[0].emi}
+                  Next Payment: {remainingEMIs[0].date} - EMI{" "}
+                  {remainingEMIs[0].emi}
                 </Text>
               ) : (
                 <Text>Loan fully paid</Text>
@@ -255,7 +238,7 @@ export default function PaymentSchedule() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#e6f8f9", // full-screen mint background
+    backgroundColor: "#e6f8f9",
   },
   container: {
     padding: 16,
@@ -268,15 +251,8 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     textAlign: "center",
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 20,
-    marginBottom: 8,
-    color: "#045d56",
-  },
   btn: {
-    backgroundColor: "#4ade80", // green
+    backgroundColor: "#4ade80",
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -301,15 +277,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.5,
   },
-  optionBtn: {
+  selectBtn: {
     backgroundColor: "#fff",
     padding: 10,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 10,
     marginBottom: 8,
+    alignItems: "center",
   },
-  optionText: {
+  selectText: {
     fontSize: 16,
     color: "#045d56",
   },
@@ -329,5 +306,39 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 6,
     color: "#045d56",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    width: "85%",
+    maxHeight: "70%",
+    borderRadius: 12,
+    padding: 16,
+  },
+  loanItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  loanText: {
+    fontSize: 16,
+    color: "#045d56",
+  },
+  closeBtn: {
+    backgroundColor: "#4ade80",
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginTop: 15,
+    alignItems: "center",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#666",
+    marginVertical: 10,
   },
 });
