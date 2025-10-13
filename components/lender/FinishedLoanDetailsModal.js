@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { exportAndShareLoanPDF } from '../../services/lender/loanPdfService';
 import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
+import { getUserDoc } from '../../services/firestoreService';
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -68,6 +69,70 @@ export const FinishedLoanDetailsModal = ({ visible, onClose, investment }) => {
   const [exportError, setExportError] = useState(null);
   const [repaymentData, setRepaymentData] = useState(null);
   const [loadingRepayment, setLoadingRepayment] = useState(false);
+  const [borrowerName, setBorrowerName] = useState(investment?.borrowerName || 'Unknown');
+
+  // Fetch borrower name when modal opens
+  useEffect(() => {
+    const fetchBorrowerName = async () => {
+      if (!investment?.borrowerId) {
+        console.log('No borrowerId found in investment:', investment);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(investment.borrowerId);
+        
+        // Extract firstName and lastName from nested personalDetails or root level
+        const firstName = userData?.personalDetails?.firstName || userData?.firstName;
+        const lastName = userData?.personalDetails?.lastName || userData?.lastName;
+        const nameWithInitials = userData?.personalDetails?.initials || userData?.nameWithInitials;
+        
+        console.log('Fetched borrower data for modal:', { 
+          borrowerId: investment.borrowerId, 
+          firstName,
+          lastName,
+          nameWithInitials,
+          fullName: userData?.fullName,
+          name: userData?.name,
+          personalDetails: userData?.personalDetails
+        });
+        
+        if (userData) {
+          let displayName = '';
+          
+          // Priority 1: Combine firstName and lastName from users collection (nested or root)
+          if (firstName || lastName) {
+            if (firstName && lastName) {
+              displayName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              displayName = firstName;
+            } else if (lastName) {
+              displayName = lastName;
+            }
+            console.log('✅ Using firstName/lastName from users collection (modal):', displayName);
+          }
+          
+          // Priority 2-5: Fallbacks
+          if (!displayName) {
+            displayName = nameWithInitials || userData.fullName || userData.name || investment.borrowerName || investment.borrowerId;
+            console.log('Using fallback name (modal):', displayName);
+          }
+          
+          setBorrowerName(displayName);
+        } else {
+          console.log('❌ No user data found for borrowerId:', investment.borrowerId);
+          setBorrowerName(investment.borrowerName || investment.borrowerId);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching borrower ${investment.borrowerId}:`, error);
+        setBorrowerName(investment.borrowerName || investment.borrowerId);
+      }
+    };
+
+    if (visible && investment?.borrowerId) {
+      fetchBorrowerName();
+    }
+  }, [visible, investment?.borrowerId]);
 
   // Fetch repayment data when modal opens
   useEffect(() => {
@@ -146,7 +211,7 @@ export const FinishedLoanDetailsModal = ({ visible, onClose, investment }) => {
             <View style={styles.loanInfoSection}>
               <Text style={styles.loanId}>Loan ID: {investment.loanId || 'BRW-201'}</Text>
               <View style={styles.borrowerInfo}>
-                <Text style={styles.borrowerName}>{investment.borrowerName}</Text>
+                <Text style={styles.borrowerName}>{borrowerName}</Text>
                 <Text style={styles.borrowerLocation}>{investment.borrowerLocation || 'Colombo, Sri Lanka'}</Text>
               </View>
               <StatusChip status="repaid" />

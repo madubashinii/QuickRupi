@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getUserDoc } from '../../services/firestoreService';
 
 // Constants
 const PERFORMANCE_CONFIG = [
@@ -83,6 +84,68 @@ const ActionButton = ({ icon, label, onPress }) => (
 
 // Finished Investment Card Component
 const FinishedInvestmentCard = ({ investment, onDownloadPDF, onDetailsPress }) => {
+  const [borrowerName, setBorrowerName] = useState(investment.borrowerName || 'Unknown');
+
+  useEffect(() => {
+    const fetchBorrowerName = async () => {
+      if (!investment.borrowerId) {
+        console.log('No borrowerId found in investment:', investment);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(investment.borrowerId);
+        
+        // Extract firstName and lastName from nested personalDetails or root level
+        const firstName = userData?.personalDetails?.firstName || userData?.firstName;
+        const lastName = userData?.personalDetails?.lastName || userData?.lastName;
+        const nameWithInitials = userData?.personalDetails?.initials || userData?.nameWithInitials;
+        
+        console.log('Fetched borrower data:', { 
+          borrowerId: investment.borrowerId, 
+          firstName,
+          lastName,
+          nameWithInitials,
+          fullName: userData?.fullName,
+          name: userData?.name,
+          personalDetails: userData?.personalDetails
+        });
+        
+        if (userData) {
+          let displayName = '';
+          
+          // Priority 1: Combine firstName and lastName from users collection (nested or root)
+          if (firstName || lastName) {
+            if (firstName && lastName) {
+              displayName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              displayName = firstName;
+            } else if (lastName) {
+              displayName = lastName;
+            }
+            console.log('✅ Using firstName/lastName from users collection:', displayName);
+          }
+          
+          // Priority 2-5: Fallbacks
+          if (!displayName) {
+            displayName = nameWithInitials || userData.fullName || userData.name || investment.borrowerName || investment.borrowerId;
+            console.log('Using fallback name:', displayName);
+          }
+          
+          setBorrowerName(displayName);
+        } else {
+          console.log('❌ No user data found for borrowerId:', investment.borrowerId);
+          setBorrowerName(investment.borrowerName || investment.borrowerId);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching borrower ${investment.borrowerId}:`, error);
+        setBorrowerName(investment.borrowerName || investment.borrowerId);
+      }
+    };
+
+    fetchBorrowerName();
+  }, [investment.borrowerId]);
+
   const getPerformanceData = () => {
     const returnPercentage = calculateReturnPercentage(investment.interestEarned, investment.principalAmount);
     
@@ -119,7 +182,7 @@ const FinishedInvestmentCard = ({ investment, onDownloadPDF, onDetailsPress }) =
     <View style={styles.finishedCard}>
       <View style={styles.cardHeader}>
         <View style={styles.borrowerInfo}>
-          <Text style={styles.borrowerName}>{investment.borrowerName}</Text>
+          <Text style={styles.borrowerName}>{borrowerName}</Text>
           <Text style={styles.borrowerId}>{investment.borrowerId}</Text>
         </View>
       </View>

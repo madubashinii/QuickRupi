@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { getUserDoc } from '../../services/firestoreService';
 
 
 //  Data formatting utilities
@@ -33,11 +34,11 @@ const ComponentFactory = {
     </View>
   ),
 
-  HeaderCard: ({ request }) => (
+  HeaderCard: ({ request, borrowerName }) => (
     <View style={styles.headerCard}>
       <>
         <Text style={styles.requestId}>Request #{request.id}</Text>
-        <Text style={styles.borrowerName}>{request.borrowerName}</Text>
+        <Text style={styles.borrowerName}>{borrowerName}</Text>
       </>
     </View>
   ),
@@ -45,9 +46,9 @@ const ComponentFactory = {
 
 //  Section components with clear boundaries
 const SectionComponents = {
-  Header: ({ request }) => (
+  Header: ({ request, borrowerName }) => (
     <View style={styles.section}>
-      <ComponentFactory.HeaderCard request={request} />
+      <ComponentFactory.HeaderCard request={request} borrowerName={borrowerName} />
     </View>
   ),
 
@@ -75,12 +76,12 @@ const SectionComponents = {
     </ComponentFactory.Section>
   ),
 
-  BorrowerInfo: ({ request }) => (
+  BorrowerInfo: ({ request, borrowerName }) => (
     <ComponentFactory.Section title="Borrower Information">
       <>
         <ComponentFactory.DetailRow 
           label="Full Name" 
-          value={request.borrowerName} 
+          value={borrowerName} 
           isHighlight 
           icon="person"
         />
@@ -117,6 +118,68 @@ const ModalBehavior = {
 
 // Main Modal Component 
 export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress }) => {
+  const [borrowerName, setBorrowerName] = useState(request?.borrowerName || 'Unknown');
+
+  useEffect(() => {
+    const fetchBorrowerName = async () => {
+      if (!request?.borrowerId) {
+        console.log('No borrowerId found in request (modal):', request);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(request.borrowerId);
+        
+        // Extract firstName and lastName from nested personalDetails or root level
+        const firstName = userData?.personalDetails?.firstName || userData?.firstName;
+        const lastName = userData?.personalDetails?.lastName || userData?.lastName;
+        const nameWithInitials = userData?.personalDetails?.initials || userData?.nameWithInitials;
+        
+        console.log('Fetched borrower data (LoanRequestDetailsModal):', { 
+          borrowerId: request.borrowerId, 
+          firstName,
+          lastName,
+          nameWithInitials,
+          personalDetails: userData?.personalDetails
+        });
+        
+        if (userData) {
+          let displayName = '';
+          
+          // Priority 1: Combine firstName and lastName from users collection (nested or root)
+          if (firstName || lastName) {
+            if (firstName && lastName) {
+              displayName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              displayName = firstName;
+            } else if (lastName) {
+              displayName = lastName;
+            }
+            console.log('✅ Using firstName/lastName (LoanRequestDetailsModal):', displayName);
+          }
+          
+          // Priority 2-5: Fallbacks
+          if (!displayName) {
+            displayName = nameWithInitials || userData.fullName || userData.name || request.borrowerName || request.borrowerId;
+            console.log('Using fallback name (LoanRequestDetailsModal):', displayName);
+          }
+          
+          setBorrowerName(displayName);
+        } else {
+          console.log('❌ No user data found for borrowerId:', request.borrowerId);
+          setBorrowerName(request.borrowerName || request.borrowerId);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching borrower ${request.borrowerId}:`, error);
+        setBorrowerName(request.borrowerName || request.borrowerId);
+      }
+    };
+
+    if (visible && request?.borrowerId) {
+      fetchBorrowerName();
+    }
+  }, [visible, request?.borrowerId]);
+
   if (!ModalBehavior.shouldRender(visible, request)) return null;
 
   return (
@@ -144,9 +207,9 @@ export const LoanRequestDetailsModal = ({ visible, onClose, request, onFundPress
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
             <View style={styles.content}>
               <>
-                <SectionComponents.Header request={request} />
+                <SectionComponents.Header request={request} borrowerName={borrowerName} />
                 <SectionComponents.LoanInfo request={request} />
-                <SectionComponents.BorrowerInfo request={request} />
+                <SectionComponents.BorrowerInfo request={request} borrowerName={borrowerName} />
                 <SectionComponents.Purpose request={request} />
               </>
             </View>

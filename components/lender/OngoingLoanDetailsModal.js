@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { getRepaymentSchedule } from '../../services/repayment/repaymentService';
+import { getUserDoc } from '../../services/firestoreService';
 
 // Constants
 const STATUS_CONFIG = {
@@ -108,11 +109,11 @@ const RepaymentRow = ({ installment }) => {
 };
 
 // Section Components
-const BorrowerSection = ({ investment }) => (
+const BorrowerSection = ({ investment, borrowerName }) => (
   <View style={styles.section}>
     <View style={styles.headerCard}>
       <Text style={styles.requestId}>Loan #{investment.loanId || 'LN008'}</Text>
-      <Text style={styles.borrowerName}>{investment.borrowerName}</Text>
+      <Text style={styles.borrowerName}>{borrowerName}</Text>
       <View style={styles.locationContainer}>
         <Ionicons name="location-outline" size={14} color={colors.gray} style={styles.locationIcon} />
         <Text style={styles.location}>{investment.borrowerLocation || 'Colombo, Sri Lanka'}</Text>
@@ -263,6 +264,68 @@ export const OngoingLoanDetailsModal = ({ visible, onClose, investment }) => {
   const [loading, setLoading] = useState(false);
   const [repaymentData, setRepaymentData] = useState(null);
   const [error, setError] = useState(null);
+  const [borrowerName, setBorrowerName] = useState(investment?.borrowerName || 'Unknown');
+
+  // Fetch borrower name when modal opens
+  useEffect(() => {
+    const fetchBorrowerName = async () => {
+      if (!investment?.borrowerId) {
+        console.log('No borrowerId found in investment (modal):', investment);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(investment.borrowerId);
+        
+        // Extract firstName and lastName from nested personalDetails or root level
+        const firstName = userData?.personalDetails?.firstName || userData?.firstName;
+        const lastName = userData?.personalDetails?.lastName || userData?.lastName;
+        const nameWithInitials = userData?.personalDetails?.initials || userData?.nameWithInitials;
+        
+        console.log('Fetched borrower data (OngoingLoanDetailsModal):', { 
+          borrowerId: investment.borrowerId, 
+          firstName,
+          lastName,
+          nameWithInitials,
+          personalDetails: userData?.personalDetails
+        });
+        
+        if (userData) {
+          let displayName = '';
+          
+          // Priority 1: Combine firstName and lastName from users collection (nested or root)
+          if (firstName || lastName) {
+            if (firstName && lastName) {
+              displayName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              displayName = firstName;
+            } else if (lastName) {
+              displayName = lastName;
+            }
+            console.log('✅ Using firstName/lastName (OngoingLoanDetailsModal):', displayName);
+          }
+          
+          // Priority 2-5: Fallbacks
+          if (!displayName) {
+            displayName = nameWithInitials || userData.fullName || userData.name || investment.borrowerName || investment.borrowerId;
+            console.log('Using fallback name (OngoingLoanDetailsModal):', displayName);
+          }
+          
+          setBorrowerName(displayName);
+        } else {
+          console.log('❌ No user data found for borrowerId:', investment.borrowerId);
+          setBorrowerName(investment.borrowerName || investment.borrowerId);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching borrower ${investment.borrowerId}:`, error);
+        setBorrowerName(investment.borrowerName || investment.borrowerId);
+      }
+    };
+
+    if (visible && investment?.borrowerId) {
+      fetchBorrowerName();
+    }
+  }, [visible, investment?.borrowerId]);
 
   useEffect(() => {
     const fetchRepaymentData = async () => {
@@ -346,7 +409,7 @@ export const OngoingLoanDetailsModal = ({ visible, onClose, investment }) => {
           
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
             <View style={styles.content}>
-              <BorrowerSection investment={investment} />
+              <BorrowerSection investment={investment} borrowerName={borrowerName} />
               <LoanInfoSection 
                 investment={investment} 
                 progress={progress}

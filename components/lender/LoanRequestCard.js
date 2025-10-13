@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { LoanRequestDetailsModal } from './LoanRequestDetailsModal';
 import LoanFundModal from './LoanFundModal';
+import { getUserDoc } from '../../services/firestoreService';
 
 // Constants
 const DETAIL_ICONS = {
@@ -51,6 +52,65 @@ const DetailRow = ({ icon, label, value, isApr = false }) => (
 const LoanRequestCard = ({ request, onFundPress, onDetailsPress, userId }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [borrowerName, setBorrowerName] = useState(request.borrowerName || 'Unknown');
+
+  useEffect(() => {
+    const fetchBorrowerName = async () => {
+      if (!request.borrowerId) {
+        console.log('No borrowerId found in request:', request);
+        return;
+      }
+
+      try {
+        const userData = await getUserDoc(request.borrowerId);
+        
+        // Extract firstName and lastName from nested personalDetails or root level
+        const firstName = userData?.personalDetails?.firstName || userData?.firstName;
+        const lastName = userData?.personalDetails?.lastName || userData?.lastName;
+        const nameWithInitials = userData?.personalDetails?.initials || userData?.nameWithInitials;
+        
+        console.log('Fetched borrower data (LoanRequestCard):', { 
+          borrowerId: request.borrowerId, 
+          firstName,
+          lastName,
+          nameWithInitials,
+          personalDetails: userData?.personalDetails
+        });
+        
+        if (userData) {
+          let displayName = '';
+          
+          // Priority 1: Combine firstName and lastName from users collection (nested or root)
+          if (firstName || lastName) {
+            if (firstName && lastName) {
+              displayName = `${firstName} ${lastName}`;
+            } else if (firstName) {
+              displayName = firstName;
+            } else if (lastName) {
+              displayName = lastName;
+            }
+            console.log('✅ Using firstName/lastName (LoanRequestCard):', displayName);
+          }
+          
+          // Priority 2-5: Fallbacks
+          if (!displayName) {
+            displayName = nameWithInitials || userData.fullName || userData.name || request.borrowerName || request.borrowerId;
+            console.log('Using fallback name (LoanRequestCard):', displayName);
+          }
+          
+          setBorrowerName(displayName);
+        } else {
+          console.log('❌ No user data found for borrowerId:', request.borrowerId);
+          setBorrowerName(request.borrowerName || request.borrowerId);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching borrower ${request.borrowerId}:`, error);
+        setBorrowerName(request.borrowerName || request.borrowerId);
+      }
+    };
+
+    fetchBorrowerName();
+  }, [request.borrowerId]);
 
   const handleDetailsPress = () => {
     setShowDetailsModal(true);
@@ -87,7 +147,7 @@ const LoanRequestCard = ({ request, onFundPress, onDetailsPress, userId }) => {
       <>
         <View style={styles.cardHeader}>
           <View style={styles.borrowerInfo}>
-            <Text style={styles.borrowerName}>{request.borrowerName}</Text>
+            <Text style={styles.borrowerName}>{borrowerName}</Text>
           </View>
         </View>
 

@@ -30,8 +30,13 @@ const TypingIndicator = ({ typingUsers, currentUserId }) => {
           try {
             const userData = await getUserDoc(userId);
             if (userData) {
-              // Use fullName, or name, or email, or fallback to userId
-              names[userId] = userData.fullName || userData.name || userData.email?.split('@')[0] || userId;
+              // Combine firstName and lastName
+              const fullName = userData.firstName && userData.lastName 
+                ? `${userData.firstName} ${userData.lastName}`.trim()
+                : (userData.firstName || userData.lastName || '').trim();
+              
+              // Use nameWithInitials, fullName, name, email, or fallback to userId
+              names[userId] = userData.nameWithInitials || fullName || userData.name || userData.email?.split('@')[0] || userId;
             } else {
               names[userId] = userId;
             }

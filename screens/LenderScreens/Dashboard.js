@@ -17,6 +17,7 @@ import { subscribeToWallet } from '../../services/wallet';
 import { fetchOngoingLoans, fetchCompletedLoans, calculateROIGrowth, calculateMonthlyReturns } from '../../services/lender/lenderLoanService';
 import { subscribeToUnreadCount } from '../../services/notifications/notificationService';
 import { subscribeToConversationsForUser } from '../../services/chat';
+import { getUserDoc } from '../../services/firestoreService';
 
 // Constants
 const BACKGROUND_HEIGHT = 380;
@@ -25,9 +26,6 @@ const ACTION_BUTTON_SIZE = 44;
 
 // Mock Data
 const mockData = {
-  user: {
-    name: 'Brian Gunasekara',
-  },
   portfolio: {
     totalValue: 'LKR 255,680.00',
     activeLoans: 'LKR 1,25,000',
@@ -163,9 +161,10 @@ const ReportButton = ({ title, icon, onPress, description }) => (
 
 const Dashboard = () => {
   const { user: authUser } = useAuth();
-  const { user, reportOptions } = mockData;
+  const { reportOptions } = mockData;
   const navigation = useNavigation();
   
+  const [userName, setUserName] = useState('');
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showTaxSummaryModal, setShowTaxSummaryModal] = useState(false);
@@ -187,6 +186,25 @@ const Dashboard = () => {
     if (!authUser?.uid) return;
     
     const userId = authUser.uid;
+    
+    // Fetch user data
+    const loadUserData = async () => {
+      try {
+        const userData = await getUserDoc(userId);
+        if (userData) {
+          const fullName = userData.firstName && userData.lastName 
+            ? `${userData.firstName} ${userData.lastName}`.trim()
+            : (userData.firstName || userData.lastName || '').trim();
+          
+          setUserName(userData.nameWithInitials || fullName || userData.name || userData.email?.split('@')[0] || 'Lender');
+        }
+      } catch (error) {
+        console.error('Failed to load user data:', error);
+        setUserName('Lender');
+      }
+    };
+    
+    loadUserData();
     
     // Subscribe to wallet balance
     const unsubscribeWallet = subscribeToWallet(userId, (walletData) => {
@@ -317,7 +335,7 @@ const Dashboard = () => {
             <View style={styles.profileSection}>
               <ProfileImage />
               <View>
-                <Text style={styles.userName}>{user.name}</Text>
+                <Text style={styles.userName}>{userName || 'Lender'}</Text>
               </View>
             </View>
             <View style={styles.headerActions}>

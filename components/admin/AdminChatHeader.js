@@ -18,8 +18,13 @@ const AdminChatHeader = ({ lenderId, onBack, onInfo }) => {
       try {
         const userData = await getUserDoc(lenderId);
         if (userData) {
-          // Use fullName, or name, or email, or fallback to lenderId
-          setLenderName(userData.fullName || userData.name || userData.email?.split('@')[0] || lenderId);
+          // Combine firstName and lastName
+          const fullName = userData.firstName && userData.lastName 
+            ? `${userData.firstName} ${userData.lastName}`.trim()
+            : (userData.firstName || userData.lastName || '').trim();
+          
+          // Use nameWithInitials, fullName, name, email, or fallback to lenderId
+          setLenderName(userData.nameWithInitials || fullName || userData.name || userData.email?.split('@')[0] || lenderId);
         } else {
           setLenderName(lenderId);
         }

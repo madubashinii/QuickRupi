@@ -91,7 +91,6 @@ const useProfileHandlers = () => {
       }
     },
     handleLogout,
-    handleChatSupport: () => console.log('Chat support pressed'),
     showPaymentModal,
     setShowPaymentModal,
     showAgreementsModal,
@@ -110,7 +109,6 @@ const Profile = () => {
   const { 
     handleSettingPress, 
     handleLogout, 
-    handleChatSupport, 
     showPaymentModal, 
     setShowPaymentModal,
     showAgreementsModal,
@@ -269,7 +267,6 @@ const Profile = () => {
         <SettingsList settings={CONFIG.SETTINGS} onPress={handleSettingPress} />
         <FooterSection onLogout={handleLogout} />
       </ScrollView>
-      <FloatingChatButton onPress={handleChatSupport} />
       <PaymentMethodsModal 
         visible={showPaymentModal} 
         onClose={() => setShowPaymentModal(false)} 
@@ -364,13 +361,6 @@ const FooterSection = ({ onLogout }) => (
     </TouchableOpacity>
   </View>
 );
-
-const FloatingChatButton = ({ onPress }) => (
-  <TouchableOpacity style={styles.floatingChatButton} onPress={onPress} activeOpacity={0.7}>
-    <Image source={require('../../assets/lender/chatbot.png')} style={styles.chatbotImage} resizeMode="contain" />
-  </TouchableOpacity>
-);
-
 
 // Shared Styles
 const cardStyle = {
@@ -555,27 +545,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.white,
     fontWeight: '600',
-  },
-  
-  // Floating Chat Button
-  floatingChatButton: {
-    position: 'absolute',
-    bottom: 10,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.blueGreen,
-    elevation: 8,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    ...centerContent,
-  },
-  chatbotImage: {
-    width: 40,
-    height: 40,
   },
   
   // Loading
